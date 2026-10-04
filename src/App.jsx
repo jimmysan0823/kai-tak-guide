@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v3（按官方指南 09/2026 核對）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v4（手機版標題、全類別車費、車票連結）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  */
@@ -92,7 +92,7 @@ const ADMIN_PASSWORD = 'admin123'; // 只在未連接 Supabase 時使用
 // 先試 Vercel 代理（vercel.json rewrites），再試直接連線
 const MTR_SCHEDULE_URLS = ['/api/mtr-schedule?line=TML&sta=KAT', 'https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TML&sta=KAT'];
 const MTR_FARE_URLS = ['/api/mtr-fares', 'https://opendata.mtr.com.hk/data/mtr_lines_fares.csv'];
-const TICKET_URL = 'https://www.mtr.com.hk/ch/customer/tickets/index.html';
+const TICKET_URL = 'https://www.mtr.com.hk/ch/customer/tickets/index.php';
 const mapsUrl = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 
 async function fetchFirst(urls, parse, timeout = 6000) {
@@ -235,6 +235,26 @@ const UI_EXTRA = {
   },
 };
 Object.keys(UI_EXTRA).forEach((l) => Object.assign(UI[l], UI_EXTRA[l]));
+const UI_FARES = {
+  zh: { fareType: '乘客類別', octCol: '八達通', singleCol: '單程票', fAdult: '成人', fChild: '小童（3–11 歲）', fElder: '長者（65 歲或以上）', fJoy60: '樂悠咭（60–64 歲）', fJoy65: '樂悠咭（65 歲或以上）',
+    joyNote: '樂悠咭「兩蚊兩折」（2026 年 4 月 3 日起）：成人車費 $10 或以下付 $2；高於 $10 付成人車費兩成。樂悠咭只以八達通形式使用，不設單程票。',
+    joy65Note: '樂悠咭（65 歲或以上）按「兩蚊兩折」與長者優惠車費兩者較低者推算，實際收費以入閘扣數為準。',
+    aelConcession: '機場快綫車程的優惠車費請參閱港鐵官網。' },
+  en: { fareType: 'Passenger', octCol: 'Octopus', singleCol: 'Single', fAdult: 'Adult', fChild: 'Child (3–11)', fElder: 'Elderly (65+)', fJoy60: 'JoyYou Card (60–64)', fJoy65: 'JoyYou Card (65+)',
+    joyNote: 'JoyYou "$2 or 20%" scheme (from 3 April 2026): pay $2 if the adult fare is $10 or less, otherwise 20% of the adult fare. JoyYou is an Octopus card, so no single journey ticket applies.',
+    joy65Note: 'JoyYou (65+) is inferred as the lower of the "$2 or 20%" fare and the elderly concessionary fare. The amount deducted at the gate is final.',
+    aelConcession: 'See the MTR website for concessionary Airport Express fares.' },
+  ko: { fareType: '승객 유형', octCol: '옥토퍼스', singleCol: '편도 승차권', fAdult: '성인', fChild: '어린이 (3–11세)', fElder: '경로 (65세 이상)', fJoy60: '조이유 카드 (60–64세)', fJoy65: '조이유 카드 (65세 이상)',
+    joyNote: '조이유 카드 "2달러·20%" 제도(2026년 4월 3일부터): 성인 요금이 10달러 이하이면 2달러, 초과하면 성인 요금의 20%. 조이유 카드는 옥토퍼스 방식으로만 사용하며 편도 승차권은 없습니다.',
+    joy65Note: '조이유 카드(65세 이상)는 "2달러·20%" 요금과 경로 우대 요금 중 낮은 금액으로 추정한 값이며, 실제 요금은 개찰구 차감액을 기준으로 합니다.',
+    aelConcession: '공항철도 우대 요금은 MTR 웹사이트를 참고하세요.' },
+  ja: { fareType: '乗客区分', octCol: 'オクトパス', singleCol: '片道きっぷ', fAdult: '大人', fChild: '子供（3–11歳）', fElder: '高齢者（65歳以上）', fJoy60: 'JoyYou カード（60–64歳）', fJoy65: 'JoyYou カード（65歳以上）',
+    joyNote: 'JoyYou カード「2ドル・2割」制度（2026年4月3日から）：大人運賃が10ドル以下なら2ドル、10ドル超は大人運賃の2割。JoyYou はオクトパス形式のみで、片道きっぷはありません。',
+    joy65Note: 'JoyYou（65歳以上）は「2ドル・2割」運賃と高齢者割引運賃の低い方として推定した値です。実際の運賃は改札での引き落とし額が優先されます。',
+    aelConcession: 'エアポート・エクスプレスの割引運賃は MTR 公式サイトをご確認ください。' },
+};
+Object.keys(UI_FARES).forEach((l) => Object.assign(UI[l], UI_FARES[l]));
+const money = (v) => (v == null ? '—' : `$${v.toFixed(1)}`);
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -539,17 +559,35 @@ function routeTo(dest) {
   return result;
 }
 
+const r1 = (x) => Math.round(x * 10) / 10;
+const halfUp = (x) => Math.ceil(x * 2) / 2;
+// 「兩蚊兩折」（2026 年 4 月 3 日起）：成人車費 $10 或以下付 $2；高於 $10 付成人車費兩成
+const twoTwo = (adult) => (adult <= 10 ? 2 : r1(adult * 0.2));
+
+// 補齊各類乘客車費：官方數值優先，缺少的欄位按規則推算
+function completeFare(f, source) {
+  const oct = f.oct;
+  const single = f.single ?? halfUp(oct * 1.1);
+  const childOct = f.childOct ?? r1(oct / 2);
+  const childSingle = f.childSingle ?? halfUp(single / 2);
+  const elderOct = f.elderOct ?? r1(oct / 2);
+  const elderSingle = f.elderSingle ?? childSingle;
+  const joy60 = f.joy60 ?? twoTwo(oct);
+  const joy65 = Math.min(joy60, elderOct); // 樂悠咭 65 歲或以上：兩蚊兩折與長者優惠取較低者（推算）
+  return { oct, single, childOct, childSingle, elderOct, elderSingle, joy60, joy65, source };
+}
+
 function estimateFare(route) {
-  const oct = Math.round((3.5 + 0.55 * Math.pow(route.rideMins, 0.85) + (route.cross ? 5 : 0)) * 10) / 10;
-  return { oct, single: Math.ceil(oct * 1.1 * 2) / 2 };
+  const oct = r1(3.5 + 0.55 * Math.pow(route.rideMins, 0.85) + (route.cross ? 5 : 0));
+  return { oct, single: halfUp(oct * 1.1) };
 }
 
 // 由啟德往某站（不含機場快綫）的車費：優先使用港鐵開放數據
 function fareTo(code, fares) {
   const f = fares && fares[normName(ST[code][1])];
-  if (f && !Number.isNaN(f.oct)) return { oct: f.oct, single: f.single || f.oct, source: 'official' };
+  if (f && f.oct != null) return completeFare(f, 'official');
   const r = routeTo(code);
-  return r ? { ...estimateFare(r), source: 'estimate' } : null;
+  return r ? completeFare(estimateFare(r), 'estimate') : null;
 }
 
 function planTrip(dest, fares) {
@@ -558,9 +596,10 @@ function planTrip(dest, fares) {
   const aelLeg = route.legs.find((l) => l.line === 'AEL');
   let fare;
   if (aelLeg) {
+    // 港鐵開放數據不包括機場快綫：成人車費為估算，優惠車費請參閱官網
     const base = aelLeg.from === 'KAT' ? { oct: 0, single: 0, source: 'official' } : fareTo(aelLeg.from, fares);
     const extra = AEL_EST[aelLeg.from] || 100;
-    fare = { oct: base.oct + extra, single: base.single + extra, source: base.source, ael: true };
+    fare = { oct: base.oct + extra, single: base.single + extra, childOct: null, childSingle: null, elderOct: null, elderSingle: null, joy60: null, joy65: null, source: base.source, ael: true };
   } else {
     fare = fareTo(dest, fares);
   }
@@ -572,13 +611,19 @@ function parseFares(text) {
   if (rows.length < 2) return null;
   const head = rows[0].split(',').map((h) => h.replace(/"/g, '').trim().toUpperCase());
   const iS = head.indexOf('SRC_STATION_NAME'), iD = head.indexOf('DEST_STATION_NAME');
-  const iO = head.indexOf('OCT_ADT_FARE'), iSg = head.indexOf('SINGLE_ADT_FARE');
-  if (iS < 0 || iD < 0 || iO < 0) return null;
+  const idx = {
+    oct: head.indexOf('OCT_ADT_FARE'), single: head.indexOf('SINGLE_ADT_FARE'),
+    childOct: head.indexOf('OCT_CON_CHILD_FARE'), childSingle: head.indexOf('SINGLE_CON_CHILD_FARE'),
+    elderOct: head.indexOf('OCT_CON_ELDERLY_FARE'), elderSingle: head.indexOf('SINGLE_CON_ELDERLY_FARE'),
+    joy60: head.indexOf('OCT_JOYYOU_SIXTY_FARE'),
+  };
+  if (iS < 0 || iD < 0 || idx.oct < 0) return null;
   const out = {};
   for (let k = 1; k < rows.length; k++) {
     const c = rows[k].split(',').map((x) => x.replace(/"/g, '').trim());
     if (normName(c[iS]) !== 'kaitak') continue;
-    out[normName(c[iD])] = { oct: parseFloat(c[iO]), single: iSg >= 0 ? parseFloat(c[iSg]) : null };
+    const num = (i) => (i >= 0 && c[i] !== '' && !Number.isNaN(parseFloat(c[i])) ? parseFloat(c[i]) : null);
+    out[normName(c[iD])] = Object.fromEntries(Object.entries(idx).map(([key, i]) => [key, num(i)]));
   }
   return Object.keys(out).length ? out : null;
 }
@@ -691,33 +736,23 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+    // 手機：標題一行、語言選項另起一行（不固定頂部，避免佔用畫面）；電腦：同一行並固定頂部
+    <header className="relative z-30 md:sticky md:top-0" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
       <div className="bg-[#16202B] text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+          {/* 標題（可自動換行，不會被裁切） */}
+          <div className="order-1 flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: LINES.TML.color }}>
               <Train size={22} />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold leading-tight sm:text-lg">{t.title}</h1>
-              <p className="text-xs text-white/60">Kai Tak Transit &amp; Landmark Guide</p>
+              <h1 className="text-[15px] font-bold leading-snug sm:text-lg">{t.title}</h1>
+              <p className="text-xs leading-snug text-white/60">Kai Tak Transit &amp; Landmark Guide</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg bg-white/10 p-0.5" role="group" aria-label="Language">
-              {LANGS.map((l) => (
-                <button key={l.code} onClick={() => setLang(l.code)}
-                  className={`relative rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${lang === l.code ? 'text-[#16202B]' : 'text-white/75 hover:text-white'}`}>
-                  {lang === l.code && <motion.span layoutId="langPill" className="absolute inset-0 rounded-md bg-white" transition={{ type: 'spring', damping: 30, stiffness: 400 }} />}
-                  <span className="relative">{l.label}</span>
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1" title={gt === 'error' ? t.gtFail : 'Google Translate'}>
-              <Globe size={16} className="text-white/60" />
-              <div id="google_translate_element" className={gt === 'ready' ? '' : 'hidden'} />
-              {gt !== 'ready' && <span className="hidden text-[11px] text-white/45 md:inline">{gt === 'error' ? 'Google' : '…'}</span>}
-            </div>
+
+          {/* 管理員按鈕：手機貼右上角，電腦放最右 */}
+          <div className="order-2 shrink-0 self-start md:order-3 md:self-center">
             {isAdmin ? (
               <button onClick={onLogout} className="flex items-center gap-1 rounded-md bg-[var(--sign)] px-2 py-1 text-xs font-semibold text-[#111418]">
                 <LogOut size={14} />{t.logout}
@@ -727,6 +762,24 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
                 <Lock size={15} />
               </button>
             )}
+          </div>
+
+          {/* 語言選項：手機佔滿整行，電腦跟標題同一行 */}
+          <div className="order-3 flex w-full items-center gap-2 md:order-2 md:w-auto">
+            <div className="grid flex-1 grid-cols-4 rounded-lg bg-white/10 p-0.5 md:flex md:flex-none" role="group" aria-label="Language">
+              {LANGS.map((l) => (
+                <button key={l.code} onClick={() => setLang(l.code)}
+                  className={`relative whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors md:py-1 ${lang === l.code ? 'text-[#16202B]' : 'text-white/75 hover:text-white'}`}>
+                  {lang === l.code && <motion.span layoutId="langPill" className="absolute inset-0 rounded-md bg-white" transition={{ type: 'spring', damping: 30, stiffness: 400 }} />}
+                  <span className="relative">{l.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex shrink-0 items-center gap-1" title={gt === 'error' ? t.gtFail : 'Google Translate'}>
+              <Globe size={16} className="text-white/60" />
+              <div id="google_translate_element" className={gt === 'ready' ? '' : 'hidden'} />
+              {gt !== 'ready' && <span className="hidden text-[11px] text-white/45 lg:inline">{gt === 'error' ? 'Google' : '…'}</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -1096,29 +1149,50 @@ function StationRouteFinder({ t, lang, fares, fareStatus }) {
               </div>
 
               <div className="flex flex-col gap-2">
-                {[
-                  { k: t.octopus, v: fare ? `$${fare.oct.toFixed(1)}` : '—', big: true },
-                  { k: t.single, v: fare ? `$${fare.single.toFixed(1)}` : '—' },
-                  { k: t.time, v: `${plan.mins} ${t.mins}`, sub: t.timeNote },
-                ].map((r) => (
-                  <div key={r.k} className="rounded-lg bg-[var(--surface-2)] px-4 py-3">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-sm text-[var(--muted)]">{r.k}</span>
-                      <span className={`num font-bold ${r.big ? 'text-3xl' : 'text-xl'}`}>{r.v}</span>
-                    </div>
-                    {r.sub && <p className="mt-0.5 text-right text-[11px] text-[var(--muted)]">{r.sub}</p>}
-                  </div>
-                ))}
+                <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[var(--surface-2)] text-xs text-[var(--muted)]">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">{t.fareType}</th>
+                        <th className="px-3 py-2 text-right font-medium">{t.octCol}</th>
+                        <th className="px-3 py-2 text-right font-medium">{t.singleCol}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { k: t.fAdult, oct: fare && fare.oct, single: fare && fare.single, strong: true },
+                        { k: t.fChild, oct: fare && fare.childOct, single: fare && fare.childSingle },
+                        { k: t.fElder, oct: fare && fare.elderOct, single: fare && fare.elderSingle },
+                        { k: t.fJoy60, oct: fare && fare.joy60, single: null },
+                        { k: `${t.fJoy65} *`, oct: fare && fare.joy65, single: null },
+                      ].map((r) => (
+                        <tr key={r.k} className="border-t border-[var(--border)]">
+                          <td className={`px-3 py-2 ${r.strong ? 'font-bold' : ''}`}>{r.k}</td>
+                          <td className={`num px-3 py-2 text-right ${r.strong ? 'text-2xl font-bold' : 'text-base font-semibold'}`}>{money(r.oct)}</td>
+                          <td className={`num px-3 py-2 text-right ${r.strong ? 'text-lg font-bold' : 'text-base font-semibold'} text-[var(--muted)]`}>{money(r.single)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-baseline justify-between rounded-lg bg-[var(--surface-2)] px-4 py-3">
+                  <span className="text-sm text-[var(--muted)]">{t.time}<span className="block text-[11px]">{t.timeNote}</span></span>
+                  <span className="num text-xl font-bold">{plan.mins} {t.mins}</span>
+                </div>
                 <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${fare && fare.source === 'official' ? 'bg-emerald-100 text-emerald-800' : ''}`}
                   style={fare && fare.source === 'official' ? undefined : { background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
                   <Database size={14} />
                   {fareStatus === 'loading' ? t.fareLoading : fare && fare.source === 'official' ? t.fareOfficial : t.fareEstimate}
                 </div>
-                {fare && fare.ael && <p className="text-xs text-[var(--warn-ink)]">{t.aelNote}</p>}
+                {fare && fare.ael && <p className="text-xs text-[var(--warn-ink)]">{t.aelNote} {t.aelConcession}</p>}
                 <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
                   <Ticket size={14} />{plan.pass === 'free' ? t.passFree : t.passDisc}
                 </div>
-                <p className="text-xs text-[var(--muted)]">{t.fareNote}</p>
+                <div className="space-y-1 text-xs leading-relaxed text-[var(--muted)]">
+                  <p>{t.joyNote}</p>
+                  <p>* {t.joy65Note}</p>
+                  <p>{t.fareNote}</p>
+                </div>
               </div>
             </div>
           )}
