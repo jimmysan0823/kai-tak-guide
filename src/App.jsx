@@ -1,43 +1,41 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)
- * React + Tailwind CSS + lucide-react + framer-motion 單頁應用原型
- * 依賴：npm i react react-dom framer-motion lucide-react   （選用：@supabase/supabase-js）
- * 字型（建議放入 index.html）：Noto Sans HK、Barlow Semi Condensed（Google Fonts）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v3（按官方指南 09/2026 核對）
+ * React + Tailwind CSS + lucide-react + framer-motion + Supabase
+ * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, ArrowRight, Bus, CheckCircle2, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, RotateCcw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+import { AlertTriangle, ArrowLeftRight, ArrowRight, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
+
+const ENV = import.meta.env;
 
 /* =====================================================================
- *  Supabase 雲端資料庫預留層
+ *  Supabase 雲端資料庫
  *  ---------------------------------------------------------------------
- *  部署步驟：
- *   1. npm i @supabase/supabase-js
- *   2. 取消下面兩行註解，並於 .env 填入 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
- *   3. 於 Supabase SQL Editor 建立資料表：
+ *  環境變數（本機放 .env.local；Vercel 放 Settings → Environment Variables）：
+ *    VITE_SUPABASE_URL      Supabase Project URL
+ *    VITE_SUPABASE_ANON_KEY Supabase anon / publishable key
+ *    VITE_ADMIN_EMAIL       Supabase Authentication 內建立的管理員電郵
  *
+ *  資料表（如已建立可略過）：
  *   create table landmarks (
- *     id text primary key,
- *     category text not null,
- *     exit text not null,
- *     name jsonb not null,      -- {zh,en,ko,ja}
- *     "desc" jsonb not null,    -- {zh,en,ko,ja}
- *     tip jsonb,                -- {zh,en,ko,ja}
- *     map_query text,
- *     sort int default 0,
- *     updated_at timestamptz default now()
+ *     id text primary key, category text not null, exit text not null,
+ *     name jsonb not null, "desc" jsonb not null, tip jsonb,
+ *     map_query text, sort int default 0, updated_at timestamptz default now()
  *   );
  *   alter table landmarks enable row level security;
  *   create policy "public read" on landmarks for select using (true);
  *   create policy "admin write" on landmarks for all using (auth.role() = 'authenticated');
  *
- *  ⚠️ 正式環境請改用 Supabase Auth 取代前端寫死的 admin123 密碼。
+ *  未設定環境變數時，系統自動改用瀏覽器本機儲存，管理員密碼為 admin123。
  * ===================================================================== */
-import { createClient } from '@supabase/supabase-js';
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+const SUPABASE_URL = ENV.VITE_SUPABASE_URL;
+const SUPABASE_KEY = ENV.VITE_SUPABASE_ANON_KEY;
+const ADMIN_EMAIL = ENV.VITE_ADMIN_EMAIL || '';
+const supabase = createClient && SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-const LS_KEY = 'kat-landmarks-v1';
+const LS_KEY = 'kat-landmarks-v2';
 const toRow = (x, i) => ({ id: x.id, category: x.category, exit: x.exit, name: x.name, desc: x.desc, tip: x.tip, map_query: x.mapQuery, sort: i });
 const fromRow = (r) => ({ id: r.id, category: r.category, exit: r.exit, name: r.name, desc: r.desc, tip: r.tip || {}, mapQuery: r.map_query });
 
@@ -66,23 +64,51 @@ const db = {
     }
     try { localStorage.setItem(LS_KEY, JSON.stringify(all)); } catch {}
   },
-    async seedIfEmpty(seed) {
+  // 雲端資料表為空時，自動上載預設資料（需已登入管理員）
+  async seedIfEmpty(seed) {
     if (!supabase) return false;
-    const { count } = await supabase.from('landmarks').select('id', { count: 'exact', head: true });
+    const { count, error } = await supabase.from('landmarks').select('id', { count: 'exact', head: true });
+    if (error) throw error;
     if (count === 0) {
-      const { error } = await supabase.from('landmarks').insert(seed.map(toRow));
-      if (error) throw error;
+      const { error: e2 } = await supabase.from('landmarks').insert(seed.map(toRow));
+      if (e2) throw e2;
       return true;
     }
     return false;
   },
-  reset() { try { localStorage.removeItem(LS_KEY); } catch {} },
+  // 以最新預設資料完全取代雲端資料（管理員「同步」按鈕）
+  async replaceAll(seed) {
+    if (supabase) {
+      const { error: e1 } = await supabase.from('landmarks').delete().neq('id', '__none__');
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from('landmarks').insert(seed.map(toRow));
+      if (e2) throw e2;
+    }
+    try { localStorage.setItem(LS_KEY, JSON.stringify(seed)); } catch {}
+  },
 };
 
-
-const MTR_API = 'https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TML&sta=KAT';
+const ADMIN_PASSWORD = 'admin123'; // 只在未連接 Supabase 時使用
+// 先試 Vercel 代理（vercel.json rewrites），再試直接連線
+const MTR_SCHEDULE_URLS = ['/api/mtr-schedule?line=TML&sta=KAT', 'https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TML&sta=KAT'];
+const MTR_FARE_URLS = ['/api/mtr-fares', 'https://opendata.mtr.com.hk/data/mtr_lines_fares.csv'];
 const TICKET_URL = 'https://www.mtr.com.hk/ch/customer/tickets/index.html';
 const mapsUrl = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+
+async function fetchFirst(urls, parse, timeout = 6000) {
+  for (const u of urls) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeout);
+      const res = await fetch(u, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const out = await parse(res);
+      if (out) return out;
+    } catch {}
+  }
+  return null;
+}
 
 /* ============================ 介面文字 ============================ */
 const LANGS = [
@@ -170,8 +196,47 @@ const UI = {
     gtFail: 'Google 翻訳は独自ドメインへのデプロイ後に有効になります', storeLocal: 'このブラウザに保存', storeCloud: 'Supabase に接続済み',
   },
 };
+const UI_EXTRA = {
+  zh: {
+    stationPick: '選擇目的地車站', allLines: '所有路綫', stationSearch: '輸入車站名稱或代號，例如「沙田」、「Central」、「TST」',
+    stops: '{n} 站', dirTo: '往{to}方向', walkTo: '步行至{to}', transferNone: '直達，毋須轉車', transferAt: '轉車站：{list}',
+    fareOfficial: '港鐵開放數據車費', fareEstimate: '估算車費（未能載入官方車費表）', fareLoading: '正在載入官方車費…',
+    aelNote: '機場快綫部分車費為估算，請以港鐵官網為準。', atKat: '你已經身處啟德站。', noStation: '找不到相符車站。', timeNote: '不包括候車時間',
+    csc: '客務中心：位於啟德站大堂中間（閘外區域，洗手間旁邊）', tvm: '自動售票機：可購買單程車票及港鐵都會票，並為八達通增值',
+    sync: '以最新官方出口資料覆蓋', syncConfirm: '將刪除雲端所有地標，並以最新官方出口資料（{n} 個地點）取代。此操作無法復原，確定？',
+    synced: '已同步最新官方出口資料', seeded: '已上載預設資料', email: '管理員電郵', signingIn: '登入中…', stationCount: '{n} 個車站',
+  },
+  en: {
+    stationPick: 'Choose a destination station', allLines: 'All lines', stationSearch: 'Station name or code, e.g. "Sha Tin", "中環", "TST"',
+    stops: '{n} stops', dirTo: 'towards {to}', walkTo: 'Walk to {to}', transferNone: 'Direct, no change needed', transferAt: 'Change at: {list}',
+    fareOfficial: 'MTR Open Data fare', fareEstimate: 'Estimated fare (official fare table unavailable)', fareLoading: 'Loading official fares…',
+    aelNote: 'Airport Express portion is estimated. Check MTR for official fares.', atKat: 'You are already at Kai Tak.', noStation: 'No matching station.', timeNote: 'Excludes waiting time',
+    csc: 'Customer Service Centre: middle of the concourse (unpaid area, next to the toilets)', tvm: 'Ticket machines: single journey tickets, MTR City Saver and Octopus top-up',
+    sync: 'Replace with latest official exit data', syncConfirm: 'This deletes all cloud landmarks and replaces them with the latest official exit data ({n} places). This cannot be undone. Continue?',
+    synced: 'Latest official exit data synced', seeded: 'Default data uploaded', email: 'Admin email', signingIn: 'Signing in…', stationCount: '{n} stations',
+  },
+  ko: {
+    stationPick: '목적지 역 선택', allLines: '전체 노선', stationSearch: '역 이름 또는 코드 입력 (예: "Sha Tin", "TST")',
+    stops: '{n}개 역', dirTo: '{to} 방면', walkTo: '{to}까지 도보', transferNone: '직통, 환승 없음', transferAt: '환승역: {list}',
+    fareOfficial: 'MTR 오픈 데이터 요금', fareEstimate: '예상 요금 (공식 요금표 불러오기 실패)', fareLoading: '공식 요금 불러오는 중…',
+    aelNote: '공항철도 구간 요금은 예상치입니다. MTR 공식 요금을 확인하세요.', atKat: '이미 카이탁역에 있습니다.', noStation: '일치하는 역이 없습니다.', timeNote: '대기 시간 제외',
+    csc: '고객서비스센터: 역 대합실 중앙 (개찰구 밖, 화장실 옆)', tvm: '자동발매기: 편도 승차권, MTR 시티 세이버 구매 및 옥토퍼스 충전',
+    sync: '최신 공식 출구 데이터로 덮어쓰기', syncConfirm: '클라우드의 모든 명소를 삭제하고 최신 공식 출구 데이터({n}곳)로 교체합니다. 되돌릴 수 없습니다. 계속할까요?',
+    synced: '최신 공식 출구 데이터 동기화 완료', seeded: '기본 데이터 업로드 완료', email: '관리자 이메일', signingIn: '로그인 중…', stationCount: '{n}개 역',
+  },
+  ja: {
+    stationPick: '目的地の駅を選択', allLines: '全路線', stationSearch: '駅名またはコードを入力（例：「沙田」「Central」「TST」）',
+    stops: '{n} 駅', dirTo: '{to} 方面', walkTo: '{to} まで徒歩', transferNone: '直通・乗換なし', transferAt: '乗換駅：{list}',
+    fareOfficial: 'MTR オープンデータ運賃', fareEstimate: '推定運賃（公式運賃表を読み込めません）', fareLoading: '公式運賃を読み込み中…',
+    aelNote: 'エアポート・エクスプレス区間の運賃は推定値です。MTR 公式サイトをご確認ください。', atKat: 'すでに啓徳駅にいます。', noStation: '該当する駅がありません。', timeNote: '待ち時間を含みません',
+    csc: 'カスタマーサービスセンター：コンコース中央（改札外、トイレ隣）', tvm: '自動券売機：片道きっぷ・MTR City Saver の購入、オクトパスのチャージ',
+    sync: '最新の公式出口データで上書き', syncConfirm: 'クラウド上の全ランドマークを削除し、最新の公式出口データ（{n} 件）に置き換えます。元に戻せません。続けますか？',
+    synced: '最新の公式出口データを同期しました', seeded: '初期データをアップロードしました', email: '管理者メール', signingIn: 'ログイン中…', stationCount: '{n} 駅',
+  },
+};
+Object.keys(UI_EXTRA).forEach((l) => Object.assign(UI[l], UI_EXTRA[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
-const tx = (obj, lang) => (obj && (obj[lang] || obj.en || obj.zh)) || '';
+const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
 /* ============================ 分類 ============================ */
 const CATS = [
@@ -188,177 +253,335 @@ const CATS = [
 const catById = (id) => CATS.find((c) => c.id === id) || CATS[0];
 const EXITS = ['A', 'B1', 'B2', 'C', 'D', 'B1/B2'];
 
-/* ============================ 地標 Mock Data ============================ */
-// mk(id, 分類, 出口, [名稱 zh,en,ko,ja], [簡介 zh,en,ko,ja], [貼士 zh,en], Google Maps 關鍵字)
-const mk = (id, category, exit, n, d, t, q) => ({
+/* ============================ 地標資料（港鐵啟德站官方指南 09/2026 逐項核對） ============================ */
+// 韓文／日文簡介按分類自動生成，可於 CMS 後台逐項改寫
+const CAT_DESC = {
+  shopping: { ko: '쇼핑·식당 시설', ja: 'ショッピング・飲食施設' },
+  residential: { ko: '주거 단지', ja: '住宅' },
+  education: { ko: '교육 시설', ja: '教育施設' },
+  government: { ko: '정부·공공·복지 시설', ja: '政府・公共・福祉施設' },
+  medical: { ko: '의료 시설', ja: '医療施設' },
+  industry: { ko: '상업·오피스 빌딩', ja: '商業・オフィスビル' },
+  sports: { ko: '스포츠·공원·명소', ja: 'スポーツ・公園・観光スポット' },
+  transport: { ko: '대중교통 환승 시설', ja: '公共交通の乗換施設' },
+};
+const EXIT_TIP = {
+  A: { zh: 'A 出口連接啟德車站廣場及公共運輸交匯處，出站後按街道指示牌前往。', en: 'Exit A leads to Kai Tak Station Square and the public transport interchange. Follow the street signs.', ko: 'A 출구는 카이탁역 광장과 환승센터로 연결됩니다. 거리 표지판을 따라가세요.', ja: 'A出口は啓徳駅前広場と公共交通ターミナルに通じています。案内標識に従ってください。' },
+  B1: { zh: 'B1 出口可經行人天橋前往新蒲崗及東啟德一帶。', en: 'From Exit B1, take the footbridge towards San Po Kong and East Kai Tak.', ko: 'B1 출구에서 보행 육교를 이용해 산포콩·동카이탁 방면으로 이동하세요.', ja: 'B1出口から歩道橋で新蒲崗・東啓徳方面へ。' },
+  B2: { zh: 'B2 出口直達天璽天，亦可經行人天橋前往新蒲崗。', en: 'Exit B2 leads straight to Tin Sai Tin, with a footbridge to San Po Kong.', ko: 'B2 출구는 틴사이틴으로 바로 연결되며, 육교로 산포콩에 갈 수 있습니다.', ja: 'B2出口は天璽天に直結。歩道橋で新蒲崗へも行けます。' },
+  C: { zh: 'C 出口往 AIRSIDE 一帶及新蒲崗東面（太子道東沿線）。', en: 'Exit C leads towards AIRSIDE and the eastern side of San Po Kong along Prince Edward Road East.', ko: 'C 출구는 AIRSIDE 및 산포콩 동쪽(프린스 에드워드 로드 이스트) 방면입니다.', ja: 'C出口はAIRSIDE方面と新蒲崗東側（太子道東沿い）へ。' },
+  D: { zh: 'D 出口往啟德體育園、跑道區方向及 D 出口公共運輸交匯處。', en: 'Exit D leads to Kai Tak Sports Park, the runway area and the Exit D transport interchange.', ko: 'D 출구는 카이탁 스포츠파크, 활주로 지구 및 D 출구 환승센터 방면입니다.', ja: 'D出口は啓徳スポーツパーク、ランウェイ地区、D出口交通ターミナル方面へ。' },
+  'B1/B2': { zh: '可經 B1 或 B2 出口的行人天橋前往。', en: 'Reach it via the footbridge from Exit B1 or B2.', ko: 'B1 또는 B2 출구의 보행 육교를 이용하세요.', ja: 'B1またはB2出口の歩道橋を利用。' },
+};
+
+// mk(id, 分類, 出口, 中文名, 英文名, 中文簡介, 英文簡介, 專屬貼士 [zh, en]?, 地圖關鍵字?)
+const mk = (id, category, exit, zh, en, dZh, dEn, tip, q) => ({
   id, category, exit,
-  name: { zh: n[0], en: n[1], ko: n[2], ja: n[3] },
-  desc: { zh: d[0], en: d[1], ko: d[2], ja: d[3] },
-  tip: { zh: t[0], en: t[1] },
-  mapQuery: q,
+  name: { zh, en, ko: en, ja: zh },
+  desc: {
+    zh: dZh, en: dEn,
+    ko: `${CAT_DESC[category].ko}. 카이탁역 ${exit} 출구 이용.`,
+    ja: `${CAT_DESC[category].ja}。啓徳駅 ${exit} 出口が便利。`,
+  },
+  tip: tip ? { zh: tip[0], en: tip[1] } : { ...EXIT_TIP[exit] },
+  mapQuery: q || `${zh} 香港`,
 });
 
+// 以下 80 個地點按港鐵啟德站官方指南（09/2026）逐項核對：中英文名稱、建議出口、分類
+// 官方「主要大廈」→ 🏭 工商業區；官方「公共服務及設施」→ 按性質分入 🏛️ 政府/公共、🏥 醫療、🚢 體育/景點
 const SEED = [
-  // 🛍️ 文娛/購物
-  mk('airside', 'shopping', 'C', ['AIRSIDE', 'AIRSIDE', 'AIRSIDE', 'AIRSIDE'],
-    ['啟德地標式商場，集購物、餐飲及天台花園。', 'Landmark mall with shopping, dining and a rooftop garden.', '쇼핑·다이닝·옥상 정원을 갖춘 랜드마크 몰.', 'ショッピング・グルメ・屋上庭園を備えたランドマークモール。'],
-    ['C 出口經地下連接通道直達，步行約 3 分鐘。', 'Exit C via the underground link, about 3 min.'], 'AIRSIDE 啟德'),
-  mk('mikiki', 'shopping', 'C', ['MIKIKI', 'MIKIKI', 'MIKIKI', 'MIKIKI'],
-    ['鄰近新蒲崗的社區商場，設超市、戲院及多元食肆。', 'Community mall near San Po Kong with supermarket, cinema and eateries.', '슈퍼마켓·영화관·식당이 있는 커뮤니티 몰.', 'スーパー・映画館・飲食店が揃うモール。'],
-    ['C 出口出站後沿太子道東方向步行約 6 分鐘。', 'From Exit C walk towards Prince Edward Road East, about 6 min.'], 'MIKIKI 新蒲崗'),
-  mk('tst-mall', 'shopping', 'B2', ['天璽天 Mall', 'Tin Sai Tin Mall', '틴사이틴 몰', '天璽天 モール'],
-    ['天璽天屋苑基座商場，提供日常購物及餐飲。', 'Podium mall of the Tin Sai Tin development for daily shopping and dining.', '단지 저층부 몰, 생활 쇼핑과 식당.', '住宅併設モール。日用品・飲食が充実。'],
-    ['B2 出口直達商場入口。', 'Exit B2 leads straight to the mall entrance.'], '天璽天 啟德'),
-  mk('sogo', 'shopping', 'B1', ['雙子匯1期 SOGO', 'SOGO Kai Tak (Twins Phase 1)', '소고 카이탁', 'そごう啓徳'],
-    ['崇光百貨啟德店，涵蓋時裝、美妝及日式超市。', 'SOGO department store with fashion, beauty and a Japanese supermarket.', '패션·뷰티·일본식 슈퍼마켓을 갖춘 백화점.', 'ファッション・コスメ・日系スーパーを備えた百貨店。'],
-    ['B1 出口經有蓋行人道步行約 4 分鐘。', 'Covered walkway from Exit B1, about 4 min.'], 'SOGO 啟德'),
-  mk('twins2', 'shopping', 'A', ['雙子匯2期', 'Twins Phase 2', '트윈스 2기', '雙子匯 第2期'],
-    ['雙子匯第二期商業及零售設施。', 'Phase 2 of the Twins commercial and retail complex.', '트윈스 2기 상업·리테일 시설.', '雙子匯第2期の商業施設。'],
-    ['A 出口出站後右轉，步行約 5 分鐘。', 'Turn right after Exit A, about 5 min.'], '雙子匯 啟德'),
-  mk('ching-long', 'shopping', 'A', ['晴朗商場', 'Ching Long Shopping Centre', '칭롱 쇼핑센터', '晴朗ショッピングセンター'],
-    ['服務啟晴邨及德朗邨居民的屋邨商場，設街市及快餐店。', 'Estate mall for Kai Ching and Tak Long residents, with a wet market.', '공공주택 단지 쇼핑센터, 재래시장 포함.', '公営団地のショッピングセンター。市場あり。'],
-    ['A 出口沿啟德車站廣場步行約 5 分鐘。', 'Walk through Kai Tak Station Square from Exit A, about 5 min.'], '晴朗商場'),
-  mk('food-bay', 'shopping', 'D', ['美食海灣 / 啟德零售館', 'Food Bay / Kai Tak Mall', '푸드 베이 / 카이탁 몰', '美食海灣／啓徳リテール館'],
-    ['啟德體育園內的零售及餐飲區，比賽日人流較多。', 'Retail and dining zone at Kai Tak Sports Park; busy on event days.', '카이탁 스포츠파크 내 상점·식당가.', '啓徳スポーツパーク内の飲食・物販エリア。'],
-    ['D 出口經體育園連接通道步行約 8 分鐘。', 'From Exit D follow the Sports Park link, about 8 min.'], '啟德零售館'),
+  /* ---------- 文娛及購物 Leisure / Shopping（1–11） ---------- */
+  mk('s01-airside', 'shopping', 'C', 'AIRSIDE', 'AIRSIDE', '啟德地標式商場，集購物、餐飲及天台花園。', 'Landmark mall with shopping, dining and a rooftop garden.', null, 'AIRSIDE 啟德'),
+  mk('s02-ching-long', 'shopping', 'A', '晴朗商場', 'Ching Long Shopping Centre', '服務啟晴邨及德朗邨的屋邨商場，設街市及食肆。', 'Estate mall for Kai Ching and Tak Long, with a wet market and eateries.'),
+  mk('s03-cullinan-sky-mall', 'shopping', 'B2', '天璽天Mall', 'Cullinan Sky Mall', '天璽天基座商場，提供日常購物及餐飲。', 'Podium mall of Cullinan Sky for daily shopping and dining.', null, 'Cullinan Sky Mall Kai Tak'),
+  mk('s04-dining-cove', 'shopping', 'D', '美食海灣', 'Dining Cove', '啟德體育園一帶的餐飲區。', 'Dining zone at Kai Tak Sports Park.', null, 'Dining Cove Kai Tak'),
+  mk('s05-kt-mall', 'shopping', 'D', '啟德零售館', 'Kai Tak Mall', '啟德體育園內的零售及餐飲設施，活動日人流較多。', 'Retail and dining at Kai Tak Sports Park; busy on event days.', null, 'Kai Tak Mall'),
+  mk('s06-mikiki', 'shopping', 'C', 'Mikiki', 'Mikiki', '設超市、戲院及多元食肆的商場。', 'Mall with a supermarket, cinema and eateries.', null, 'Mikiki 新蒲崗'),
+  mk('s07-richland-mall', 'shopping', 'A', '麗晶商場', 'Richland Gardens Shopping Centre', '九龍灣麗晶花園的屋苑商場。', 'Shopping centre of Richland Gardens in Kowloon Bay.'),
+  mk('s08-twins1', 'shopping', 'B1', '雙子匯1期(崇光百貨)', 'The Twins Tower I (SOGO)', '崇光百貨啟德店，涵蓋時裝、美妝及超市。', 'SOGO department store with fashion, beauty and a supermarket.', null, 'SOGO 啟德'),
+  mk('s09-twins2', 'shopping', 'A', '雙子匯2期(三道)', 'The Twins Tower II (SNDO)', '雙子匯第二期零售及餐飲設施。', 'Retail and dining in The Twins Tower II.', null, '雙子匯 啟德'),
+  mk('s10-uplace', 'shopping', 'D', 'U PLACE Riverside', 'U PLACE Riverside', '沿啟德河畔的商場。', 'Riverside shopping mall by the Kai Tak River.', null, 'U PLACE Riverside 啟德'),
+  mk('s11-yuexiu', 'shopping', 'C', '越秀廣場', 'Yue Xiu Plaza', '商場及商業大廈。', 'Shopping and commercial building.'),
 
-  // 🏠 住宅屋苑
-  mk('kai-ching', 'residential', 'A', ['啟晴邨', 'Kai Ching Estate', '카이칭 단지', '啓晴邨'],
-    ['啟德首批公共屋邨之一。', 'One of the first public housing estates in Kai Tak.', '카이탁 최초의 공공주택 단지 중 하나.', '啓徳最初期の公営住宅団地。'],
-    ['A 出口經晴朗商場前往，步行約 7 分鐘。', 'From Exit A via Ching Long Shopping Centre, about 7 min.'], '啟晴邨'),
-  mk('tak-long', 'residential', 'A', ['德朗邨', 'Tak Long Estate', '탁롱 단지', '德朗邨'],
-    ['與啟晴邨相鄰的公共屋邨。', 'Public housing estate next to Kai Ching Estate.', '카이칭 단지 옆 공공주택.', '啓晴邨に隣接する公営団地。'],
-    ['A 出口步行約 8 分鐘。', 'About 8 min from Exit A.'], '德朗邨'),
-  mk('kai-long', 'residential', 'A', ['煥然壹居 / 啟朗苑', 'URA Kai Tak Flats / Kai Long Court', '분양주택 / 카이롱 코트', '煥然壹居／啓朗苑'],
-    ['市建局資助出售房屋及居屋屋苑。', 'Subsidised sale flats by URA and HOS court.', '도시재생국 분양주택 및 HOS 단지.', '都市再生局の分譲住宅と公営分譲住宅。'],
-    ['A 出口步行約 10 分鐘。', 'About 10 min from Exit A.'], '啟朗苑'),
-  mk('tst-res', 'residential', 'B2', ['天璽天', 'Tin Sai Tin', '틴사이틴', '天璽天'],
-    ['車站上蓋私人住宅發展項目。', 'Private residential development atop the station area.', '역 상부 민간 주거 단지.', '駅上部の民間住宅。'],
-    ['B2 出口直達住宅大堂。', 'Exit B2 connects to the residential lobby.'], '天璽天 啟德'),
-  mk('henley', 'residential', 'D', ['The Henley / Henley Park', 'The Henley / Henley Park', '더 헨리 / 헨리 파크', 'ザ・ヘンリー／ヘンリーパーク'],
-    ['啟德跑道區沿岸私人住宅。', 'Private residences along the Kai Tak waterfront.', '카이탁 해안가 민간 주택.', '啓徳ウォーターフロントの民間住宅。'],
-    ['D 出口步行約 10 分鐘，或於 D 出口交匯處轉乘小巴。', 'About 10 min from Exit D, or take a minibus from the Exit D PTI.'], 'The Henley Kai Tak'),
-  mk('monaco', 'residential', 'D', ['MONACO / MONACO MARINE', 'MONACO / MONACO MARINE', '모나코 / 모나코 마린', 'MONACO／MONACO MARINE'],
-    ['啟德跑道區私人住宅。', 'Private residences in the Kai Tak runway area.', '카이탁 활주로 지구 민간 주택.', '啓徳ランウェイ地区の民間住宅。'],
-    ['D 出口轉乘 22 號巴士往跑道區方向最方便。', 'Easiest by bus 22 from Exit D towards the runway area.'], 'MONACO 啟德'),
-  mk('lung-yue', 'residential', 'D', ['龍譽 / 天寰', 'Lung Yue / Tin Wan', '룽위 / 틴완', '龍譽／天寰'],
-    ['D 出口一帶的私人住宅項目。', 'Private residential projects near Exit D.', 'D 출구 인근 민간 주택.', 'D出口周辺の民間住宅。'],
-    ['D 出口步行約 6 至 8 分鐘。', '6 to 8 min from Exit D.'], '龍譽 啟德'),
-  mk('choi-yee', 'residential', 'B1', ['采頤花園 / 景泰苑', 'Rhythm Garden / King Tai Court', '리듬 가든 / 킹타이 코트', '采頤花園／景泰苑'],
-    ['新蒲崗區內住宅屋苑。', 'Residential estates in San Po Kong.', '산포콩 주거 단지.', '新蒲崗の住宅団地。'],
-    ['B1 出口經天橋往新蒲崗，步行約 8 分鐘。', 'Footbridge from Exit B1 to San Po Kong, about 8 min.'], '采頤花園'),
+  /* ---------- 主要大廈 Major buildings（12–20） ---------- */
+  mk('m12-aia', 'industry', 'C', '友邦九龍金融中心', 'AIA Financial Centre', '甲級商業大廈。', 'Grade A office tower.'),
+  mk('m13-emsd', 'industry', 'A', '機電工程署總部大樓', 'Electrical and Mechanical Services Department Headquarters', '機電工程署總部，設教育徑供預約參觀。', 'EMSD headquarters, with an education path open by appointment.'),
+  mk('m14-port33', 'industry', 'C', 'PORT 33', 'PORT 33', '商業及辦公大樓。', 'Commercial office building.', null, 'PORT 33 新蒲崗'),
+  mk('m15-skyline', 'industry', 'A', '宏天廣場', 'Skyline Tower', '九龍灣甲級商業大廈。', 'Grade A office tower in Kowloon Bay.'),
+  mk('m16-stelux', 'industry', 'C', '寶光商業中心', 'Stelux House', '商業及辦公大樓。', 'Commercial office building.'),
+  mk('m17-tl-carpark', 'industry', 'A', '德朗邨多層停車場', 'Tak Long Estate Multi-storey Car Park', '德朗邨的多層停車場。', 'Multi-storey car park at Tak Long Estate.'),
+  mk('m18-tid', 'industry', 'C', '工業貿易大樓', 'Trade and Industry Tower', '工業貿易署等政府部門辦公大樓。', 'Government offices including the Trade and Industry Department.'),
+  mk('m19-trium-hub', 'industry', 'B1', '駿星企業中心', 'Trium Hub', '商業及辦公大樓。', 'Commercial office building.', null, 'Trium Hub Kai Tak'),
+  mk('m20-trium-lab', 'industry', 'B1', '駿星創科中心', 'Trium Lab', '創科及辦公大樓。', 'Innovation and office building.', null, 'Trium Lab Kai Tak'),
 
-  // 🏫 學校/教育
-  mk('plk-hsn', 'education', 'A', ['保良局何壽南小學', 'PLK Ho Sau Nam Primary School', 'PLK 호사우남 초등학교', '保良局何壽南小学校'],
-    ['啟德發展區內資助小學。', 'Aided primary school in the Kai Tak development.', '카이탁 개발구역 내 초등학교.', '啓徳開発区の小学校。'],
-    ['A 出口步行約 8 分鐘。', 'About 8 min from Exit A.'], '保良局何壽南小學'),
-  mk('skh-hc', 'education', 'A', ['聖公會聖十架小學', 'SKH Holy Cross Primary School', 'SKH 홀리크로스 초등학교', '聖公会聖十架小学校'],
-    ['聖公會辦學的資助小學。', 'Aided primary school run by the Anglican church.', '성공회 운영 초등학교.', '聖公会運営の小学校。'],
-    ['A 出口步行約 8 分鐘。', 'About 8 min from Exit A.'], '聖公會聖十架小學 啟德'),
-  mk('man-lee', 'education', 'A', ['文理書院(九龍)', 'Man Lee College (Kowloon)', '만리 칼리지 (구룡)', '文理書院（九龍）'],
-    ['區內中學。', 'Secondary school in the district.', '지역 중학교.', '地域の中学校。'],
-    ['A 出口步行約 10 分鐘。', 'About 10 min from Exit A.'], '文理書院(九龍)'),
-  mk('kt-gps', 'education', 'A', ['啟德官立小學', 'Kai Tak Government Primary School', '카이탁 공립 초등학교', '啓徳官立小学校'],
-    ['啟德區官立小學。', 'Government primary school in Kai Tak.', '카이탁 공립 초등학교.', '啓徳の公立小学校。'],
-    ['A 出口步行約 9 分鐘。', 'About 9 min from Exit A.'], '啟德官立小學'),
-  mk('canossa', 'education', 'B1', ['嘉諾撒小學(新蒲崗)', 'Canossa Primary School (San Po Kong)', '카노사 초등학교 (산포콩)', '嘉諾撒小学校（新蒲崗）'],
-    ['新蒲崗的天主教小學。', 'Catholic primary school in San Po Kong.', '산포콩 가톨릭 초등학교.', '新蒲崗のカトリック系小学校。'],
-    ['B1 出口經天橋步行約 7 分鐘。', 'Footbridge from Exit B1, about 7 min.'], '嘉諾撒小學(新蒲崗)'),
+  /* ---------- 公共服務及設施 Public facilities & services（21–40） ---------- */
+  mk('p21-green-tl', 'government', 'A', '綠在德朗', 'GREEN@TAK LONG', '社區回收環保站，收集多類回收物。', 'Community recycling store for various recyclables.'),
+  mk('p22-skh-youth', 'government', 'A', '香港聖公會九龍城青少年綜合服務中心', 'H.K.S.K.H. Kowloon City Children and Youth Integrated Service Centre', '為兒童及青少年提供輔導及活動的社會服務中心。', 'Social services centre offering counselling and activities for young people.'),
+  mk('p23-hkch', 'medical', 'D', '香港兒童醫院', "Hong Kong Children's Hospital", '全港首間專科兒童醫院。', "Hong Kong's dedicated children's hospital.",
+    ['可於 D 出口步行前往；或於 C 出口乘搭 22S，A 出口設復康穿梭巴士站。', 'Walk from Exit D, take route 22S from Exit C, or use the Rehabus feeder stop at Exit A.']),
+  mk('p24-irc', 'government', 'C', '稅務中心', 'Inland Revenue Centre', '稅務局總部所在地。', 'Headquarters of the Inland Revenue Department.'),
+  mk('p25-kt-arena', 'sports', 'D', '啟德體藝館', 'Kai Tak Arena', '室內體育及文娛表演場館。', 'Indoor arena for sports and performances.'),
+  mk('p26-avenue-park', 'sports', 'A', '啟德大道公園', 'Kai Tak Avenue Park', '沿啟德大道而建的休憩公園。', 'Landscaped park along Kai Tak Avenue.'),
+  mk('p27-kt-hall', 'government', 'C', '啟德社區會堂', 'Kai Tak Community Hall', '供區內團體舉辦活動的社區會堂。', 'Community hall for local events and activities.'),
+  mk('p28-ekt-playground', 'sports', 'B1', '東啟德遊樂場', 'Kai Tak East Playground', '設球場及兒童遊樂設施的遊樂場。', "Playground with sports courts and children's play facilities."),
+  mk('p29-ekt-sports', 'sports', 'B1', '東啟德體育館', 'Kai Tak East Sports Centre', '康文署室內體育館。', 'LCSD indoor sports centre.'),
+  mk('p30-kt-hosp', 'medical', 'D', '啟德醫院', 'Kai Tak Hospital', '已正式開幕營運的大型急症醫院。', 'Major acute hospital, now open.',
+    ['可於 D 出口步行前往；或於 C 出口乘搭 22S，A 出口設復康穿梭巴士站。', 'Walk from Exit D, take route 22S from Exit C, or use the Rehabus feeder stop at Exit A.']),
+  mk('p31-ktsp', 'sports', 'D', '啟德體育園', 'Kai Tak Sports Park', '全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.",
+    ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。', 'Covered walkway from Exit D. Allow extra time after big events.'], '啟德體育園'),
+  mk('p32-kt-stadium', 'sports', 'D', '啟德主場館', 'Kai Tak Stadium', '可容納約五萬人、設開合式上蓋的主場館。', 'About 50,000-seat stadium with a retractable roof.'),
+  mk('p33-station-sq', 'sports', 'A', '啟德車站廣場', 'Kai Tak Station Square', '車站上蓋的大型綠化休憩空間。', 'Large landscaped open space above the station.', ['A 出口出站即達。', 'Right outside Exit A.']),
+  mk('p34-kt-ysg', 'sports', 'D', '啟德青年運動場', 'Kai Tak Youth Sports Ground', '設田徑跑道及足球場的運動場。', 'Sports ground with running track and football pitch.'),
+  mk('p35-kb-park', 'sports', 'A', '九龍灣公園', 'Kowloon Bay Park', '設球場及休憩設施的地區公園。', 'District park with sports courts and sitting areas.'),
+  mk('p36-police', 'government', 'B1', '東九龍總區總部及行動基地暨牛頭角分區警署', 'Kowloon East Regional Headquarters and Operational Base-cum-Ngau Tau Kok Divisional Police Station', '東九龍總區警察總部、行動基地及分區警署。', 'Police regional headquarters, operational base and divisional station.'),
+  mk('p37-plk-elderly', 'government', 'A', '保良局溫林美賢耆暉中心', 'PLK Wan Lam May Yin Shirley Neighbourhood Elderly Centre', '為區內長者提供服務的鄰舍中心。', 'Neighbourhood centre serving local elderly residents.'),
+  mk('p38-robert-black', 'medical', 'C', '柏立基普通科門診診所', 'Robert Black General Out-patient Clinic', '醫管局普通科門診。', 'Hospital Authority general out-patient clinic.'),
+  mk('p39-sklr-playground', 'sports', 'C', '石鼓壟道遊樂場', 'Shek Ku Lung Road Playground', '區內休憩及運動場地。', 'Local playground and sports ground.'),
+  mk('p40-twgh-tungpo', 'government', 'C', '東華三院東蒲', 'TWGHs TungPo', '東華三院社會服務單位。', 'Tung Wah Group of Hospitals social service unit.'),
 
-  // 🏛️ 政府/公共
-  mk('tid', 'government', 'C', ['工業貿易大樓', 'Trade and Industry Tower', '공업무역 빌딩', '工業貿易ビル'],
-    ['工業貿易署等政府部門辦公大樓。', 'Government offices including the Trade and Industry Department.', '무역산업부 등 정부 청사.', '工業貿易署などの政府庁舎。'],
-    ['C 出口步行約 5 分鐘。', 'About 5 min from Exit C.'], '工業貿易大樓 啟德'),
-  mk('irc', 'government', 'C', ['稅務中心', 'Inland Revenue Centre', '국세청 센터', '税務センター'],
-    ['稅務局總部所在地。', 'Headquarters of the Inland Revenue Department.', '국세청 본부.', '税務局本部。'],
-    ['C 出口步行約 6 分鐘。', 'About 6 min from Exit C.'], '稅務中心 啟德'),
-  mk('kerhq', 'government', 'B1', ['東九龍總區警察總部', 'Kowloon East Regional Police HQ', '동구룡 경찰본부', '東九龍地区警察本部'],
-    ['東九龍總區警察總部及警署。', 'Regional police headquarters for Kowloon East.', '동구룡 지역 경찰본부.', '東九龍地区の警察本部。'],
-    ['B1 出口步行約 6 分鐘。', 'About 6 min from Exit B1.'], '東九龍總區警察總部'),
-  mk('kt-hall', 'government', 'C', ['啟德社區會堂', 'Kai Tak Community Hall', '카이탁 커뮤니티 홀', '啓徳コミュニティホール'],
-    ['供區內團體舉辦活動的社區會堂。', 'Community hall for local events and activities.', '지역 행사용 커뮤니티 홀.', '地域イベント用のホール。'],
-    ['C 出口步行約 7 分鐘。', 'About 7 min from Exit C.'], '啟德社區會堂'),
-  mk('green-tl', 'government', 'A', ['綠在德朗', 'GREEN@TAK LONG', '그린@탁롱', '綠在德朗'],
-    ['社區回收站，收集多類回收物。', 'Community recycling store for various recyclables.', '지역 재활용 센터.', '地域のリサイクルステーション。'],
-    ['A 出口往德朗邨方向步行約 8 分鐘。', 'Towards Tak Long Estate from Exit A, about 8 min.'], '綠在德朗'),
+  /* ---------- 住宅 Residential（41–63） ---------- */
+  mk('r41-wun-yin', 'residential', 'A', '煥然壹居', '煥然壹居', '市建局資助出售房屋項目。', 'Subsidised sale flats by the Urban Renewal Authority.'),
+  mk('r42-cullinan-sky', 'residential', 'B2', '天璽天', 'Cullinan Sky', '車站旁私人住宅發展項目。', 'Private residential development next to the station.', null, 'Cullinan Sky Kai Tak'),
+  mk('r43-henley-park', 'residential', 'D', 'Henley Park', 'Henley Park', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Henley Park Kai Tak'),
+  mk('r44-k-city', 'residential', 'A', '嘉匯', 'K City', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'K City Kai Tak'),
+  mk('r45-k-summit', 'residential', 'D', '嘉峯匯', 'K.Summit', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'K.Summit Kai Tak'),
+  mk('r46-kai-ching', 'residential', 'A', '啟晴邨', 'Kai Ching Estate', '啟德首批公共屋邨之一。', 'One of the first public housing estates in Kai Tak.'),
+  mk('r47-kai-long', 'residential', 'A', '啟朗苑', 'Kai Long Court', '居者有其屋屋苑。', 'Home Ownership Scheme court.'),
+  mk('r48-king-tai', 'residential', 'B1', '景泰苑', 'King Tai Court', '新蒲崗居屋屋苑。', 'Home Ownership Scheme court in San Po Kong.'),
+  mk('r49-light-ph', 'residential', 'D', '世運道簡約公屋', 'Light Public Housing at Olympic Avenue', '世運道簡約公屋項目。', 'Light public housing on Olympic Avenue.'),
+  mk('r50-monaco', 'residential', 'D', 'Monaco & Grande Monaco', 'Monaco & Grande Monaco', '啟德跑道區私人住宅。', 'Private residences in the Kai Tak runway area.', null, 'Monaco Kai Tak'),
+  mk('r51-monaco-one', 'residential', 'D', 'Monaco One & Monaco Marine', 'Monaco One & Monaco Marine', '啟德跑道區私人住宅。', 'Private residences in the Kai Tak runway area.', null, 'Monaco One Kai Tak'),
+  mk('r52-oasis', 'residential', 'D', 'OASIS KAI TAK', 'OASIS KAI TAK', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'OASIS KAI TAK'),
+  mk('r53-one-kt-1', 'residential', 'A', '啟德1號(I)', 'One Kai Tak (I)', '啟德1號第一期私人住宅。', 'Phase I of the One Kai Tak private development.', null, 'One Kai Tak'),
+  mk('r54-one-kt-2', 'residential', 'D', '啟德1號(II)', 'One Kai Tak (II)', '啟德1號第二期私人住宅。', 'Phase II of the One Kai Tak private development.', null, 'One Kai Tak II'),
+  mk('r55-rhythm', 'residential', 'B1', '采頤花園', 'Rhythm Garden', '新蒲崗私人屋苑。', 'Private estate in San Po Kong.'),
+  mk('r56-richland', 'residential', 'A', '麗晶花園', 'Richland Gardens', '九龍灣大型私人屋苑。', 'Large private estate in Kowloon Bay.'),
+  mk('r57-tak-long', 'residential', 'A', '德朗邨', 'Tak Long Estate', '與啟晴邨相鄰的公共屋邨。', 'Public housing estate next to Kai Ching Estate.'),
+  mk('r58-henley', 'residential', 'D', 'The Henley', 'The Henley', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'The Henley Kai Tak'),
+  mk('r59-latitude', 'residential', 'C', '譽港灣', 'The Latitude', '私人住宅項目。', 'Private residential development.', null, 'The Latitude 譽港灣'),
+  mk('r60-t-loft', 'residential', 'A', '啟德東寓', 'T-Loft@Kai Tak', '啟德住宅項目。', 'Residential project in Kai Tak.', null, 'T-Loft@Kai Tak'),
+  mk('r61-upper-riverbank', 'residential', 'D', '尚珒溋', 'Upper RiverBank', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Upper RiverBank Kai Tak'),
+  mk('r62-vibe-centro', 'residential', 'D', '龍譽', 'Vibe Centro', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Vibe Centro Kai Tak'),
+  mk('r63-victoria-skye', 'residential', 'A', '天寰', 'Victoria Skye', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Victoria Skye Kai Tak'),
 
-  // 🏥 醫療/健康
-  mk('hkch', 'medical', 'D', ['香港兒童醫院', "Hong Kong Children's Hospital", '홍콩 아동병원', '香港小児病院'],
-    ['全港首間專科兒童醫院。', "Hong Kong's dedicated tertiary children's hospital.", '홍콩 최초의 아동 전문 병원.', '香港初の小児専門病院。'],
-    ['D 出口轉乘 22M 巴士或步行約 15 分鐘。', 'Bus 22M from Exit D, or about 15 min on foot.'], '香港兒童醫院'),
-  mk('kt-hosp', 'medical', 'D', ['啟德醫院', 'Kai Tak Hospital', '카이탁 병원', '啓徳病院'],
-    ['已正式開幕營運的大型急症醫院。', 'Major acute hospital, now officially open.', '정식 개원한 대형 급성기 병원.', '正式開院した大型急性期病院。'],
-    ['D 出口轉乘醫院專車或 22M 巴士直達。', 'Hospital shuttle or bus 22M from Exit D.'], '啟德醫院'),
-  mk('robert-black', 'medical', 'C', ['柏立基普通科門診診所', 'Robert Black General Out-patient Clinic', '로버트 블랙 일반외래진료소', 'ロバート・ブラック一般外来診療所'],
-    ['醫管局普通科門診。', 'Hospital Authority general out-patient clinic.', '병원관리국 일반 외래.', '病院管理局の一般外来。'],
-    ['C 出口步行約 10 分鐘。', 'About 10 min from Exit C.'], '柏立基普通科門診診所'),
+  /* ---------- 學校 Schools（64–73） ---------- */
+  mk('e64-canossa', 'education', 'B1', '嘉諾撒小學(新蒲崗)', 'Canossa Primary School (San Po Kong)', '新蒲崗的天主教小學。', 'Catholic primary school in San Po Kong.'),
+  mk('e65-cognitio', 'education', 'A', '文理書院(九龍)', 'Cognitio College (Kowloon)', '區內中學。', 'Secondary school in the district.'),
+  mk('e66-lky', 'education', 'C', '李求恩紀念中學', 'Lee Kau Yan Memorial School', '新蒲崗區內中學。', 'Secondary school in San Po Kong.'),
+  mk('e67-lst-wcm', 'education', 'C', '樂善堂王仲銘中學', 'Lok Sin Tong Wong Chung Ming Secondary School', '樂善堂辦學的中學。', 'Secondary school run by Lok Sin Tong.'),
+  mk('e68-plk-shsn', 'education', 'A', '保良局何壽南小學', 'Po Leung Kuk Stanley Ho Sau Nan Primary School', '啟德發展區內資助小學。', 'Aided primary school in Kai Tak.'),
+  mk('e69-ngwah-pri', 'education', 'C', '天主教伍華小學', 'Ng Wah Catholic Primary School', '天主教小學。', 'Catholic primary school.'),
+  mk('e70-ngwah-sec', 'education', 'C', '天主教伍華中學', 'Ng Wah Catholic Secondary School', '天主教中學。', 'Catholic secondary school.'),
+  mk('e71-skh-hc', 'education', 'A', '聖公會聖十架小學', 'S.K.H. Holy Cross Primary School', '聖公會辦學的資助小學。', 'Aided primary school run by the Anglican church.'),
+  mk('e72-skh-kl', 'education', 'A', '聖公會九龍灣基樂小學', 'SKH Kowloon Bay Kei Lok Primary School', '聖公會辦學的資助小學。', 'Aided primary school run by the Anglican church.'),
+  mk('e73-ymca-kg', 'education', 'A', '港青基信幼稚園(啟晴)', 'YMCA of HK Christian Kindergarten', '位於啟晴邨的幼稚園。', 'Kindergarten at Kai Ching Estate.'),
 
-  // 🏭 工商業區
-  mk('spk', 'industry', 'B1/B2', ['新蒲崗工業區', 'San Po Kong Business Area', '산포콩 상업지구', '新蒲崗ビジネスエリア'],
-    ['工廈及辦公室集中地，亦有不少特色食肆。', 'Industrial and office buildings with plenty of local eateries.', '공업·오피스 빌딩과 맛집이 모인 지역.', '工業ビルとオフィスが集まり、飲食店も多い。'],
-    ['B1 或 B2 出口經行人天橋前往，步行約 5 至 10 分鐘。', 'Via footbridge from Exit B1 or B2, 5 to 10 min.'], '新蒲崗'),
-  mk('aia-kfc', 'industry', 'C', ['友邦九龍金融中心', 'AIA Kowloon Financial Centre', 'AIA 구룡 금융센터', 'AIA九龍金融センター'],
-    ['甲級商業大廈。', 'Grade A office tower.', 'A급 오피스 빌딩.', 'グレードAオフィスビル。'],
-    ['C 出口步行約 5 分鐘。', 'About 5 min from Exit C.'], '友邦九龍金融中心'),
-  mk('emsd', 'industry', 'A', ['機電工程署總部大樓', 'EMSD Headquarters', '전기기계공정서 본부', '機電工程署本部ビル'],
-    ['機電工程署總部，設教育徑供預約參觀。', 'EMSD headquarters with an education path open by appointment.', '전기기계공정서 본부, 예약 견학 가능.', '機電工程署本部。予約制の見学ルートあり。'],
-    ['A 出口步行約 6 分鐘。', 'About 6 min from Exit A.'], '機電工程署總部大樓'),
-
-  // 🚢 體育/景點
-  mk('ktsp', 'sports', 'D', ['啟德體育園', 'Kai Tak Sports Park', '카이탁 스포츠파크', '啓徳スポーツパーク'],
-    ['全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.", '홍콩 최대 스포츠·레저 시설.', '香港最大のスポーツ・レジャー施設。'],
-    ['D 出口有蓋通道直達，大型活動散場時請預留排隊時間。', 'Covered link from Exit D; allow extra time after big events.'], '啟德體育園'),
-  mk('kt-stadium', 'sports', 'D', ['啟德主場館', 'Kai Tak Stadium', '카이탁 스타디움', '啓徳スタジアム'],
-    ['可容納約五萬人的開合式上蓋主場館。', 'About 50,000-seat stadium with a retractable roof.', '개폐식 지붕의 약 5만 석 경기장.', '開閉式屋根の約5万人収容スタジアム。'],
-    ['D 出口步行約 10 分鐘，跟隨體育園指示牌。', 'About 10 min from Exit D; follow Sports Park signs.'], '啟德主場館'),
-  mk('kt-arena', 'sports', 'D', ['啟德體藝館', 'Kai Tak Arena', '카이탁 아레나', '啓徳アリーナ'],
-    ['室內體育及文娛表演場館。', 'Indoor arena for sports and performances.', '실내 스포츠·공연장.', '屋内スポーツ・公演会場。'],
-    ['D 出口步行約 8 分鐘。', 'About 8 min from Exit D.'], '啟德體藝館'),
-  mk('kt-ysg', 'sports', 'D', ['啟德青年運動場', 'Kai Tak Youth Sports Ground', '카이탁 청소년 운동장', '啓徳ユーススポーツグラウンド'],
-    ['設田徑跑道及足球場的公眾運動場。', 'Public ground with running track and football pitch.', '육상 트랙·축구장 공공 운동장.', 'トラックとサッカー場のある競技場。'],
-    ['D 出口步行約 12 分鐘。', 'About 12 min from Exit D.'], '啟德青年運動場'),
-  mk('cruise', 'sports', 'D', ['啟德郵輪碼頭', 'Kai Tak Cruise Terminal', '카이탁 크루즈 터미널', '啓徳クルーズターミナル'],
-    ['國際郵輪碼頭，天台公園可欣賞維港景色。', 'International cruise terminal with a harbour-view rooftop park.', '항구 전망 옥상 공원이 있는 크루즈 터미널.', '港を望む屋上公園のあるクルーズターミナル。'],
-    ['D 出口公共運輸交匯處轉乘 22／22M／22X 巴士。', 'Bus 22, 22M or 22X from the Exit D PTI.'], '啟德郵輪碼頭'),
-  mk('station-sq', 'sports', 'A', ['啟德車站廣場', 'Kai Tak Station Square', '카이탁역 광장', '啓徳駅前広場'],
-    ['車站上蓋的大型綠化休憩空間。', 'Large landscaped open space above the station.', '역 위의 대형 녹지 휴식 공간.', '駅上部の大規模な緑地広場。'],
-    ['A 出口出站即達。', 'Right outside Exit A.'], '啟德車站廣場'),
-
-  // 🚌 接駁交通
-  mk('pti-d', 'transport', 'D', ['D 出口公共運輸交匯處', 'Exit D Public Transport Interchange', 'D 출구 대중교통 환승센터', 'D出口 公共交通ターミナル'],
-    ['往跑道區、郵輪碼頭及九龍城碼頭的巴士與專線小巴總站。', 'Buses and minibuses to the runway area, cruise terminal and Kowloon City Pier.', '활주로 지구·크루즈 터미널·구룡성 부두행 버스·미니버스.', 'ランウェイ地区・クルーズターミナル・九龍城埠頭行きバス。'],
-    ['往郵輪碼頭：22／22M／22X；往九龍城碼頭：可轉乘區內小巴。上車前請核對車頭目的地。', 'Cruise terminal: 22/22M/22X. Kowloon City Pier: local minibus. Check the destination sign before boarding.'], '啟德站 公共運輸交匯處'),
-  mk('pti-a', 'transport', 'A', ['A 出口公共運輸交匯處', 'Exit A Public Transport Interchange', 'A 출구 대중교통 환승센터', 'A出口 公共交通ターミナル'],
-    ['服務啟晴邨、德朗邨一帶的巴士及小巴站。', 'Bus and minibus stops serving Kai Ching and Tak Long estates.', '카이칭·탁롱 단지 버스·미니버스 정류장.', '啓晴邨・德朗邨方面のバス停。'],
-    ['往觀塘、九龍城方向的巴士多於此上落。', 'Most buses towards Kwun Tong and Kowloon City stop here.'], '德朗邨 巴士總站'),
+  /* ---------- 公共交通 Public transport ---------- */
+  mk('t-22s-hosp', 'transport', 'C', '往啟德醫院／香港兒童醫院（22S）', "To Kai Tak Hospital / Hong Kong Children's Hospital (22S)", '於 C 出口附近巴士站乘搭 22S 路線。', 'Take route 22S from the bus stop near Exit C.',
+    ['C 出口巴士站上車，上車前請核對車頭路線號碼。', 'Board at the bus stop by Exit C. Check the route number before boarding.'], '啟德站 C出口 巴士站'),
+  mk('t-rehabus-hosp', 'transport', 'A', '復康穿梭巴士站（往啟德醫院／香港兒童醫院）', "Rehabus Feeder Bus Stop (to Kai Tak Hospital / Hong Kong Children's Hospital)", '為有需要人士提供的復康穿梭巴士站。', 'Rehabus feeder stop for passengers with mobility needs.',
+    ['位於 A 出口，輪椅使用者可經升降機往返街面。', 'At Exit A. Wheelchair users can use the lift between street and concourse.'], '啟德站 A出口'),
+  mk('t-22m-cruise', 'transport', 'A', '往啟德郵輪碼頭（22M）', 'To Kai Tak Cruise Terminal (22M)', '於 A 出口附近巴士站乘搭 22M 路線。', 'Take route 22M from the bus stop near Exit A.',
+    ['A 出口巴士站上車，郵輪抵港日人流較多。', 'Board at the bus stop by Exit A. Expect crowds on cruise days.'], '啟德郵輪碼頭'),
+  mk('t-22d-runway', 'transport', 'A', '往啟德跑道區（22D）', 'To Kai Tak Runway Area (22D)', '於 A 出口附近巴士站乘搭 22D 路線。', 'Take route 22D from the bus stop near Exit A.',
+    ['A 出口巴士站上車。', 'Board at the bus stop by Exit A.'], '啟德跑道區'),
+  mk('t-49-kc-pier', 'transport', 'B1', '往九龍城碼頭（49，只限繁忙時間）', 'To Kowloon City Ferry Pier (49, peak hours only)', '於 B1 出口附近乘搭 49 路線，只於繁忙時間服務。', 'Route 49 from near Exit B1, peak hours only.',
+    ['B1 出口上車；此路線只限繁忙時間行駛，非繁忙時間請改用其他交通。', 'Board near Exit B1. Peak hours only; use other transport at other times.'], '九龍城碼頭'),
+  mk('t-20-courts', 'transport', 'B1', '往九龍城裁判法院／醫管局大樓（20）', "To Kowloon City Magistrates' Courts / Hospital Authority Building (20)", '於 B1 出口附近乘搭 20 路線。', 'Take route 20 from near Exit B1.',
+    ['B1 出口上車。', 'Board near Exit B1.'], '九龍城裁判法院'),
+  mk('t-22x-one-victoria', 'transport', 'A', '往維港1號（22X）', 'To One Victoria (22X)', '於 A 出口附近巴士站乘搭 22X 路線。', 'Take route 22X from the bus stop near Exit A.',
+    ['A 出口巴士站上車。', 'Board at the bus stop by Exit A.'], '維港1號 啟德'),
 ];
 
-/* ============================ 港鐵：目的地與車費 ============================ */
+/* ============================ 港鐵全綫網絡 ============================ */
 const LINES = {
-  TML: { color: '#9A3B26', zh: '屯馬綫', en: 'Tuen Ma Line' },
-  KTL: { color: '#00AB4E', zh: '觀塘綫', en: 'Kwun Tong Line' },
-  EAL: { color: '#5EB6E4', zh: '東鐵綫', en: 'East Rail Line' },
-  TWL: { color: '#E2231A', zh: '荃灣綫', en: 'Tsuen Wan Line' },
-  TCL: { color: '#F7943E', zh: '東涌綫', en: 'Tung Chung Line' },
-  AEL: { color: '#00888A', zh: '機場快綫', en: 'Airport Express' },
-  DRL: { color: '#F550A6', zh: '迪士尼綫', en: 'Disneyland Resort Line' },
-  WALK: { color: '#8A939E', zh: '步行', en: 'Walk' },
+  TML: { color: '#9A3B26', name: { zh: '屯馬綫', en: 'Tuen Ma Line', ko: '툰마선', ja: '屯馬線' } },
+  KTL: { color: '#00AB4E', name: { zh: '觀塘綫', en: 'Kwun Tong Line', ko: '쿤통선', ja: '観塘線' } },
+  TWL: { color: '#E2231A', name: { zh: '荃灣綫', en: 'Tsuen Wan Line', ko: '췬완선', ja: '荃湾線' } },
+  ISL: { color: '#0075C2', name: { zh: '港島綫', en: 'Island Line', ko: '아일랜드선', ja: '港島線' } },
+  EAL: { color: '#5EB6E4', name: { zh: '東鐵綫', en: 'East Rail Line', ko: '이스트레일선', ja: '東鉄線' } },
+  TKL: { color: '#7D499D', name: { zh: '將軍澳綫', en: 'Tseung Kwan O Line', ko: '청관오선', ja: '将軍澳線' } },
+  TCL: { color: '#F7943E', name: { zh: '東涌綫', en: 'Tung Chung Line', ko: '퉁청선', ja: '東涌線' } },
+  SIL: { color: '#BAC429', name: { zh: '南港島綫', en: 'South Island Line', ko: '사우스아일랜드선', ja: '南港島線' } },
+  DRL: { color: '#F550A6', name: { zh: '迪士尼綫', en: 'Disneyland Resort Line', ko: '디즈니랜드 리조트선', ja: 'ディズニーランド・リゾート線' } },
+  AEL: { color: '#00888A', name: { zh: '機場快綫', en: 'Airport Express', ko: '공항철도', ja: 'エアポート・エクスプレス' } },
+  WALK: { color: '#8A939E', name: { zh: '步行', en: 'Walk', ko: '도보', ja: '徒歩' } },
 };
-// pass: 'free' = 全程在全月通加強版範圍內；'disc' = 範圍外路程 75 折
-const DESTS = [
-  { id: 'tst', name: { zh: '尖沙咀', en: 'Tsim Sha Tsui', ko: '침사추이', ja: '尖沙咀' }, oct: 11.2, single: 12.5, mins: 15, pass: 'free',
-    steps: [{ l: 'TML', zh: '往屯門方向至尖東站', en: 'Towards Tuen Mun to East Tsim Sha Tsui' }, { l: 'WALK', zh: '經行人隧道往尖沙咀站，約 5 分鐘', en: 'Subway walk to Tsim Sha Tsui, ~5 min' }] },
-  { id: 'central', name: { zh: '中環', en: 'Central', ko: '센트럴', ja: '中環' }, oct: 16.1, single: 17.5, mins: 22, pass: 'disc',
-    steps: [{ l: 'TML', zh: '往屯門方向至紅磡', en: 'Towards Tuen Mun to Hung Hom' }, { l: 'EAL', zh: '轉東鐵綫往金鐘', en: 'East Rail Line to Admiralty' }, { l: 'TWL', zh: '轉荃灣綫至中環', en: 'Tsuen Wan Line to Central' }] },
-  { id: 'mk', name: { zh: '旺角', en: 'Mong Kok', ko: '몽콕', ja: '旺角' }, oct: 9.4, single: 10.5, mins: 12, pass: 'disc',
-    steps: [{ l: 'TML', zh: '往屯門方向至何文田', en: 'Towards Tuen Mun to Ho Man Tin' }, { l: 'KTL', zh: '轉觀塘綫往調景嶺方向至旺角', en: 'Kwun Tong Line towards Tiu Keng Leng to Mong Kok' }] },
-  { id: 'kt', name: { zh: '觀塘', en: 'Kwun Tong', ko: '쿤통', ja: '観塘' }, oct: 7.6, single: 8.5, mins: 14, pass: 'disc',
-    steps: [{ l: 'TML', zh: '往烏溪沙方向至鑽石山', en: 'Towards Wu Kai Sha to Diamond Hill' }, { l: 'KTL', zh: '轉觀塘綫往調景嶺方向至觀塘', en: 'Kwun Tong Line towards Tiu Keng Leng to Kwun Tong' }] },
-  { id: 'airport', name: { zh: '機場', en: 'Airport', ko: '공항', ja: '空港' }, oct: 70.5, single: 72.0, mins: 48, pass: 'disc',
-    steps: [{ l: 'TML', zh: '往屯門方向至南昌', en: 'Towards Tuen Mun to Nam Cheong' }, { l: 'TCL', zh: '轉東涌綫至青衣', en: 'Tung Chung Line to Tsing Yi' }, { l: 'AEL', zh: '轉機場快綫至機場', en: 'Airport Express to Airport' }] },
-  { id: 'disney', name: { zh: '迪士尼', en: 'Disneyland', ko: '디즈니랜드', ja: 'ディズニー' }, oct: 21.6, single: 23.5, mins: 40, pass: 'disc',
-    steps: [{ l: 'TML', zh: '往屯門方向至南昌', en: 'Towards Tuen Mun to Nam Cheong' }, { l: 'TCL', zh: '轉東涌綫至欣澳', en: 'Tung Chung Line to Sunny Bay' }, { l: 'DRL', zh: '轉迪士尼綫至迪士尼', en: 'Disneyland Resort Line to Disneyland Resort' }] },
+const LINE_ORDER = ['TML', 'KTL', 'TWL', 'ISL', 'EAL', 'TKL', 'TCL', 'SIL', 'DRL', 'AEL'];
+
+// 車站代號 → [中文, 英文]（英文名稱須與港鐵開放數據車費表一致）
+const ST = {
+  KET: ['堅尼地城', 'Kennedy Town'], HKU: ['香港大學', 'HKU'], SYP: ['西營盤', 'Sai Ying Pun'], SHW: ['上環', 'Sheung Wan'], CEN: ['中環', 'Central'],
+  ADM: ['金鐘', 'Admiralty'], WAC: ['灣仔', 'Wan Chai'], CAB: ['銅鑼灣', 'Causeway Bay'], TIH: ['天后', 'Tin Hau'], FOH: ['炮台山', 'Fortress Hill'],
+  NOP: ['北角', 'North Point'], QUB: ['鰂魚涌', 'Quarry Bay'], TAK: ['太古', 'Tai Koo'], SWH: ['西灣河', 'Sai Wan Ho'], SKW: ['筲箕灣', 'Shau Kei Wan'],
+  HFC: ['杏花邨', 'Heng Fa Chuen'], CHW: ['柴灣', 'Chai Wan'],
+  TST: ['尖沙咀', 'Tsim Sha Tsui'], JOR: ['佐敦', 'Jordan'], YMT: ['油麻地', 'Yau Ma Tei'], MOK: ['旺角', 'Mong Kok'], PRE: ['太子', 'Prince Edward'],
+  SSP: ['深水埗', 'Sham Shui Po'], CSW: ['長沙灣', 'Cheung Sha Wan'], LCK: ['荔枝角', 'Lai Chi Kok'], MEF: ['美孚', 'Mei Foo'], LAK: ['荔景', 'Lai King'],
+  KWF: ['葵芳', 'Kwai Fong'], KWH: ['葵興', 'Kwai Hing'], TWH: ['大窩口', 'Tai Wo Hau'], TSW: ['荃灣', 'Tsuen Wan'],
+  WHA: ['黃埔', 'Whampoa'], HOM: ['何文田', 'Ho Man Tin'], SKM: ['石硤尾', 'Shek Kip Mei'], KOT: ['九龍塘', 'Kowloon Tong'], LOF: ['樂富', 'Lok Fu'],
+  WTS: ['黃大仙', 'Wong Tai Sin'], DIH: ['鑽石山', 'Diamond Hill'], CHH: ['彩虹', 'Choi Hung'], KOB: ['九龍灣', 'Kowloon Bay'], NTK: ['牛頭角', 'Ngau Tau Kok'],
+  KWT: ['觀塘', 'Kwun Tong'], LAT: ['藍田', 'Lam Tin'], YAT: ['油塘', 'Yau Tong'], TIK: ['調景嶺', 'Tiu Keng Leng'],
+  TKO: ['將軍澳', 'Tseung Kwan O'], HAH: ['坑口', 'Hang Hau'], POA: ['寶琳', 'Po Lam'], LHP: ['康城', 'LOHAS Park'],
+  HOK: ['香港', 'Hong Kong'], KOW: ['九龍', 'Kowloon'], OLY: ['奧運', 'Olympic'], NAC: ['南昌', 'Nam Cheong'], TSY: ['青衣', 'Tsing Yi'],
+  SUN: ['欣澳', 'Sunny Bay'], TUC: ['東涌', 'Tung Chung'], AIR: ['機場', 'Airport'], AWE: ['博覽館', 'AsiaWorld-Expo'], DIS: ['迪士尼', 'Disneyland Resort'],
+  EXC: ['會展', 'Exhibition Centre'], HUH: ['紅磡', 'Hung Hom'], MKK: ['旺角東', 'Mong Kok East'], TAW: ['大圍', 'Tai Wai'], SHT: ['沙田', 'Sha Tin'],
+  FOT: ['火炭', 'Fo Tan'], UNI: ['大學', 'University'], TAP: ['大埔墟', 'Tai Po Market'], TWO: ['太和', 'Tai Wo'], FAN: ['粉嶺', 'Fanling'],
+  SHS: ['上水', 'Sheung Shui'], LOW: ['羅湖', 'Lo Wu'], LMC: ['落馬洲', 'Lok Ma Chau'],
+  WKS: ['烏溪沙', 'Wu Kai Sha'], MOS: ['馬鞍山', 'Ma On Shan'], HEO: ['恆安', 'Heng On'], TSH: ['大水坑', 'Tai Shui Hang'], SHM: ['石門', 'Shek Mun'],
+  CIO: ['第一城', 'City One'], STW: ['沙田圍', 'Sha Tin Wai'], CKT: ['車公廟', 'Che Kung Temple'], HIK: ['顯徑', 'Hin Keng'], KAT: ['啟德', 'Kai Tak'],
+  SUW: ['宋皇臺', 'Sung Wong Toi'], TKW: ['土瓜灣', 'To Kwa Wan'], ETS: ['尖東', 'East Tsim Sha Tsui'], AUS: ['柯士甸', 'Austin'], TWW: ['荃灣西', 'Tsuen Wan West'],
+  KSR: ['錦上路', 'Kam Sheung Road'], YUL: ['元朗', 'Yuen Long'], LOP: ['朗屏', 'Long Ping'], TIS: ['天水圍', 'Tin Shui Wai'], SIH: ['兆康', 'Siu Hong'], TUM: ['屯門', 'Tuen Mun'],
+  OCP: ['海洋公園', 'Ocean Park'], WCH: ['黃竹坑', 'Wong Chuk Hang'], LET: ['利東', 'Lei Tung'], SOH: ['海怡半島', 'South Horizons'],
+};
+
+// [路綫, 車站序列, 每段行車分鐘（null = 每段 2 分鐘）]；行車時間為估算值
+const SEGMENTS = [
+  ['TML', 'WKS MOS HEO TSH SHM CIO STW CKT TAW HIK DIH KAT SUW TKW HOM HUH ETS AUS NAC MEF TWW KSR YUL LOP TIS SIH TUM', [2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 3, 2, 2, 2, 2, 3, 2, 3, 4, 4, 9, 4, 2, 3, 3, 3]],
+  ['KTL', 'WHA HOM YMT MOK PRE SKM KOT LOF WTS DIH CHH KOB NTK KWT LAT YAT TIK', [2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2]],
+  ['TWL', 'CEN ADM TST JOR YMT MOK PRE SSP CSW LCK MEF LAK KWF KWH TWH TSW', [2, 4, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2]],
+  ['ISL', 'KET HKU SYP SHW CEN ADM WAC CAB TIH FOH NOP QUB TAK SWH SKW HFC CHW', null],
+  ['EAL', 'ADM EXC HUH MKK KOT TAW SHT FOT UNI TAP TWO FAN SHS LOW', [2, 5, 4, 3, 5, 2, 3, 4, 6, 3, 6, 3, 6]],
+  ['EAL', 'SHS LMC', [7]],
+  ['TKL', 'NOP QUB YAT TIK TKO HAH POA', [3, 5, 2, 3, 2, 2]],
+  ['TKL', 'TKO LHP', [4]],
+  ['TCL', 'HOK KOW OLY NAC LAK TSY SUN TUC', [4, 2, 2, 3, 4, 6, 5]],
+  ['SIL', 'ADM OCP WCH LET SOH', [4, 2, 2, 2]],
+  ['DRL', 'SUN DIS', [4]],
+  ['AEL', 'HOK KOW TSY AIR AWE', [3, 9, 12, 2]],
 ];
+const WALKS = [['ETS', 'TST', 6], ['HOK', 'CEN', 7]]; // 站外步行轉乘
+const CROSS = new Set(['ADM-TST', 'TST-ADM', 'EXC-HUH', 'HUH-EXC', 'QUB-YAT', 'YAT-QUB', 'HOK-KOW', 'KOW-HOK']); // 過海路段
+const TRANSFER_MIN = 4;
+// 全月通加強版（尖東 – 烏溪沙）覆蓋車站
+const MPE_ZONE = new Set('ETS HUH HOM TKW SUW KAT DIH HIK TAW CKT STW CIO SHM TSH HEO MOS WKS'.split(' '));
+const AEL_EST = { TSY: 70, KOW: 105, HOK: 115 }; // 機場快綫往機場估算車費（港元）
+
+const STATION_LINES = {};
+const LINE_STATIONS = {};
+SEGMENTS.forEach(([line, str]) => {
+  LINE_STATIONS[line] = LINE_STATIONS[line] || [];
+  str.split(' ').forEach((c) => {
+    if (!LINE_STATIONS[line].includes(c)) LINE_STATIONS[line].push(c);
+    STATION_LINES[c] = STATION_LINES[c] || [];
+    if (!STATION_LINES[c].includes(line)) STATION_LINES[c].push(line);
+  });
+});
+Object.values(STATION_LINES).forEach((ls) => ls.sort((a, b) => LINE_ORDER.indexOf(a) - LINE_ORDER.indexOf(b)));
+const ALL_STATIONS = [];
+LINE_ORDER.forEach((l) => LINE_STATIONS[l].forEach((c) => { if (!ALL_STATIONS.includes(c)) ALL_STATIONS.push(c); }));
+
+const GRAPH = (() => {
+  const adj = {};
+  const add = (a, b, e) => { (adj[a] = adj[a] || []).push({ to: b, ...e }); };
+  SEGMENTS.forEach(([line, str, times], si) => {
+    const cs = str.split(' ');
+    for (let i = 0; i < cs.length - 1; i++) {
+      const t = times ? times[i] : 2;
+      const cross = CROSS.has(`${cs[i]}-${cs[i + 1]}`);
+      add(`${cs[i]}|${line}`, `${cs[i + 1]}|${line}`, { cost: t, kind: 'ride', line, si, fwd: true, cross });
+      add(`${cs[i + 1]}|${line}`, `${cs[i]}|${line}`, { cost: t, kind: 'ride', line, si, fwd: false, cross });
+    }
+  });
+  Object.entries(STATION_LINES).forEach(([s, ls]) => ls.forEach((a) => ls.forEach((b) => {
+    if (a !== b) add(`${s}|${a}`, `${s}|${b}`, { cost: TRANSFER_MIN, kind: 'xfer' });
+  })));
+  WALKS.forEach(([a, b, t]) => STATION_LINES[a].forEach((la) => STATION_LINES[b].forEach((lb) => {
+    add(`${a}|${la}`, `${b}|${lb}`, { cost: t, kind: 'walk' });
+    add(`${b}|${lb}`, `${a}|${la}`, { cost: t, kind: 'walk' });
+  })));
+  return adj;
+})();
+
+const stName = (code, lang) => (ST[code] ? (lang === 'zh' || lang === 'ja' ? ST[code][0] : ST[code][1]) : code);
+const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+
+// Dijkstra：由啟德（屯馬綫）出發，計算最快路線
+const ROUTE_CACHE = {};
+function routeTo(dest) {
+  if (ROUTE_CACHE[dest]) return ROUTE_CACHE[dest];
+  const start = 'KAT|TML';
+  const dist = { [start]: 0 }, prev = {}, done = new Set();
+  let found = null;
+  for (;;) {
+    let u = null, best = Infinity;
+    for (const k in dist) if (!done.has(k) && dist[k] < best) { best = dist[k]; u = k; }
+    if (u === null) break;
+    if (u.split('|')[0] === dest) { found = u; break; }
+    done.add(u);
+    for (const e of GRAPH[u] || []) {
+      const nd = best + e.cost;
+      if (nd < (dist[e.to] ?? Infinity)) { dist[e.to] = nd; prev[e.to] = { from: u, e }; }
+    }
+  }
+  if (!found) return null;
+  const edges = [];
+  for (let k = found; prev[k]; k = prev[k].from) edges.unshift({ ...prev[k].e, a: prev[k].from.split('|')[0], b: k.split('|')[0] });
+  const legs = [];
+  let rideMins = 0, cross = false;
+  for (const e of edges) {
+    if (e.kind === 'xfer') continue;
+    if (e.kind === 'walk') { legs.push({ kind: 'walk', line: 'WALK', from: e.a, to: e.b, mins: e.cost, stops: 0 }); continue; }
+    rideMins += e.cost;
+    if (e.cross) cross = true;
+    const seg = SEGMENTS[e.si][1].split(' ');
+    const toward = e.fwd ? seg[seg.length - 1] : seg[0];
+    const last = legs[legs.length - 1];
+    if (last && last.kind === 'ride' && last.line === e.line && last.to === e.a) {
+      last.to = e.b; last.stops += 1; last.mins += e.cost;
+      if (last.si !== e.si) { last.si = e.si; last.toward = toward; }
+    } else {
+      legs.push({ kind: 'ride', line: e.line, from: e.a, to: e.b, stops: 1, mins: e.cost, toward, si: e.si });
+    }
+  }
+  const transfers = legs.slice(1).filter((l) => l.kind === 'ride').map((l) => l.from);
+  const result = { legs, mins: Math.round(dist[found]), rideMins, cross, transfers };
+  ROUTE_CACHE[dest] = result;
+  return result;
+}
+
+function estimateFare(route) {
+  const oct = Math.round((3.5 + 0.55 * Math.pow(route.rideMins, 0.85) + (route.cross ? 5 : 0)) * 10) / 10;
+  return { oct, single: Math.ceil(oct * 1.1 * 2) / 2 };
+}
+
+// 由啟德往某站（不含機場快綫）的車費：優先使用港鐵開放數據
+function fareTo(code, fares) {
+  const f = fares && fares[normName(ST[code][1])];
+  if (f && !Number.isNaN(f.oct)) return { oct: f.oct, single: f.single || f.oct, source: 'official' };
+  const r = routeTo(code);
+  return r ? { ...estimateFare(r), source: 'estimate' } : null;
+}
+
+function planTrip(dest, fares) {
+  const route = routeTo(dest);
+  if (!route) return null;
+  const aelLeg = route.legs.find((l) => l.line === 'AEL');
+  let fare;
+  if (aelLeg) {
+    const base = aelLeg.from === 'KAT' ? { oct: 0, single: 0, source: 'official' } : fareTo(aelLeg.from, fares);
+    const extra = AEL_EST[aelLeg.from] || 100;
+    fare = { oct: base.oct + extra, single: base.single + extra, source: base.source, ael: true };
+  } else {
+    fare = fareTo(dest, fares);
+  }
+  return { ...route, fare, pass: MPE_ZONE.has(dest) ? 'free' : 'disc' };
+}
+
+function parseFares(text) {
+  const rows = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
+  if (rows.length < 2) return null;
+  const head = rows[0].split(',').map((h) => h.replace(/"/g, '').trim().toUpperCase());
+  const iS = head.indexOf('SRC_STATION_NAME'), iD = head.indexOf('DEST_STATION_NAME');
+  const iO = head.indexOf('OCT_ADT_FARE'), iSg = head.indexOf('SINGLE_ADT_FARE');
+  if (iS < 0 || iD < 0 || iO < 0) return null;
+  const out = {};
+  for (let k = 1; k < rows.length; k++) {
+    const c = rows[k].split(',').map((x) => x.replace(/"/g, '').trim());
+    if (normName(c[iS]) !== 'kaitak') continue;
+    out[normName(c[iD])] = { oct: parseFloat(c[iO]), single: iSg >= 0 ? parseFloat(c[iSg]) : null };
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 const STATION_NAME = {
   WKS: { zh: '烏溪沙', en: 'Wu Kai Sha', ko: '우카이샤', ja: '烏溪沙' },
@@ -408,7 +631,7 @@ function ExitPlate({ exit, size = 'md' }) {
 
 function LineChip({ code, lang }) {
   const l = LINES[code];
-  const label = lang === 'zh' || lang === 'ja' ? l.zh : l.en;
+  const label = tx(l.name, lang);
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white" style={{ background: l.color }}>
       {code === 'WALK' ? <Footprints size={12} /> : <Train size={12} />}
@@ -590,7 +813,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   );
 }
 
-function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onReset }) {
+function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
 
@@ -625,12 +848,9 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRe
           {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={16} /></button>}
         </label>
         {isAdmin && (
-          <div className="flex gap-2">
-            <button onClick={onAdd} className="flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>
-              <Plus size={17} />{t.addNew}
-            </button>
-            <button onClick={onReset} title={t.reset} aria-label={t.reset} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-[var(--muted)] hover:text-[var(--ink)]"><RotateCcw size={16} /></button>
-          </div>
+          <button onClick={onAdd} className="flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>
+            <Plus size={17} />{t.addNew}
+          </button>
         )}
       </div>
 
@@ -687,20 +907,12 @@ function Arrivals({ t, lang }) {
   const [now, setNow] = useState(Date.now());
 
   const load = useCallback(async () => {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 5000);
-      const res = await fetch(MTR_API, { signal: ctrl.signal });
-      clearTimeout(timer);
-      const j = await res.json();
-      const s = j && j.data && j.data['TML-KAT'];
-      if (!s) throw new Error('no data');
-      const conv = (arr) => (arr || []).map((x) => ({ dest: x.dest, plat: x.plat, at: new Date(x.time.replace(' ', 'T') + '+08:00').getTime() }));
-      setLive({ up: conv(s.UP), down: conv(s.DOWN), updated: Date.now() });
-      setStatus('live');
-    } catch {
-      setStatus('sim');
-    }
+    const j = await fetchFirst(MTR_SCHEDULE_URLS, (r) => r.json(), 5000);
+    const s = j && j.data && j.data['TML-KAT'];
+    if (!s) { setStatus('sim'); return; }
+    const conv = (arr) => (arr || []).map((x) => ({ dest: x.dest, plat: x.plat, at: new Date(String(x.time).replace(' ', 'T') + '+08:00').getTime() }));
+    setLive({ up: conv(s.UP), down: conv(s.DOWN), updated: Date.now() });
+    setStatus('live');
   }, []);
 
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
@@ -767,64 +979,149 @@ function Arrivals({ t, lang }) {
   );
 }
 
-function FareCalculator({ t, lang }) {
-  const [sel, setSel] = useState('central');
-  const d = DESTS.find((x) => x.id === sel);
+
+function StationDots({ code }) {
+  return (
+    <span className="flex gap-0.5">
+      {(STATION_LINES[code] || []).map((l) => <span key={l} className="h-2 w-2 rounded-full" style={{ background: LINES[l].color }} />)}
+    </span>
+  );
+}
+
+function StationRouteFinder({ t, lang, fares, fareStatus }) {
+  const [line, setLine] = useState('ALL');
+  const [q, setQ] = useState('');
+  const [dest, setDest] = useState('CEN');
+
+  const list = useMemo(() => {
+    const base = line === 'ALL' ? ALL_STATIONS : LINE_STATIONS[line];
+    const k = q.trim().toLowerCase();
+    if (!k) return base;
+    return base.filter((c) => ST[c][0].includes(q.trim()) || ST[c][1].toLowerCase().includes(k) || c.toLowerCase() === k);
+  }, [line, q]);
+
+  const plan = useMemo(() => (dest === 'KAT' ? null : planTrip(dest, fares)), [dest, fares]);
+  const fare = plan && plan.fare;
+
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Wallet size={19} />{t.fareCalc}</h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">{t.from}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {DESTS.map((x) => (
-          <button key={x.id} onClick={() => setSel(x.id)}
-            className={`rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${sel === x.id ? 'border-transparent text-white' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}
-            style={sel === x.id ? { background: LINES.TML.color } : undefined}>
-            {tx(x.name, lang)}
-          </button>
-        ))}
+      <p className="mt-1 text-sm text-[var(--muted)]">{t.stationPick}</p>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,14rem)_1fr]">
+        <label className="relative">
+          <span className="sr-only">{t.allLines}</span>
+          <select value={line} onChange={(e) => setLine(e.target.value)}
+            className="w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-3 pr-9 text-sm font-semibold outline-none focus:border-[var(--ink)]">
+            <option value="ALL">{t.allLines}</option>
+            {LINE_ORDER.map((l) => <option key={l} value={l}>{tx(LINES[l].name, lang)}</option>)}
+          </select>
+          <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+        </label>
+        <label className="relative">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.stationSearch}
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-9 pr-9 text-sm outline-none focus:border-[var(--ink)]" />
+          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
+        </label>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between text-xs text-[var(--muted)]">
+        <span>{fmt(t.stationCount, { n: list.length })}</span>
+        {line !== 'ALL' && <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: LINES[line].color }} />{tx(LINES[line].name, lang)}</span>}
+      </div>
+
+      <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[var(--border)] p-2">
+        {list.length === 0 ? (
+          <p className="p-4 text-center text-sm text-[var(--muted)]">{t.noStation}</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+            {list.map((c) => {
+              const active = dest === c;
+              return (
+                <button key={c} onClick={() => setDest(c)}
+                  className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${active ? 'text-white' : 'hover:bg-[var(--surface-2)]'}`}
+                  style={active ? { background: LINES.TML.color } : undefined}>
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold">{stName(c, lang)}</span>
+                    <span className={`block truncate text-[11px] ${active ? 'text-white/75' : 'text-[var(--muted)]'}`}>{lang === 'zh' || lang === 'ja' ? ST[c][1] : ST[c][0]}</span>
+                  </span>
+                  <StationDots code={c} />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div key={sel} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
-          className="mt-5 grid gap-5 md:grid-cols-[1.4fr_1fr]">
-          <div>
-            <h3 className="mb-3 text-sm font-semibold text-[var(--muted)]">{t.route}</h3>
-            <ol className="relative">
-              <li className="flex items-center gap-3 pb-4">
-                <ExitPlate exit="KAT" />
-                <span className="text-sm font-bold">{lang === 'zh' || lang === 'ja' ? '啟德' : 'Kai Tak'}</span>
-              </li>
-              {d.steps.map((s, i) => (
-                <li key={i} className="relative flex gap-3 pb-4 pl-[0.85rem]">
-                  <div className="absolute bottom-0 left-[0.85rem] top-0 w-1 -translate-x-1/2 rounded-full" style={{ background: LINES[s.l].color, opacity: s.l === 'WALK' ? 0.5 : 1 }} />
-                  <div className="ml-5 flex flex-col gap-1">
-                    <LineChip code={s.l} lang={lang} />
-                    <span className="text-sm">{lang === 'zh' ? s.zh : s.en}</span>
-                  </div>
-                </li>
-              ))}
-              <li className="flex items-center gap-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full border-[3px] bg-[var(--surface)]" style={{ borderColor: LINES[d.steps[d.steps.length - 1].l].color }} />
-                <span className="text-sm font-bold">{tx(d.name, lang)}</span>
-              </li>
-            </ol>
-          </div>
-          <div className="flex flex-col gap-2">
-            {[
-              { k: t.octopus, v: `$${d.oct.toFixed(1)}`, big: true },
-              { k: t.single, v: `$${d.single.toFixed(1)}` },
-              { k: t.time, v: `${d.mins} ${t.mins}` },
-            ].map((r) => (
-              <div key={r.k} className="flex items-baseline justify-between rounded-lg bg-[var(--surface-2)] px-4 py-3">
-                <span className="text-sm text-[var(--muted)]">{r.k}</span>
-                <span className={`num font-bold ${r.big ? 'text-3xl' : 'text-xl'}`}>{r.v}</span>
+        <motion.div key={dest} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="mt-5">
+          {!plan ? (
+            <p className="rounded-lg bg-[var(--surface-2)] p-4 text-sm">{t.atKat}</p>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-[1.4fr_1fr]">
+              <div>
+                <h3 className="mb-1 text-sm font-semibold text-[var(--muted)]">{t.route}</h3>
+                <p className="mb-3 flex items-center gap-1.5 text-sm font-medium">
+                  <ArrowLeftRight size={14} className="text-[var(--muted)]" />
+                  {plan.transfers.length === 0 ? t.transferNone : fmt(t.transferAt, { list: plan.transfers.map((c) => stName(c, lang)).join('、') })}
+                </p>
+                <ol>
+                  <li className="flex items-center gap-3 pb-3">
+                    <div className="h-6 w-6 rounded-full border-[3px] bg-[var(--surface)]" style={{ borderColor: LINES.TML.color }} />
+                    <span className="text-sm font-bold">{stName('KAT', lang)}</span>
+                  </li>
+                  {plan.legs.map((lg, i) => (
+                    <li key={i} className="relative flex pb-3 pl-3">
+                      <div className="absolute bottom-0 left-3 top-0 w-1 -translate-x-1/2 rounded-full"
+                        style={lg.kind === 'walk' ? { backgroundImage: `repeating-linear-gradient(${LINES.WALK.color} 0 4px, transparent 4px 8px)` } : { background: LINES[lg.line].color }} />
+                      <div className="ml-6 flex flex-col gap-1 py-1">
+                        <LineChip code={lg.line} lang={lang} />
+                        <span className="text-sm">
+                          {lg.kind === 'walk'
+                            ? fmt(t.walkTo, { to: stName(lg.to, lang) })
+                            : <>{fmt(t.dirTo, { to: stName(lg.toward, lang) })} <ArrowRight size={12} className="inline" /> <b>{stName(lg.to, lang)}</b></>}
+                        </span>
+                        <span className="text-xs text-[var(--muted)]">
+                          {lg.kind === 'ride' && `${fmt(t.stops, { n: lg.stops })}, `}{lg.mins} {t.mins}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                  <li className="flex items-center gap-3">
+                    <div className="h-6 w-6 rounded-full border-[3px] bg-[var(--surface)]" style={{ borderColor: LINES[plan.legs[plan.legs.length - 1].line].color }} />
+                    <span className="text-sm font-bold">{stName(dest, lang)}</span>
+                  </li>
+                </ol>
               </div>
-            ))}
-            <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
-              <Ticket size={14} />{d.pass === 'free' ? t.passFree : t.passDisc}
+
+              <div className="flex flex-col gap-2">
+                {[
+                  { k: t.octopus, v: fare ? `$${fare.oct.toFixed(1)}` : '—', big: true },
+                  { k: t.single, v: fare ? `$${fare.single.toFixed(1)}` : '—' },
+                  { k: t.time, v: `${plan.mins} ${t.mins}`, sub: t.timeNote },
+                ].map((r) => (
+                  <div key={r.k} className="rounded-lg bg-[var(--surface-2)] px-4 py-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-[var(--muted)]">{r.k}</span>
+                      <span className={`num font-bold ${r.big ? 'text-3xl' : 'text-xl'}`}>{r.v}</span>
+                    </div>
+                    {r.sub && <p className="mt-0.5 text-right text-[11px] text-[var(--muted)]">{r.sub}</p>}
+                  </div>
+                ))}
+                <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${fare && fare.source === 'official' ? 'bg-emerald-100 text-emerald-800' : ''}`}
+                  style={fare && fare.source === 'official' ? undefined : { background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+                  <Database size={14} />
+                  {fareStatus === 'loading' ? t.fareLoading : fare && fare.source === 'official' ? t.fareOfficial : t.fareEstimate}
+                </div>
+                {fare && fare.ael && <p className="text-xs text-[var(--warn-ink)]">{t.aelNote}</p>}
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
+                  <Ticket size={14} />{plan.pass === 'free' ? t.passFree : t.passDisc}
+                </div>
+                <p className="text-xs text-[var(--muted)]">{t.fareNote}</p>
+              </div>
             </div>
-            <p className="text-xs text-[var(--muted)]">{t.fareNote}</p>
-          </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </section>
@@ -835,24 +1132,39 @@ const TICKETS = {
   zh: [
     { key: 'mp', title: '全月通 加強版（尖東 – 烏溪沙）', flag: '啟德站位處本全月通指定覆蓋範圍內！',
       body: ['有效月份內無限次免費乘搭屯馬綫尖東至烏溪沙段（包括啟德、鑽石山、紅磡等站）。', '連接指定範圍以外的路程（例如過海往金鐘、中環），正價車費可享 75 折（25% OFF）優惠。'] },
-    { key: 'cs', title: '港鐵都會票（MTR City Saver）',
-      body: ['40 天內可乘搭 40 程港鐵市區綫（包括啟德站）。', '適合經常跨區長途乘車的乘客，每程車費固定。'] },
+    { key: 'cs', title: '港鐵都會票（MTR City Saver）', warn: '客務中心不設發售，只可於啟德站「自動售票機」購買',
+      body: ['40 天內可乘搭 40 程港鐵市區綫（包括啟德站）。', '適合經常跨區長途乘車的乘客。'] },
     { key: 'tdp', title: '遊客全日通（Tourist Day Pass）', warn: '啟德站現場不設發售',
-      body: ['請預先於 MTR Mobile App／港鐵官網預訂，或前往設有指定客務中心的主要車站（如機場站、西九龍站、邊境車站）購買。', '購票後可於啟德站正常感應入閘使用。'] },
+      body: ['請預先於 MTR Mobile App／港鐵官網預訂，或前往設有指定客務中心的車站（如機場站、西九龍站、邊境車站）購買。', '購票後可於啟德站正常感應入閘使用。'] },
   ],
   en: [
-    { key: 'mp', title: 'Monthly Pass Extra (East TST – Wu Kai Sha)', flag: 'Kai Tak is inside this pass\'s coverage zone!',
-      body: ['Unlimited free rides on the Tuen Ma Line between East Tsim Sha Tsui and Wu Kai Sha (incl. Kai Tak, Diamond Hill, Hung Hom) during the valid month.', 'Journeys extending beyond the zone (e.g. cross-harbour to Admiralty or Central) get 25% off the regular fare.'] },
-    { key: 'cs', title: 'MTR City Saver',
-      body: ['40 rides on MTR urban lines (incl. Kai Tak) within 40 days.', 'Fixed per-ride cost, good for frequent long-distance riders.'] },
+    { key: 'mp', title: 'Monthly Pass Extra (East TST – Wu Kai Sha)', flag: "Kai Tak is inside this pass's coverage zone!",
+      body: ['Unlimited free rides on the Tuen Ma Line between East Tsim Sha Tsui and Wu Kai Sha (incl. Kai Tak, Diamond Hill, Hung Hom) during the valid month.', 'Journeys beyond the zone (e.g. cross-harbour to Admiralty or Central) get 25% off the regular fare.'] },
+    { key: 'cs', title: 'MTR City Saver', warn: 'Not sold at the Customer Service Centre. Buy it only from the ticket machines at Kai Tak.',
+      body: ['40 rides on MTR urban lines (incl. Kai Tak) within 40 days.', 'Good for frequent long-distance riders.'] },
     { key: 'tdp', title: 'Tourist Day Pass', warn: 'Not sold at Kai Tak Station',
       body: ['Book in advance on the MTR Mobile app or website, or buy at a station with a designated Customer Service Centre (e.g. Airport, West Kowloon, boundary stations).', 'Once bought, tap in at Kai Tak as normal.'] },
   ],
+  ko: [
+    { key: 'mp', title: '월정액 패스 엑스트라 (이스트 침사추이 – 우카이샤)', flag: '카이탁역은 이 패스의 적용 구간에 포함됩니다!',
+      body: ['유효 월 동안 툰마선 이스트 침사추이–우카이샤 구간(카이탁, 다이아몬드힐, 홍함 포함) 무제한 무료 탑승.', '구간 밖으로 이어지는 이동(예: 해저 터널 건너 애드미럴티·센트럴)은 정상 요금의 25% 할인.'] },
+    { key: 'cs', title: 'MTR 시티 세이버 (MTR City Saver)', warn: '고객서비스센터에서는 판매하지 않으며, 카이탁역 자동발매기에서만 구매 가능',
+      body: ['40일 이내 MTR 시내 노선(카이탁역 포함) 40회 탑승.', '장거리 이동이 잦은 승객에게 적합.'] },
+    { key: 'tdp', title: '관광객 1일권 (Tourist Day Pass)', warn: '카이탁역에서는 판매하지 않습니다',
+      body: ['MTR Mobile 앱·공식 웹사이트에서 미리 예약하거나, 지정 고객서비스센터가 있는 역(공항역, 웨스트카오룽역, 국경역 등)에서 구매하세요.', '구매 후 카이탁역에서 평소처럼 개찰구를 통과하면 됩니다.'] },
+  ],
+  ja: [
+    { key: 'mp', title: '全月通 加強版（尖東 – 烏溪沙）', flag: '啓徳駅はこの定期券の対象区間内です！',
+      body: ['有効月内は屯馬線 尖東–烏溪沙 区間（啓徳・鑽石山・紅磡など）が乗り放題。', '区間外へ続く乗車（例：海を渡って金鐘・中環へ）は通常運賃の25%割引。'] },
+    { key: 'cs', title: 'MTR 都会票（MTR City Saver）', warn: 'カスタマーサービスセンターでは販売なし。啓徳駅の自動券売機でのみ購入可能',
+      body: ['40日以内に MTR 市街地路線（啓徳駅を含む）を40回乗車可能。', '長距離移動の多い方におすすめ。'] },
+    { key: 'tdp', title: '旅遊全日通（Tourist Day Pass）', warn: '啓徳駅では販売していません',
+      body: ['MTR Mobile アプリ／公式サイトで事前予約するか、指定カスタマーサービスセンターのある駅（空港駅・西九龍駅・境界駅など）で購入してください。', '購入後は啓徳駅で通常通り改札を通過できます。'] },
+  ],
 };
-TICKETS.ko = TICKETS.en; TICKETS.ja = TICKETS.en;
 
 function TicketZone({ t, lang }) {
-  const list = TICKETS[lang];
+  const list = TICKETS[lang] || TICKETS.en;
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Ticket size={19} />{t.tickets}</h2>
@@ -880,11 +1192,9 @@ function TicketZone({ t, lang }) {
       <div className="mt-4 grid gap-3 rounded-xl bg-[var(--surface-2)] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-bold"><Info size={16} />{t.service}</h3>
-          <ul className="mt-2 space-y-1.5 text-sm">
-            <li className="flex items-center gap-2"><ExitPlate exit="A" /><ExitPlate exit="B" />
-              <span>{lang === 'zh' ? '客務中心：位於大堂近 A／B 出口' : 'Customer Service Centre: concourse near Exits A/B'}</span></li>
-            <li className="flex items-center gap-2"><Ticket size={16} className="mx-1.5" />
-              <span>{lang === 'zh' ? '自動售票機：可購買單程車票及為八達通增值' : 'Ticket machines: single journey tickets and Octopus top-up'}</span></li>
+          <ul className="mt-2 space-y-2 text-sm">
+            <li className="flex items-start gap-2"><Info size={16} className="mt-0.5 shrink-0 text-[var(--muted)]" /><span>{t.csc}</span></li>
+            <li className="flex items-start gap-2"><Ticket size={16} className="mt-0.5 shrink-0 text-[var(--muted)]" /><span>{t.tvm}</span></li>
           </ul>
         </div>
         <a href={TICKET_URL} target="_blank" rel="noopener noreferrer"
@@ -896,11 +1206,25 @@ function TicketZone({ t, lang }) {
   );
 }
 
+let FARE_CACHE = null;
 function MTRGuide({ t, lang }) {
+  const [fares, setFares] = useState(FARE_CACHE);
+  const [fareStatus, setFareStatus] = useState(FARE_CACHE ? 'official' : 'loading');
+  useEffect(() => {
+    if (FARE_CACHE) return;
+    let alive = true;
+    fetchFirst(MTR_FARE_URLS, async (r) => parseFares(await r.text()), 10000).then((f) => {
+      if (!alive) return;
+      FARE_CACHE = f;
+      setFares(f);
+      setFareStatus(f ? 'official' : 'estimate');
+    });
+    return () => { alive = false; };
+  }, []);
   return (
     <div className="space-y-4">
       <Arrivals t={t} lang={lang} />
-      <FareCalculator t={t} lang={lang} />
+      <StationRouteFinder t={t} lang={lang} fares={fares} fareStatus={fareStatus} />
       <TicketZone t={t} lang={lang} />
     </div>
   );
@@ -908,29 +1232,48 @@ function MTRGuide({ t, lang }) {
 
 /* ============================ 管理員 Modal ============================ */
 function LoginModal({ open, onClose, onSuccess, t }) {
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [pw, setPw] = useState('');
   const [err, setErr] = useState(false);
-  useEffect(() => { if (open) { setPw(''); setErr(false); } }, [open]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) { setPw(''); setErr(false); setBusy(false); } }, [open]);
+
   const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    let ok = false;
     if (supabase) {
-      const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: pw });
-      if (error) { setErr(true); return; }
-    } else if (pw !== ADMIN_PASSWORD) { setErr(true); return; }
-    onSuccess(); onClose();
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pw });
+        ok = !error;
+      } catch { ok = false; }
+    } else {
+      ok = pw === ADMIN_PASSWORD;
+    }
+    setBusy(false);
+    if (ok) { onSuccess(); onClose(); } else setErr(true);
   };
+  const inputCls = 'w-full rounded-lg border bg-[var(--surface-2)] px-3 py-2.5 outline-none';
+
   return (
     <Modal open={open} onClose={onClose}>
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-bold"><Lock size={18} />{t.admin}</h2>
         <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
       </div>
-      <motion.div animate={err ? { x: [0, -8, 8, -5, 5, 0] } : {}} transition={{ duration: 0.35 }}>
+      <motion.div animate={err ? { x: [0, -8, 8, -5, 5, 0] } : {}} transition={{ duration: 0.35 }} className="mt-4 space-y-2">
+        {supabase && !ADMIN_EMAIL && (
+          <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(false); }} placeholder={t.email}
+            className={`${inputCls} border-[var(--border)] focus:border-[var(--ink)]`} />
+        )}
         <input type="password" autoFocus value={pw} onChange={(e) => { setPw(e.target.value); setErr(false); }}
           onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder={t.pwPh}
-          className={`mt-4 w-full rounded-lg border bg-[var(--surface-2)] px-3 py-2.5 outline-none ${err ? 'border-red-500' : 'border-[var(--border)] focus:border-[var(--ink)]'}`} />
+          className={`${inputCls} ${err ? 'border-red-500' : 'border-[var(--border)] focus:border-[var(--ink)]'}`} />
       </motion.div>
       {err && <p className="mt-2 text-sm text-red-600">{t.pwWrong}</p>}
-      <button onClick={submit} className="mt-4 w-full rounded-lg py-2.5 font-bold text-white" style={{ background: LINES.TML.color }}>{t.login}</button>
+      <button onClick={submit} disabled={busy} className="mt-4 w-full rounded-lg py-2.5 font-bold text-white disabled:opacity-60" style={{ background: LINES.TML.color }}>
+        {busy ? t.signingIn : t.login}
+      </button>
     </Modal>
   );
 }
@@ -1014,18 +1357,18 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
   );
 }
 
-function ConfirmModal({ item, onClose, onConfirm, t, lang }) {
+function ConfirmModal({ request, onClose, t }) {
   return (
-    <Modal open={!!item} onClose={onClose}>
-      {item && (
+    <Modal open={!!request} onClose={onClose}>
+      {request && (
         <>
           <div className="flex items-start gap-3">
-            <div className="rounded-full bg-red-100 p-2 text-red-600"><Trash2 size={18} /></div>
-            <p className="text-sm leading-relaxed">{fmt(t.confirmDel, { name: tx(item.name, lang) })}</p>
+            <div className="rounded-full bg-red-100 p-2 text-red-600"><AlertTriangle size={18} /></div>
+            <p className="text-sm leading-relaxed">{request.message}</p>
           </div>
           <div className="mt-5 flex justify-end gap-2">
             <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
-            <button onClick={() => onConfirm(item)} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">{t.del}</button>
+            <button onClick={request.action} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">{request.label}</button>
           </div>
         </>
       )}
@@ -1042,7 +1385,7 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [toDelete, setToDelete] = useState(null);
+  const [confirmReq, setConfirmReq] = useState(null);
   const [toast, setToast] = useState('');
   const t = UI[lang];
 
@@ -1060,10 +1403,20 @@ function App() {
   const handleDelete = async (item) => {
     const next = items.filter((x) => x.id !== item.id);
     setItems(next);
-    setToDelete(null);
+    setConfirmReq(null);
     try { await db.remove(item.id, next); setToast(t.deleted); } catch (e) { setToast(String(e.message || e)); }
   };
-  const handleReset = () => { db.reset(); setItems(SEED); setToast(t.reset); };
+  const handleSync = async () => {
+    setConfirmReq(null);
+    try { await db.replaceAll(SEED); setItems(SEED); setToast(t.synced); } catch (e) { setToast(String(e.message || e)); }
+  };
+  const askDelete = (item) => setConfirmReq({ message: fmt(t.confirmDel, { name: tx(item.name, lang) }), label: t.del, action: () => handleDelete(item) });
+  const askSync = () => setConfirmReq({ message: fmt(t.syncConfirm, { n: SEED.length }), label: t.sync, action: handleSync });
+  const handleLoginSuccess = async () => {
+    setIsAdmin(true);
+    try { if (await db.seedIfEmpty(SEED)) { setItems(SEED); setToast(t.seeded); } } catch (e) { setToast(String(e.message || e)); }
+  };
+  const handleLogout = () => { if (supabase) supabase.auth.signOut(); setIsAdmin(false); };
 
   const TABS = [
     { id: 'land', label: t.tabLand, Icon: MapPin },
@@ -1073,14 +1426,19 @@ function App() {
   return (
     <div className="min-h-full bg-[var(--bg)] text-[var(--ink)]">
       <style>{GLOBAL_CSS}</style>
-      <Header lang={lang} setLang={setLang} t={t} isAdmin={isAdmin} onAdminClick={() => setLoginOpen(true)} onLogout={() => { supabase?.auth.signOut(); setIsAdmin(false); }} />
+      <Header lang={lang} setLang={setLang} t={t} isAdmin={isAdmin} onAdminClick={() => setLoginOpen(true)} onLogout={handleLogout} />
 
       <AnimatePresence>
         {isAdmin && (
           <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden bg-[var(--sign)] text-[#111418]">
             <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2 text-sm font-semibold">
               <span className="flex items-center gap-2"><Unlock size={15} />{t.adminOn}</span>
-              <span className="flex items-center gap-1.5 text-xs font-medium"><Database size={13} />{db.mode === 'cloud' ? t.storeCloud : t.storeLocal}</span>
+              <span className="flex flex-wrap items-center justify-end gap-3">
+                <span className="flex items-center gap-1.5 text-xs font-medium"><Database size={13} />{db.mode === 'cloud' ? t.storeCloud : t.storeLocal}</span>
+                <button onClick={askSync} className="flex items-center gap-1.5 rounded-md bg-[#111418] px-2.5 py-1 text-xs font-bold text-[var(--sign)]">
+                  <RefreshCw size={13} />{t.sync}
+                </button>
+              </span>
             </div>
           </motion.div>
         )}
@@ -1105,8 +1463,7 @@ function App() {
               <LandmarkPortal items={items} lang={lang} t={t} isAdmin={isAdmin}
                 onAdd={() => { setEditing(null); setFormOpen(true); }}
                 onEdit={(it) => { setEditing(it); setFormOpen(true); }}
-                onDelete={(it) => setToDelete(it)}
-                onReset={handleReset} />
+                onDelete={askDelete} />
             ) : (
               <MTRGuide t={t} lang={lang} />
             )}
@@ -1118,9 +1475,9 @@ function App() {
         Kai Tak Transit &amp; Landmark Guide（原型 Prototype）
       </footer>
 
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} t={t}onSuccess={async () => {setIsAdmin(true);try { if (await db.seedIfEmpty(SEED)) setToast('已上載預設資料'); } catch (e) { setToast(e.message); }}} />
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={handleLoginSuccess} t={t} />
       <LandmarkForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} onSave={handleSave} t={t} lang={lang} />
-      <ConfirmModal item={toDelete} onClose={() => setToDelete(null)} onConfirm={handleDelete} t={t} lang={lang} />
+      <ConfirmModal request={confirmReq} onClose={() => setConfirmReq(null)} t={t} />
 
       <AnimatePresence>
         {toast && (

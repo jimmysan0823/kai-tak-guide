@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/mtr-schedule", "destination": "https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php" },
+    { "source": "/api/mtr-fares", "destination": "https://opendata.mtr.com.hk/data/mtr_lines_fares.csv" }
+  ]
+}
