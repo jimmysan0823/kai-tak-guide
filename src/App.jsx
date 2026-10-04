@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v4（手機版標題、全類別車費、車票連結）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v5（Google 翻譯改用原生下拉選單）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  */
@@ -656,7 +656,14 @@ const GLOBAL_CSS = `
 body{ background:var(--bg); color:var(--ink); margin:0; }
 .num{ font-family:'Barlow Semi Condensed','Noto Sans HK',sans-serif; font-feature-settings:'tnum'; }
 :focus-visible{ outline:3px solid var(--sign); outline-offset:2px; border-radius:6px; }
-.goog-te-gadget{ font-size:0 !important; } .goog-te-gadget .goog-te-combo{ font-size:13px; padding:4px 6px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--ink); }
+/* Google 翻譯：改用原生下拉選單，由手機／瀏覽器自行顯示選項，不會超出畫面 */
+#google_translate_element .goog-te-gadget{ font-size:0 !important; line-height:0; color:transparent !important; white-space:nowrap; }
+#google_translate_element .goog-te-gadget > span, #google_translate_element .goog-logo-link{ display:none !important; }
+#google_translate_element .goog-te-combo{ margin:0 !important; width:9.5rem; max-width:100%; font-size:13px; line-height:1.2; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,.25); background:#223041; color:#fff; cursor:pointer; }
+@media (max-width: 767px){ #google_translate_element .goog-te-combo{ width:7.25rem; } }
+/* 隱藏 Google 翻譯頂部橫額及懸浮提示，避免頁面被推低或遮擋 */
+.goog-te-banner-frame, iframe.skiptranslate, #goog-gt-tt, .goog-te-balloon-frame, .VIpgJd-ZVi9od-ORHb-OEVmcd, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-yAWNEb-L7lbkb{ display:none !important; }
+body{ top:0 !important; position:static !important; }
 @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 `;
 
@@ -717,7 +724,7 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
     window.googleTranslateElementInit = () => {
       try {
         new window.google.translate.TranslateElement(
-          { pageLanguage: 'zh-TW', autoDisplay: false, layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE },
+          { pageLanguage: 'zh-TW', autoDisplay: false }, // 預設版面 = 原生下拉選單
           'google_translate_element'
         );
         setGt('ready');
@@ -776,8 +783,8 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
               ))}
             </div>
             <div className="flex shrink-0 items-center gap-1" title={gt === 'error' ? t.gtFail : 'Google Translate'}>
-              <Globe size={16} className="text-white/60" />
-              <div id="google_translate_element" className={gt === 'ready' ? '' : 'hidden'} />
+              <Globe size={16} className="shrink-0 text-white/60" />
+              <div id="google_translate_element" className={gt === 'ready' ? 'min-w-0' : 'hidden'} />
               {gt !== 'ready' && <span className="hidden text-[11px] text-white/45 lg:inline">{gt === 'error' ? 'Google' : '…'}</span>}
             </div>
           </div>
