@@ -1,12 +1,13 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v5（Google 翻譯改用原生下拉選單）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v6
+ * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  */
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
-import { AlertTriangle, ArrowLeftRight, ArrowRight, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
 
 const ENV = import.meta.env;
 
@@ -255,6 +256,49 @@ const UI_FARES = {
 };
 Object.keys(UI_FARES).forEach((l) => Object.assign(UI[l], UI_FARES[l]));
 const money = (v) => (v == null ? '—' : `$${v.toFixed(1)}`);
+const UI_V6 = {
+  zh: {
+    tabBus: '巴士實時到站', busTitle: '啟德站附近巴士實時到站', busKey: '主要接駁路線', busAll: '全部路線', busLoading: '正在載入巴士資料…',
+    busLive: '九巴／城巴開放數據', busOfflineShort: '未能連線', busOffline: '暫時未能連接巴士開放數據。部署到你的網站後即可顯示實時班次，下面先列出港鐵官方指南的接駁路線。',
+    busNone: '附近車站暫時沒有符合的路線資料。', busNoEta: '暫無班次', busArriving: '即將抵達', busMin: '{n} 分鐘', busTo: '往 {dest}', busDist: '約 {m} 米',
+    busNew: '新路線', busKmb: '九巴', busCtb: '城巴', busLeaflet: '港鐵官方指南：接駁路線及上車出口',
+    busSource: '資料來源：九巴及城巴實時到站開放數據（DATA.GOV.HK），每 30 秒更新；系統會自動搜尋啟德站約 650 米範圍內的巴士站，新開辦的路線及巴士站會自動出現。專線小巴暫未納入。',
+    syncBanner: '官方指南資料有 {n} 項更新', syncReview: '檢視並同步', syncAdded: '新增', syncChanged: '修改', syncRemoved: '移除',
+    syncApply: '確認同步', syncNote: '你在後台自行新增的地點會保留；曾被修改過的官方地點會還原為最新官方資料。', syncNothing: '雲端資料已是最新版本。',
+    liveUpdated: '地標資料已自動更新', dataVersion: '資料版本：{v}',
+  },
+  en: {
+    tabBus: 'Live bus ETA', busTitle: 'Live bus arrivals near Kai Tak Station', busKey: 'Main feeder routes', busAll: 'All routes', busLoading: 'Loading bus data…',
+    busLive: 'KMB / Citybus Open Data', busOfflineShort: 'Offline', busOffline: 'Bus open data is unavailable right now. Live ETAs appear once deployed on your site. The feeder routes from the MTR leaflet are listed below.',
+    busNone: 'No matching routes at nearby stops right now.', busNoEta: 'No service', busArriving: 'Arriving', busMin: '{n} min', busTo: 'To {dest}', busDist: '~{m} m',
+    busNew: 'New', busKmb: 'KMB', busCtb: 'Citybus', busLeaflet: 'MTR leaflet: feeder routes and boarding exits',
+    busSource: 'Source: KMB and Citybus real-time ETA open data (DATA.GOV.HK), refreshed every 30 seconds. Stops within about 650 m of Kai Tak Station are found automatically, so new routes and stops appear on their own. Green minibuses are not included yet.',
+    syncBanner: '{n} updates from the official leaflet', syncReview: 'Review and sync', syncAdded: 'Added', syncChanged: 'Changed', syncRemoved: 'Removed',
+    syncApply: 'Sync now', syncNote: 'Places you added yourself are kept. Official places you edited are restored to the latest official data.', syncNothing: 'Cloud data is already up to date.',
+    liveUpdated: 'Landmark data updated automatically', dataVersion: 'Data version: {v}',
+  },
+  ko: {
+    tabBus: '버스 실시간 도착', busTitle: '카이탁역 주변 버스 실시간 도착', busKey: '주요 연계 노선', busAll: '전체 노선', busLoading: '버스 정보 불러오는 중…',
+    busLive: 'KMB / 시티버스 오픈 데이터', busOfflineShort: '연결 불가', busOffline: '지금은 버스 오픈 데이터에 연결할 수 없습니다. 사이트에 배포하면 실시간 도착 정보가 표시됩니다. 아래는 MTR 공식 안내의 연계 노선입니다.',
+    busNone: '주변 정류장에 해당 노선 정보가 없습니다.', busNoEta: '운행 없음', busArriving: '곧 도착', busMin: '{n}분', busTo: '{dest} 방면', busDist: '약 {m}m',
+    busNew: '신규', busKmb: 'KMB', busCtb: '시티버스', busLeaflet: 'MTR 공식 안내: 연계 노선 및 승차 출구',
+    busSource: '출처: KMB·시티버스 실시간 도착 오픈 데이터(DATA.GOV.HK), 30초마다 갱신. 카이탁역 반경 약 650m 정류장을 자동 검색하므로 신규 노선·정류장이 자동으로 표시됩니다. 미니버스는 아직 포함되지 않습니다.',
+    syncBanner: '공식 안내 데이터 업데이트 {n}건', syncReview: '확인 후 동기화', syncAdded: '추가', syncChanged: '변경', syncRemoved: '삭제',
+    syncApply: '동기화', syncNote: '직접 추가한 장소는 유지되며, 수정한 공식 장소는 최신 공식 데이터로 복원됩니다.', syncNothing: '클라우드 데이터가 최신입니다.',
+    liveUpdated: '명소 데이터가 자동 업데이트되었습니다', dataVersion: '데이터 버전: {v}',
+  },
+  ja: {
+    tabBus: 'バス リアルタイム', busTitle: '啓徳駅周辺のバス リアルタイム到着', busKey: '主な連絡路線', busAll: '全路線', busLoading: 'バス情報を読み込み中…',
+    busLive: 'KMB／シティバス オープンデータ', busOfflineShort: '接続不可', busOffline: '現在バスのオープンデータに接続できません。ご自身のサイトにデプロイするとリアルタイム到着情報が表示されます。下記は MTR 公式案内の連絡路線です。',
+    busNone: '周辺の停留所に該当する路線情報がありません。', busNoEta: '運行なし', busArriving: 'まもなく到着', busMin: '{n} 分', busTo: '{dest} 行き', busDist: '約 {m} m',
+    busNew: '新路線', busKmb: 'KMB', busCtb: 'シティバス', busLeaflet: 'MTR 公式案内：連絡路線と乗車出口',
+    busSource: '出典：KMB・シティバスのリアルタイム到着オープンデータ（DATA.GOV.HK）、30秒ごとに更新。啓徳駅から約650m以内の停留所を自動検索するため、新路線・新停留所も自動で表示されます。ミニバスは未対応です。',
+    syncBanner: '公式案内データの更新 {n} 件', syncReview: '確認して同期', syncAdded: '追加', syncChanged: '変更', syncRemoved: '削除',
+    syncApply: '同期する', syncNote: '自分で追加した場所は保持され、編集した公式の場所は最新の公式データに戻ります。', syncNothing: 'クラウドのデータは最新です。',
+    liveUpdated: 'ランドマーク情報が自動更新されました', dataVersion: 'データ版：{v}',
+  },
+};
+Object.keys(UI_V6).forEach((l) => Object.assign(UI[l], UI_V6[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -268,10 +312,11 @@ const CATS = [
   { id: 'medical', Icon: HeartPulse, emoji: '🏥', label: { zh: '醫療/健康', en: 'Medical', ko: '의료·건강', ja: '医療・健康' } },
   { id: 'industry', Icon: Factory, emoji: '🏭', label: { zh: '工商業區', en: 'Business', ko: '상공업지구', ja: '商工業エリア' } },
   { id: 'sports', Icon: Ship, emoji: '🚢', label: { zh: '體育/景點', en: 'Sports & Sights', ko: '스포츠·명소', ja: 'スポーツ・観光' } },
+  { id: 'bank', Icon: Banknote, emoji: '🏦', label: { zh: '銀行/找換店', en: 'Banks & FX', ko: '은행·환전', ja: '銀行・両替' } },
   { id: 'transport', Icon: Bus, emoji: '🚌', label: { zh: '接駁交通', en: 'Transport', ko: '환승 교통', ja: '交通乗換' } },
 ];
 const catById = (id) => CATS.find((c) => c.id === id) || CATS[0];
-const EXITS = ['A', 'B1', 'B2', 'C', 'D', 'B1/B2'];
+const EXITS = ['A', 'B1', 'B2', 'C', 'D', 'B1/B2', 'KAT']; // KAT = 車站大堂（毋須出站）
 
 /* ============================ 地標資料（港鐵啟德站官方指南 09/2026 逐項核對） ============================ */
 // 韓文／日文簡介按分類自動生成，可於 CMS 後台逐項改寫
@@ -284,6 +329,7 @@ const CAT_DESC = {
   industry: { ko: '상업·오피스 빌딩', ja: '商業・オフィスビル' },
   sports: { ko: '스포츠·공원·명소', ja: 'スポーツ・公園・観光スポット' },
   transport: { ko: '대중교통 환승 시설', ja: '公共交通の乗換施設' },
+  bank: { ko: '은행·ATM·외화 서비스', ja: '銀行・ATM・外貨サービス' },
 };
 const EXIT_TIP = {
   A: { zh: 'A 出口連接啟德車站廣場及公共運輸交匯處，出站後按街道指示牌前往。', en: 'Exit A leads to Kai Tak Station Square and the public transport interchange. Follow the street signs.', ko: 'A 출구는 카이탁역 광장과 환승센터로 연결됩니다. 거리 표지판을 따라가세요.', ja: 'A出口は啓徳駅前広場と公共交通ターミナルに通じています。案内標識に従ってください。' },
@@ -291,6 +337,7 @@ const EXIT_TIP = {
   B2: { zh: 'B2 出口直達天璽天，亦可經行人天橋前往新蒲崗。', en: 'Exit B2 leads straight to Tin Sai Tin, with a footbridge to San Po Kong.', ko: 'B2 출구는 틴사이틴으로 바로 연결되며, 육교로 산포콩에 갈 수 있습니다.', ja: 'B2出口は天璽天に直結。歩道橋で新蒲崗へも行けます。' },
   C: { zh: 'C 出口往 AIRSIDE 一帶及新蒲崗東面（太子道東沿線）。', en: 'Exit C leads towards AIRSIDE and the eastern side of San Po Kong along Prince Edward Road East.', ko: 'C 출구는 AIRSIDE 및 산포콩 동쪽(프린스 에드워드 로드 이스트) 방면입니다.', ja: 'C出口はAIRSIDE方面と新蒲崗東側（太子道東沿い）へ。' },
   D: { zh: 'D 出口往啟德體育園、跑道區方向及 D 出口公共運輸交匯處。', en: 'Exit D leads to Kai Tak Sports Park, the runway area and the Exit D transport interchange.', ko: 'D 출구는 카이탁 스포츠파크, 활주로 지구 및 D 출구 환승센터 방면입니다.', ja: 'D出口は啓徳スポーツパーク、ランウェイ地区、D出口交通ターミナル方面へ。' },
+  KAT: { zh: '位於啟德站大堂閘外，毋須出站。', en: 'In the station concourse outside the gates; no need to exit.', ko: '역 대합실 개찰구 밖에 있어 출구로 나갈 필요가 없습니다.', ja: '駅コンコースの改札外にあり、出口を出る必要はありません。' },
   'B1/B2': { zh: '可經 B1 或 B2 出口的行人天橋前往。', en: 'Reach it via the footbridge from Exit B1 or B2.', ko: 'B1 또는 B2 출구의 보행 육교를 이용하세요.', ja: 'B1またはB2出口の歩道橋を利用。' },
 };
 
@@ -411,6 +458,22 @@ const SEED = [
     ['B1 出口上車。', 'Board near Exit B1.'], '九龍城裁判法院'),
   mk('t-22x-one-victoria', 'transport', 'A', '往維港1號（22X）', 'To One Victoria (22X)', '於 A 出口附近巴士站乘搭 22X 路線。', 'Take route 22X from the bus stop near Exit A.',
     ['A 出口巴士站上車。', 'Board at the bus stop by Exit A.'], '維港1號 啟德'),
+  /* ---------- 新增：最新落成學校 ---------- */
+  mk('e74-baptist-rainbow', 'education', 'A', '浸信會孔憲紹天虹小學', 'Baptist Hung Hin Shiu Rainbow Primary School', '位於九龍啟德沐安街2號的新校舍，前身為黃大仙的浸信會天虹小學，2025 年 9 月起改用現名並改屬九龍城 34 校網。', 'New campus at 2 Muk On Street, Kai Tak. Formerly Baptist Rainbow Primary School in Wong Tai Sin, renamed in September 2025.',
+    ['經 A 出口沿車站廣場／沐安街步行約 3 至 5 分鐘。', 'From Exit A, walk via Kai Tak Station Square and Muk On Street, about 3 to 5 min.'], '浸信會孔憲紹天虹小學'),
+
+  /* ---------- 新增：銀行／自動櫃員機／外幣服務（2026 年 10 月網上搜尋核實，出發前請再向銀行確認） ---------- */
+  mk('bk-hsbc-kt', 'bank', 'D', '滙豐 啟德分行（啟德零售館2 2樓 M2-211及212號舖）', 'HSBC Kai Tak Branch (Shop M2-211&212, Level 2, Kai Tak Mall 2)', '提供提款、存款、外幣兌換服務，並設可提取人民幣及外幣的自動櫃員機；同址設卓越理財中心。營業時間：星期一至五 09:00–17:00，星期六 09:00–13:00。', 'Cash withdrawal and deposit, foreign currency exchange, and an RMB / foreign currency ATM; HSBC Premier Centre at the same address. Mon–Fri 09:00–17:00, Sat 09:00–13:00.',
+    ['D 出口前往啟德體育園啟德零售館2，上 2 樓。', 'From Exit D, go to Kai Tak Mall 2 at Kai Tak Sports Park, Level 2.'], 'HSBC Kai Tak Branch'),
+  mk('bk-boc-kt', 'bank', 'C', '中國銀行(香港) 啟德分行（AIRSIDE 3樓 321及324號舖）', 'Bank of China (Hong Kong) Kai Tak Branch (Shop 321 & 324, 3/F, AIRSIDE)', '324 號舖為分行（星期一至五 09:00–17:00，星期六 09:00–13:00）；321 號舖為自助銀行中心，按商場開放時間開放，設提款機、存鈔機及存票機，並有外幣提款機。', 'Branch at Shop 324 (Mon–Fri 09:00–17:00, Sat 09:00–13:00). Self-service centre at Shop 321 follows mall hours, with ATMs, cash and cheque deposit machines, plus a foreign currency ATM.',
+    ['C 出口直達 AIRSIDE，上 3 樓。', 'Exit C leads straight into AIRSIDE; go up to 3/F.'], '中國銀行 啟德分行 AIRSIDE'),
+  mk('bk-icbc-kt', 'bank', 'C', '中國工商銀行（亞洲）啟德分行（AIRSIDE 1樓 L112號舖）', 'ICBC (Asia) Kai Tak Branch (Shop L112, 1/F, AIRSIDE)', '提供個人及商業銀行服務，設視像銀行及自助銀行服務。', 'Personal and commercial banking, with video banking and self-service banking.',
+    ['C 出口直達 AIRSIDE，上 1 樓。', 'Exit C leads straight into AIRSIDE; go up to 1/F.'], 'ICBC Asia AIRSIDE Kai Tak'),
+  mk('bk-boc-atm-kat', 'bank', 'KAT', '中國銀行(香港) 自動櫃員機（啟德站閘外 KAT 6號舖）', 'Bank of China (Hong Kong) ATM (Shop KAT 6, Kai Tak Station, unpaid area)', '位於車站大堂閘外的自動櫃員機。', 'ATM in the station concourse, outside the gates.', null, '啟德站 中國銀行 自動櫃員機'),
+  mk('bk-hangseng-kat', 'bank', 'KAT', '恒生銀行（啟德站大堂 KAT 7號舖）', 'Hang Seng Bank (Shop KAT 7, Kai Tak Station concourse)', '位於車站大堂。此項資料來自第三方網站，實際服務類型請向銀行核實。', 'In the station concourse. Listed by third-party sites; please check the service type with the bank.', null, '恒生銀行 啟德站'),
+  mk('bk-boc-atm-chinglong', 'bank', 'A', '中國銀行(香港) 自動櫃員機（晴朗商場 A區 1樓）', 'Bank of China (Hong Kong) ATM (Zone A, 1/F, Ching Long Shopping Centre)', '晴朗商場內的自動櫃員機。', 'ATM inside Ching Long Shopping Centre.', null, '晴朗商場'),
+  mk('bk-boc-atm-hkch', 'bank', 'D', '中國銀行(香港) 自動櫃員機（香港兒童醫院 B座地下）', "Bank of China (Hong Kong) ATM (G/F, Block B, Hong Kong Children's Hospital)", '香港兒童醫院內的自動櫃員機。', "ATM inside Hong Kong Children's Hospital.", null, '香港兒童醫院'),
+  mk('bk-icbc-atm-mikiki', 'bank', 'C', '中國工商銀行（亞洲）自動櫃員機（MIKIKI 1樓）', 'ICBC (Asia) ATM (1/F, MIKIKI)', 'MIKIKI 商場內的自動櫃員機（資料截至 2023 年，出發前請核實）。', 'ATM inside MIKIKI (listed as of 2023; please check before going).', null, 'MIKIKI 新蒲崗'),
 ];
 
 /* ============================ 港鐵全綫網絡 ============================ */
@@ -634,6 +697,41 @@ const STATION_NAME = {
   TAW: { zh: '大圍', en: 'Tai Wai', ko: '타이와이', ja: '大圍' },
   HUH: { zh: '紅磡', en: 'Hung Hom', ko: '홍함', ja: '紅磡' },
 };
+
+/* ============================ 官方指南資料版本與差異同步 ============================ */
+// 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補';
+const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
+const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery], (k, v) =>
+  v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
+
+// 比較雲端資料與最新官方資料：新增、修改、移除
+function diffWithSeed(current) {
+  const cur = new Map(current.map((x) => [x.id, x]));
+  const seedIds = new Set(SEED.map((x) => x.id));
+  const added = SEED.filter((s) => !cur.has(s.id));
+  const changed = SEED.filter((s) => cur.has(s.id) && normItem(s) !== normItem(cur.get(s.id)));
+  const removed = current.filter((x) => !isCustomId(x.id) && !seedIds.has(x.id));
+  return { added, changed, removed, total: added.length + changed.length + removed.length };
+}
+
+// 套用同步：官方資料按 SEED 順序排列，自訂地點保留並排在後面
+async function applySeedSync(current) {
+  const custom = current.filter((x) => isCustomId(x.id));
+  const next = [...SEED, ...custom];
+  const { removed } = diffWithSeed(current);
+  if (supabase) {
+    const { error: e1 } = await supabase.from('landmarks').upsert(next.map(toRow));
+    if (e1) throw e1;
+    if (removed.length) {
+      const { error: e2 } = await supabase.from('landmarks').delete().in('id', removed.map((x) => x.id));
+      if (e2) throw e2;
+    }
+  }
+  try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
+  return next;
+}
+const hashItems = (list) => list.map((x) => x.id + normItem(x)).join('|');
 
 /* ============================ 全域樣式（主題色 Token） ============================ */
 const GLOBAL_CSS = `
@@ -1213,7 +1311,7 @@ const TICKETS = {
   zh: [
     { key: 'mp', title: '全月通 加強版（尖東 – 烏溪沙）', flag: '啟德站位處本全月通指定覆蓋範圍內！',
       body: ['有效月份內無限次免費乘搭屯馬綫尖東至烏溪沙段（包括啟德、鑽石山、紅磡等站）。', '連接指定範圍以外的路程（例如過海往金鐘、中環），正價車費可享 75 折（25% OFF）優惠。'] },
-    { key: 'cs', title: '港鐵都會票（MTR City Saver）', warn: '客務中心不設發售，只可於啟德站「自動售票機」購買',
+    { key: 'cs', title: '港鐵都會票（MTR City Saver）', warn: '客務中心不設發售，只可於啟德站「自動售票機」購買或增值',
       body: ['40 天內可乘搭 40 程港鐵市區綫（包括啟德站）。', '適合經常跨區長途乘車的乘客。'] },
     { key: 'tdp', title: '遊客全日通（Tourist Day Pass）', warn: '啟德站現場不設發售',
       body: ['請預先於 MTR Mobile App／港鐵官網預訂，或前往設有指定客務中心的車站（如機場站、西九龍站、邊境車站）購買。', '購票後可於啟德站正常感應入閘使用。'] },
@@ -1221,7 +1319,7 @@ const TICKETS = {
   en: [
     { key: 'mp', title: 'Monthly Pass Extra (East TST – Wu Kai Sha)', flag: "Kai Tak is inside this pass's coverage zone!",
       body: ['Unlimited free rides on the Tuen Ma Line between East Tsim Sha Tsui and Wu Kai Sha (incl. Kai Tak, Diamond Hill, Hung Hom) during the valid month.', 'Journeys beyond the zone (e.g. cross-harbour to Admiralty or Central) get 25% off the regular fare.'] },
-    { key: 'cs', title: 'MTR City Saver', warn: 'Not sold at the Customer Service Centre. Buy it only from the ticket machines at Kai Tak.',
+    { key: 'cs', title: 'MTR City Saver', warn: 'Not sold at the Customer Service Centre. Buy or add value only at the ticket machines at Kai Tak.',
       body: ['40 rides on MTR urban lines (incl. Kai Tak) within 40 days.', 'Good for frequent long-distance riders.'] },
     { key: 'tdp', title: 'Tourist Day Pass', warn: 'Not sold at Kai Tak Station',
       body: ['Book in advance on the MTR Mobile app or website, or buy at a station with a designated Customer Service Centre (e.g. Airport, West Kowloon, boundary stations).', 'Once bought, tap in at Kai Tak as normal.'] },
@@ -1229,7 +1327,7 @@ const TICKETS = {
   ko: [
     { key: 'mp', title: '월정액 패스 엑스트라 (이스트 침사추이 – 우카이샤)', flag: '카이탁역은 이 패스의 적용 구간에 포함됩니다!',
       body: ['유효 월 동안 툰마선 이스트 침사추이–우카이샤 구간(카이탁, 다이아몬드힐, 홍함 포함) 무제한 무료 탑승.', '구간 밖으로 이어지는 이동(예: 해저 터널 건너 애드미럴티·센트럴)은 정상 요금의 25% 할인.'] },
-    { key: 'cs', title: 'MTR 시티 세이버 (MTR City Saver)', warn: '고객서비스센터에서는 판매하지 않으며, 카이탁역 자동발매기에서만 구매 가능',
+    { key: 'cs', title: 'MTR 시티 세이버 (MTR City Saver)', warn: '고객서비스센터에서는 판매하지 않으며, 카이탁역 자동발매기에서만 구매 또는 충전 가능',
       body: ['40일 이내 MTR 시내 노선(카이탁역 포함) 40회 탑승.', '장거리 이동이 잦은 승객에게 적합.'] },
     { key: 'tdp', title: '관광객 1일권 (Tourist Day Pass)', warn: '카이탁역에서는 판매하지 않습니다',
       body: ['MTR Mobile 앱·공식 웹사이트에서 미리 예약하거나, 지정 고객서비스센터가 있는 역(공항역, 웨스트카오룽역, 국경역 등)에서 구매하세요.', '구매 후 카이탁역에서 평소처럼 개찰구를 통과하면 됩니다.'] },
@@ -1237,7 +1335,7 @@ const TICKETS = {
   ja: [
     { key: 'mp', title: '全月通 加強版（尖東 – 烏溪沙）', flag: '啓徳駅はこの定期券の対象区間内です！',
       body: ['有効月内は屯馬線 尖東–烏溪沙 区間（啓徳・鑽石山・紅磡など）が乗り放題。', '区間外へ続く乗車（例：海を渡って金鐘・中環へ）は通常運賃の25%割引。'] },
-    { key: 'cs', title: 'MTR 都会票（MTR City Saver）', warn: 'カスタマーサービスセンターでは販売なし。啓徳駅の自動券売機でのみ購入可能',
+    { key: 'cs', title: 'MTR 都会票（MTR City Saver）', warn: 'カスタマーサービスセンターでは販売なし。啓徳駅の自動券売機でのみ購入・チャージ可能',
       body: ['40日以内に MTR 市街地路線（啓徳駅を含む）を40回乗車可能。', '長距離移動の多い方におすすめ。'] },
     { key: 'tdp', title: '旅遊全日通（Tourist Day Pass）', warn: '啓徳駅では販売していません',
       body: ['MTR Mobile アプリ／公式サイトで事前予約するか、指定カスタマーサービスセンターのある駅（空港駅・西九龍駅・境界駅など）で購入してください。', '購入後は啓徳駅で通常通り改札を通過できます。'] },
@@ -1457,6 +1555,240 @@ function ConfirmModal({ request, onClose, t }) {
   );
 }
 
+/* ============================ 巴士實時到站（九巴／城巴開放數據） ============================ */
+const KAT_POS = { lat: 22.3305, lng: 114.1993 }; // 啟德站大約位置
+const BUS_RADIUS_M = 650; // 搜尋車站範圍（米）
+const KEY_ROUTES = ['22', '22D', '22M', '22S', '22X', '20', '5R'];
+const KMB_BASES = ['/api/kmb', 'https://data.etabus.gov.hk/v1/transport/kmb'];
+const CTB_BASES = ['/api/ctb', 'https://rt.data.gov.hk/v2/transport/citybus'];
+// 城巴沒有「按車站查詢所有路線」的接口，如有城巴路線途經啟德站，請在此加入路線號碼，例如 ['A25']
+const CTB_ROUTES = [];
+
+const apiGet = (bases, path, timeout = 8000) => fetchFirst(bases.map((b) => b + path), (r) => r.json(), timeout);
+function distM(a, b) {
+  const R = 6371000, toR = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * toR, dLng = (b.lng - a.lng) * toR;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * toR) * Math.cos(b.lat * toR) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+}
+const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+// 找出啟德站附近的九巴車站（每 24 小時重新下載一次，新增的巴士站會自動納入）
+async function nearbyKmbStops() {
+  const cache = lsGet('kat-kmb-stops-v1');
+  if (cache && Date.now() - cache.t < 864e5) return cache.stops;
+  const j = await apiGet(KMB_BASES, '/stop', 20000);
+  if (!j || !Array.isArray(j.data)) return cache ? cache.stops : null;
+  const stops = j.data
+    .map((s) => ({ id: s.stop, zh: s.name_tc, en: s.name_en, lat: +s.lat, lng: +s.long }))
+    .map((s) => ({ ...s, d: distM(KAT_POS, s) }))
+    .filter((s) => s.d <= BUS_RADIUS_M)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 30);
+  lsSet('kat-kmb-stops-v1', { t: Date.now(), stops });
+  return stops;
+}
+
+// 城巴：按 CTB_ROUTES 找出途經啟德站附近的車站（結果快取 24 小時）
+async function nearbyCtbStops() {
+  if (!CTB_ROUTES.length) return [];
+  const cache = lsGet('kat-ctb-stops-v1');
+  if (cache && Date.now() - cache.t < 864e5 && cache.key === CTB_ROUTES.join(',')) return cache.list;
+  const list = [];
+  for (const route of CTB_ROUTES) {
+    for (const dir of ['inbound', 'outbound']) {
+      const rs = await apiGet(CTB_BASES, `/route-stop/CTB/${route}/${dir}`);
+      for (const r of (rs && rs.data) || []) {
+        const st = await apiGet(CTB_BASES, `/stop/${r.stop}`);
+        const s = st && st.data;
+        if (!s) continue;
+        const d = distM(KAT_POS, { lat: +s.lat, lng: +s.long });
+        if (d <= BUS_RADIUS_M) list.push({ route, dir, stop: { id: r.stop, zh: s.name_tc, en: s.name_en, d } });
+      }
+    }
+  }
+  lsSet('kat-ctb-stops-v1', { t: Date.now(), key: CTB_ROUTES.join(','), list });
+  return list;
+}
+
+// 取得所有途經附近車站的路線及到站時間（新開辦路線會自動出現，取消的路線會自動消失）
+async function loadBusEtas() {
+  const stops = await nearbyKmbStops();
+  if (!stops) return null;
+  const results = await Promise.all(stops.map((s) => apiGet(KMB_BASES, `/stop-eta/${s.id}`).then((j) => ({ s, data: (j && j.data) || null }))));
+  if (results.every((r) => r.data === null)) return null;
+  const map = {};
+  for (const { s, data } of results) {
+    for (const e of data || []) {
+      const key = `KMB|${e.route}|${e.dir}|${e.service_type}`;
+      if (!map[key]) map[key] = { key, co: 'KMB', route: e.route, destZh: e.dest_tc, destEn: e.dest_en, stop: s, etas: [] };
+      if (map[key].stop.id === s.id && e.eta) map[key].etas.push({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en });
+    }
+  }
+  const ctb = await nearbyCtbStops();
+  for (const c of ctb) {
+    const key = `CTB|${c.route}|${c.dir}`;
+    if (map[key] && map[key].stop.d <= c.stop.d) continue;
+    const j = await apiGet(CTB_BASES, `/eta/CTB/${c.stop.id}/${c.route}`);
+    const rows = ((j && j.data) || []).filter((e) => (c.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O'));
+    map[key] = { key, co: 'CTB', route: c.route, destZh: rows[0] ? rows[0].dest_tc : '', destEn: rows[0] ? rows[0].dest_en : '', stop: c.stop,
+      etas: rows.filter((e) => e.eta).map((e) => ({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en })) };
+  }
+  // 路線改動監察：記錄首次出現時間，用來標示「新路線」
+  const seen = lsGet('kat-bus-seen-v1') || { __init: Date.now() };
+  const now = Date.now();
+  const routes = Object.values(map).map((r) => {
+    if (!seen[r.key]) seen[r.key] = now;
+    const isNew = seen[r.key] > seen.__init + 36e5 && now - seen[r.key] < 7 * 864e5;
+    const etas = r.etas.filter((x) => !Number.isNaN(x.at)).sort((a, b) => a.at - b.at).slice(0, 3);
+    return { ...r, etas, isNew };
+  });
+  lsSet('kat-bus-seen-v1', seen);
+  routes.sort((a, b) => a.route.localeCompare(b.route, 'en', { numeric: true }) || a.stop.d - b.stop.d);
+  return { routes, updated: now };
+}
+
+function BusPanel({ t, lang, items }) {
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState('loading');
+  const [filter, setFilter] = useState('key');
+  const [now, setNow] = useState(Date.now());
+
+  const load = useCallback(async () => {
+    const d = await loadBusEtas();
+    if (d) { setData(d); setStatus('live'); } else setStatus((s) => (s === 'live' ? 'live' : 'offline'));
+  }, []);
+  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { const i = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(i); }, []);
+
+  const routes = data ? data.routes.filter((r) => filter === 'all' || KEY_ROUTES.includes(r.route)) : [];
+  const staticRoutes = items.filter((x) => x.category === 'transport');
+  const zhLike = lang === 'zh' || lang === 'ja';
+  const etaLabel = (at) => {
+    const m = Math.round((at - now) / 60000);
+    return m <= 0 ? t.busArriving : fmt(t.busMin, { n: m });
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><Bus size={19} />{t.busTitle}</h2>
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${status === 'live' ? 'bg-emerald-100 text-emerald-800' : 'bg-[var(--warn-bg)] text-[var(--warn-ink)]'}`}>
+              <span className={`h-2 w-2 rounded-full ${status === 'live' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {status === 'loading' ? t.busLoading : status === 'live' ? t.busLive : t.busOfflineShort}
+            </span>
+            <button onClick={load} aria-label="Refresh" className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><RefreshCw size={14} /></button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          {[{ id: 'key', label: t.busKey }, { id: 'all', label: t.busAll }].map((f) => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className={`rounded-full border px-3.5 py-1.5 text-sm font-medium ${filter === f.id ? 'border-transparent bg-[var(--ink)] text-[var(--surface)]' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {status === 'loading' && <p className="mt-4 text-sm text-[var(--muted)]">{t.busLoading}</p>}
+        {status === 'offline' && <p className="mt-4 rounded-lg p-3 text-sm" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>{t.busOffline}</p>}
+
+        {status === 'live' && (
+          routes.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--muted)]">{t.busNone}</p>
+          ) : (
+            <motion.div layout className="mt-4 grid gap-2 sm:grid-cols-2">
+              <AnimatePresence mode="popLayout">
+                {routes.map((r) => (
+                  <motion.article key={r.key} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-3">
+                    <div className="flex w-16 shrink-0 flex-col items-center">
+                      <span className="num rounded-md px-2 py-1 text-xl font-bold leading-none text-white" style={{ background: r.co === 'KMB' ? '#C8102E' : '#F2B705', color: r.co === 'KMB' ? '#fff' : '#111' }}>{r.route}</span>
+                      <span className="mt-1 text-[10px] text-[var(--muted)]">{r.co === 'KMB' ? t.busKmb : t.busCtb}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">
+                        {fmt(t.busTo, { dest: zhLike ? r.destZh : r.destEn })}
+                        {r.isNew && <span className="ml-1.5 rounded bg-[var(--sign)] px-1.5 py-0.5 text-[10px] font-bold text-[#111418]">{t.busNew}</span>}
+                      </p>
+                      <p className="truncate text-xs text-[var(--muted)]">{zhLike ? r.stop.zh : r.stop.en} · {fmt(t.busDist, { m: r.stop.d })}</p>
+                      {r.etas[0] && (zhLike ? r.etas[0].rmkZh : r.etas[0].rmkEn) && <p className="truncate text-[11px] text-[var(--muted)]">{zhLike ? r.etas[0].rmkZh : r.etas[0].rmkEn}</p>}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {r.etas.length === 0 ? (
+                        <span className="text-xs text-[var(--muted)]">{t.busNoEta}</span>
+                      ) : (
+                        <>
+                          <span className="num block text-lg font-bold" style={{ color: 'var(--tml)' }}>{etaLabel(r.etas[0].at)}</span>
+                          <span className="num block text-[11px] text-[var(--muted)]">{r.etas.slice(1).map((e) => etaLabel(e.at)).join(' · ')}</span>
+                        </>
+                      )}
+                    </div>
+                  </motion.article>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )
+        )}
+        <p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">{t.busSource}</p>
+      </div>
+
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+        <h3 className="flex items-center gap-2 text-base font-bold"><MapPin size={17} />{t.busLeaflet}</h3>
+        <ul className="mt-3 space-y-2">
+          {staticRoutes.map((x) => (
+            <li key={x.id} className="flex items-center gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
+              <ExitPlate exit={x.exit} />
+              <span className="text-sm">{tx(x.name, lang)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function SyncModal({ open, diff, onClose, onApply, t, lang, busy }) {
+  const groups = diff ? [
+    { k: 'added', label: t.syncAdded, list: diff.added, color: 'text-emerald-700' },
+    { k: 'changed', label: t.syncChanged, list: diff.changed, color: 'text-[var(--warn-ink)]' },
+    { k: 'removed', label: t.syncRemoved, list: diff.removed, color: 'text-red-600' },
+  ] : [];
+  return (
+    <Modal open={open} onClose={onClose} wide>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-lg font-bold"><RefreshCw size={18} />{t.syncReview}</h2>
+        <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+      </div>
+      <p className="mt-1 text-xs text-[var(--muted)]">{fmt(t.dataVersion, { v: DATA_VERSION })}</p>
+      {diff && diff.total === 0 ? (
+        <p className="mt-4 text-sm">{t.syncNothing}</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {groups.filter((g) => g.list.length).map((g) => (
+            <div key={g.k}>
+              <h3 className={`text-sm font-bold ${g.color}`}>{g.label}（{g.list.length}）</h3>
+              <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto rounded-lg bg-[var(--surface-2)] p-2 text-sm">
+                {g.list.map((x) => <li key={x.id} className="flex items-center gap-2"><ExitPlate exit={x.exit} /><span className="truncate">{tx(x.name, lang)}</span></li>)}
+              </ul>
+            </div>
+          ))}
+          <p className="text-xs text-[var(--muted)]">{t.syncNote}</p>
+        </div>
+      )}
+      <div className="mt-5 flex justify-end gap-2">
+        <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
+        {diff && diff.total > 0 && (
+          <button onClick={onApply} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60" style={{ background: LINES.TML.color }}>{t.syncApply}</button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 /* ============================ App ============================ */
 function App() {
   const [lang, setLang] = useState('zh');
@@ -1468,9 +1800,32 @@ function App() {
   const [editing, setEditing] = useState(null);
   const [confirmReq, setConfirmReq] = useState(null);
   const [toast, setToast] = useState('');
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
   const t = UI[lang];
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const tRef = useRef(t);
+  tRef.current = t;
+  const diff = useMemo(() => diffWithSeed(items), [items]);
 
   useEffect(() => { db.list().then((d) => { if (d && d.length) setItems(d); }).catch(() => {}); }, []);
+
+  // 背景輪詢：每 60 秒（及切換回此分頁時）檢查雲端資料，有更新即自動套用，毋須重新整理
+  useEffect(() => {
+    if (!supabase) return undefined;
+    const poll = async () => {
+      if (document.hidden) return;
+      try {
+        const d = await db.list();
+        if (d && d.length && hashItems(d) !== hashItems(itemsRef.current)) { setItems(d); setToast(tRef.current.liveUpdated); }
+      } catch {}
+    };
+    const i = setInterval(poll, 60000);
+    const onVis = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { clearInterval(i); document.removeEventListener('visibilitychange', onVis); };
+  }, []);
   useEffect(() => { document.documentElement.lang = { zh: 'zh-HK', en: 'en', ko: 'ko', ja: 'ja' }[lang]; }, [lang]);
   useEffect(() => { if (!toast) return; const i = setTimeout(() => setToast(''), 2200); return () => clearTimeout(i); }, [toast]);
 
@@ -1488,11 +1843,11 @@ function App() {
     try { await db.remove(item.id, next); setToast(t.deleted); } catch (e) { setToast(String(e.message || e)); }
   };
   const handleSync = async () => {
-    setConfirmReq(null);
-    try { await db.replaceAll(SEED); setItems(SEED); setToast(t.synced); } catch (e) { setToast(String(e.message || e)); }
+    setSyncBusy(true);
+    try { const next = await applySeedSync(items); setItems(next); setSyncOpen(false); setToast(t.synced); } catch (e) { setToast(String(e.message || e)); }
+    setSyncBusy(false);
   };
   const askDelete = (item) => setConfirmReq({ message: fmt(t.confirmDel, { name: tx(item.name, lang) }), label: t.del, action: () => handleDelete(item) });
-  const askSync = () => setConfirmReq({ message: fmt(t.syncConfirm, { n: SEED.length }), label: t.sync, action: handleSync });
   const handleLoginSuccess = async () => {
     setIsAdmin(true);
     try { if (await db.seedIfEmpty(SEED)) { setItems(SEED); setToast(t.seeded); } } catch (e) { setToast(String(e.message || e)); }
@@ -1502,6 +1857,7 @@ function App() {
   const TABS = [
     { id: 'land', label: t.tabLand, Icon: MapPin },
     { id: 'mtr', label: t.tabMtr, Icon: Train },
+    { id: 'bus', label: t.tabBus, Icon: Bus },
   ];
 
   return (
@@ -1516,8 +1872,9 @@ function App() {
               <span className="flex items-center gap-2"><Unlock size={15} />{t.adminOn}</span>
               <span className="flex flex-wrap items-center justify-end gap-3">
                 <span className="flex items-center gap-1.5 text-xs font-medium"><Database size={13} />{db.mode === 'cloud' ? t.storeCloud : t.storeLocal}</span>
-                <button onClick={askSync} className="flex items-center gap-1.5 rounded-md bg-[#111418] px-2.5 py-1 text-xs font-bold text-[var(--sign)]">
-                  <RefreshCw size={13} />{t.sync}
+                <button onClick={() => setSyncOpen(true)} className="relative flex items-center gap-1.5 rounded-md bg-[#111418] px-2.5 py-1 text-xs font-bold text-[var(--sign)]">
+                  <RefreshCw size={13} />{diff.total > 0 ? fmt(t.syncBanner, { n: diff.total }) : t.syncReview}
+                  {diff.total > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />}
                 </button>
               </span>
             </div>
@@ -1528,10 +1885,10 @@ function App() {
       <StationBoard t={t} lang={lang} />
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-5">
-        <nav className="mb-5 flex gap-1 border-b border-[var(--border)]" role="tablist">
+        <nav className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-[var(--border)] px-4" role="tablist">
           {TABS.map((tb) => (
             <button key={tb.id} role="tab" aria-selected={tab === tb.id} onClick={() => setTab(tb.id)}
-              className={`relative flex items-center gap-2 px-3 pb-3 pt-1 text-[15px] font-bold transition-colors sm:px-4 ${tab === tb.id ? 'text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+              className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3 pb-3 pt-1 text-[15px] font-bold transition-colors sm:px-4 ${tab === tb.id ? 'text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               <tb.Icon size={17} />{tb.label}
               {tab === tb.id && <motion.span layoutId="tabLine" className="absolute -bottom-px left-0 right-0 h-[3px] rounded-full" style={{ background: LINES.TML.color }} />}
             </button>
@@ -1545,8 +1902,10 @@ function App() {
                 onAdd={() => { setEditing(null); setFormOpen(true); }}
                 onEdit={(it) => { setEditing(it); setFormOpen(true); }}
                 onDelete={askDelete} />
-            ) : (
+            ) : tab === 'mtr' ? (
               <MTRGuide t={t} lang={lang} />
+            ) : (
+              <BusPanel t={t} lang={lang} items={items} />
             )}
           </motion.div>
         </AnimatePresence>
@@ -1554,11 +1913,13 @@ function App() {
 
       <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--muted)]">
         Kai Tak Transit &amp; Landmark Guide（原型 Prototype）
+        <span className="mt-1 block">{fmt(t.dataVersion, { v: DATA_VERSION })}</span>
       </footer>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={handleLoginSuccess} t={t} />
       <LandmarkForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} onSave={handleSave} t={t} lang={lang} />
       <ConfirmModal request={confirmReq} onClose={() => setConfirmReq(null)} t={t} />
+      <SyncModal open={syncOpen} diff={diff} onClose={() => setSyncOpen(false)} onApply={handleSync} t={t} lang={lang} busy={syncBusy} />
 
       <AnimatePresence>
         {toast && (
