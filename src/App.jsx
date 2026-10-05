@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v6
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v6.1（新增南洋商業銀行啟德分行）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -469,6 +469,23 @@ const SEED = [
     ['C 出口直達 AIRSIDE，上 3 樓。', 'Exit C leads straight into AIRSIDE; go up to 3/F.'], '中國銀行 啟德分行 AIRSIDE'),
   mk('bk-icbc-kt', 'bank', 'C', '中國工商銀行（亞洲）啟德分行（AIRSIDE 1樓 L112號舖）', 'ICBC (Asia) Kai Tak Branch (Shop L112, 1/F, AIRSIDE)', '提供個人及商業銀行服務，設視像銀行及自助銀行服務。', 'Personal and commercial banking, with video banking and self-service banking.',
     ['C 出口直達 AIRSIDE，上 1 樓。', 'Exit C leads straight into AIRSIDE; go up to 1/F.'], 'ICBC Asia AIRSIDE Kai Tak'),
+  {
+    id: 'bk-ncb-kt', category: 'bank', exit: 'D',
+    name: { zh: '南洋商業銀行 啟德分行（嘉峯匯地下1-3號舖）', en: 'Nanyang Commercial Bank Kai Tak Branch (Shop 1-3, G/F, K.Summit)', ko: '난양상업은행 카이탁 지점 (K.Summit G층 1-3호)', ja: '南洋商業銀行 啓徳支店（K.Summit 地下1-3号舗）' },
+    desc: {
+      zh: '設現金櫃檯服務及輪椅通道。地址：九龍啟德沐泰街9號嘉峯匯地下1-3號舖。電話：3982 9917。營業時間：星期一至五 09:00–17:00，星期六 09:00–13:00。',
+      en: 'Cash counter service and wheelchair access. 9 Muk Tai Street, Kai Tak. Tel 3982 9917. Mon–Fri 09:00–17:00, Sat 09:00–13:00.',
+      ko: '현금 창구 서비스 및 휠체어 접근 가능. 카이탁 무타이 스트리트 9번지. 전화 3982 9917. 월–금 09:00–17:00, 토 09:00–13:00.',
+      ja: '現金窓口サービスあり、車椅子対応。啓徳 沐泰街9号。電話 3982 9917。月–金 09:00–17:00、土 09:00–13:00。',
+    },
+    tip: {
+      zh: 'D 出口前往沐泰街嘉峯匯，分行位於地下。',
+      en: 'From Exit D, head to K.Summit on Muk Tai Street. The branch is on the ground floor.',
+      ko: 'D 출구에서 무타이 스트리트의 K.Summit으로 이동하세요. 지점은 G층에 있습니다.',
+      ja: 'D出口から沐泰街の K.Summit へ。支店は地上階にあります。',
+    },
+    mapQuery: '南洋商業銀行 啟德分行',
+  },
   mk('bk-boc-atm-kat', 'bank', 'KAT', '中國銀行(香港) 自動櫃員機（啟德站閘外 KAT 6號舖）', 'Bank of China (Hong Kong) ATM (Shop KAT 6, Kai Tak Station, unpaid area)', '位於車站大堂閘外的自動櫃員機。', 'ATM in the station concourse, outside the gates.', null, '啟德站 中國銀行 自動櫃員機'),
   mk('bk-hangseng-kat', 'bank', 'KAT', '恒生銀行（啟德站大堂 KAT 7號舖）', 'Hang Seng Bank (Shop KAT 7, Kai Tak Station concourse)', '位於車站大堂。此項資料來自第三方網站，實際服務類型請向銀行核實。', 'In the station concourse. Listed by third-party sites; please check the service type with the bank.', null, '恒生銀行 啟德站'),
   mk('bk-boc-atm-chinglong', 'bank', 'A', '中國銀行(香港) 自動櫃員機（晴朗商場 A區 1樓）', 'Bank of China (Hong Kong) ATM (Zone A, 1/F, Ching Long Shopping Centre)', '晴朗商場內的自動櫃員機。', 'ATM inside Ching Long Shopping Centre.', null, '晴朗商場'),
@@ -700,7 +717,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 2 版）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
