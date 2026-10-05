@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v6.1（新增南洋商業銀行啟德分行）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v6.2（巴士：加入城巴 20／22 系列路線）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -1575,11 +1575,12 @@ function ConfirmModal({ request, onClose, t }) {
 /* ============================ 巴士實時到站（九巴／城巴開放數據） ============================ */
 const KAT_POS = { lat: 22.3305, lng: 114.1993 }; // 啟德站大約位置
 const BUS_RADIUS_M = 650; // 搜尋車站範圍（米）
-const KEY_ROUTES = ['22', '22D', '22M', '22S', '22X', '20', '5R'];
+const KEY_ROUTES = ['20', '20A', '22', '22D', '22M', '22R', '22S', '22X', '5R'];
 const KMB_BASES = ['/api/kmb', 'https://data.etabus.gov.hk/v1/transport/kmb'];
 const CTB_BASES = ['/api/ctb', 'https://rt.data.gov.hk/v2/transport/citybus'];
-// 城巴沒有「按車站查詢所有路線」的接口，如有城巴路線途經啟德站，請在此加入路線號碼，例如 ['A25']
-const CTB_ROUTES = [];
+// 城巴沒有「按車站查詢所有路線」的接口，所以要列出途經啟德站一帶的城巴路線
+// 啟德的 20／22 系列均為城巴路線；日後有新城巴路線開辦，在此加入路線號碼即可
+const CTB_ROUTES = ['20', '20A', '20X', '22', '22D', '22M', '22R', '22S', '22X'];
 
 const apiGet = (bases, path, timeout = 8000) => fetchFirst(bases.map((b) => b + path), (r) => r.json(), timeout);
 function distM(a, b) {
@@ -1607,34 +1608,54 @@ async function nearbyKmbStops() {
   return stops;
 }
 
-// 城巴：按 CTB_ROUTES 找出途經啟德站附近的車站（結果快取 24 小時）
+// 城巴：按 CTB_ROUTES 找出每條路線、每個方向最接近啟德站的車站（結果快取 24 小時）
+async function inBatches(list, size, fn) {
+  const out = [];
+  for (let k = 0; k < list.length; k += size) out.push(...(await Promise.all(list.slice(k, k + size).map(fn))));
+  return out;
+}
 async function nearbyCtbStops() {
   if (!CTB_ROUTES.length) return [];
-  const cache = lsGet('kat-ctb-stops-v1');
-  if (cache && Date.now() - cache.t < 864e5 && cache.key === CTB_ROUTES.join(',')) return cache.list;
+  const cacheKey = CTB_ROUTES.join(',');
+  const cache = lsGet('kat-ctb-stops-v2');
+  if (cache && Date.now() - cache.t < 864e5 && cache.key === cacheKey) return cache.list;
+  // 1. 取得每條路線兩個方向的車站序列（循環線只有 outbound）
+  const combos = CTB_ROUTES.flatMap((route) => ['inbound', 'outbound'].map((dir) => ({ route, dir })));
+  const seqs = await inBatches(combos, 8, async (c) => {
+    const j = await apiGet(CTB_BASES, `/route-stop/CTB/${c.route}/${c.dir}`);
+    return { ...c, stops: ((j && j.data) || []).map((r) => r.stop) };
+  });
+  if (seqs.every((s) => s.stops.length === 0)) return cache ? cache.list : null;
+  // 2. 取得車站座標（永久快取，只下載未見過的車站）
+  const info = lsGet('kat-ctb-stopinfo-v1') || {};
+  const missing = [...new Set(seqs.flatMap((s) => s.stops))].filter((id) => !info[id]);
+  await inBatches(missing, 10, async (id) => {
+    const j = await apiGet(CTB_BASES, `/stop/${id}`);
+    const s = j && j.data;
+    if (s && s.lat) info[id] = { zh: s.name_tc, en: s.name_en, lat: +s.lat, lng: +s.long };
+  });
+  lsSet('kat-ctb-stopinfo-v1', info);
+  // 3. 每條路線每個方向，揀最接近啟德站而又在範圍內的車站
   const list = [];
-  for (const route of CTB_ROUTES) {
-    for (const dir of ['inbound', 'outbound']) {
-      const rs = await apiGet(CTB_BASES, `/route-stop/CTB/${route}/${dir}`);
-      for (const r of (rs && rs.data) || []) {
-        const st = await apiGet(CTB_BASES, `/stop/${r.stop}`);
-        const s = st && st.data;
-        if (!s) continue;
-        const d = distM(KAT_POS, { lat: +s.lat, lng: +s.long });
-        if (d <= BUS_RADIUS_M) list.push({ route, dir, stop: { id: r.stop, zh: s.name_tc, en: s.name_en, d } });
-      }
+  for (const s of seqs) {
+    let best = null;
+    for (const id of s.stops) {
+      const p = info[id];
+      if (!p) continue;
+      const d = distM(KAT_POS, p);
+      if (d <= BUS_RADIUS_M && (!best || d < best.d)) best = { id, zh: p.zh, en: p.en, d };
     }
+    if (best) list.push({ route: s.route, dir: s.dir, stop: best });
   }
-  lsSet('kat-ctb-stops-v1', { t: Date.now(), key: CTB_ROUTES.join(','), list });
+  lsSet('kat-ctb-stops-v2', { t: Date.now(), key: cacheKey, list });
   return list;
 }
 
 // 取得所有途經附近車站的路線及到站時間（新開辦路線會自動出現，取消的路線會自動消失）
 async function loadBusEtas() {
-  const stops = await nearbyKmbStops();
-  if (!stops) return null;
-  const results = await Promise.all(stops.map((s) => apiGet(KMB_BASES, `/stop-eta/${s.id}`).then((j) => ({ s, data: (j && j.data) || null }))));
-  if (results.every((r) => r.data === null)) return null;
+  const stops = (await nearbyKmbStops()) || [];
+  const results = await inBatches(stops, 10, (s) => apiGet(KMB_BASES, `/stop-eta/${s.id}`).then((j) => ({ s, data: (j && j.data) || null })));
+  const kmbOk = results.some((r) => r.data !== null);
   const map = {};
   for (const { s, data } of results) {
     for (const e of data || []) {
@@ -1643,15 +1664,20 @@ async function loadBusEtas() {
       if (map[key].stop.id === s.id && e.eta) map[key].etas.push({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en });
     }
   }
-  const ctb = await nearbyCtbStops();
-  for (const c of ctb) {
-    const key = `CTB|${c.route}|${c.dir}`;
-    if (map[key] && map[key].stop.d <= c.stop.d) continue;
+  const ctb = (await nearbyCtbStops()) || [];
+  const ctbEtas = await inBatches(ctb, 8, async (c) => {
     const j = await apiGet(CTB_BASES, `/eta/CTB/${c.stop.id}/${c.route}`);
-    const rows = ((j && j.data) || []).filter((e) => (c.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O'));
-    map[key] = { key, co: 'CTB', route: c.route, destZh: rows[0] ? rows[0].dest_tc : '', destEn: rows[0] ? rows[0].dest_en : '', stop: c.stop,
-      etas: rows.filter((e) => e.eta).map((e) => ({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en })) };
+    return { c, rows: ((j && j.data) || []).filter((e) => (c.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O')) };
+  });
+  for (const { c, rows } of ctbEtas) {
+    const key = `CTB|${c.route}|${c.dir}`;
+    map[key] = {
+      key, co: 'CTB', route: c.route, stop: c.stop,
+      destZh: rows[0] ? rows[0].dest_tc : '', destEn: rows[0] ? rows[0].dest_en : '',
+      etas: rows.filter((e) => e.eta).map((e) => ({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en })),
+    };
   }
+  if (!kmbOk && Object.keys(map).length === 0) return null;
   // 路線改動監察：記錄首次出現時間，用來標示「新路線」
   const seen = lsGet('kat-bus-seen-v1') || { __init: Date.now() };
   const now = Date.now();
@@ -1728,7 +1754,7 @@ function BusPanel({ t, lang, items }) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">
-                        {fmt(t.busTo, { dest: zhLike ? r.destZh : r.destEn })}
+                        {(zhLike ? r.destZh : r.destEn) ? fmt(t.busTo, { dest: zhLike ? r.destZh : r.destEn }) : `${r.co === 'KMB' ? t.busKmb : t.busCtb} ${r.route}`}
                         {r.isNew && <span className="ml-1.5 rounded bg-[var(--sign)] px-1.5 py-0.5 text-[10px] font-bold text-[#111418]">{t.busNew}</span>}
                       </p>
                       <p className="truncate text-xs text-[var(--muted)]">{zhLike ? r.stop.zh : r.stop.en} · {fmt(t.busDist, { m: r.stop.d })}</p>
