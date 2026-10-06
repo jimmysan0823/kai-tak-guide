@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v6.2（巴士：加入城巴 20／22 系列路線）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v7.1（票務規則、醫院接駁、美食餐飲、外幣找換指南）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
-import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, UtensilsCrossed, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
 
 const ENV = import.meta.env;
 
@@ -299,6 +299,53 @@ const UI_V6 = {
   },
 };
 Object.keys(UI_V6).forEach((l) => Object.assign(UI[l], UI_V6[l]));
+const UI_V7 = {
+  zh: {
+    octBanner: '啟德站現場不設實體八達通卡（Physical Octopus Card）發售。如需購買，請前往設有完整客務中心櫃枱的車站（如鑽石山站或何文田站），或使用手機八達通（Mobile Octopus）。',
+    tvmTitle: '啟德站自動售票機', tvmFuncLabel: '可辦理服務', tvmFuncs: ['八達通增值', '查詢餘額', '購買全月通', '購買單程票', '購買都會票'],
+    tvmPayLabel: '付款方式', tvmPayOk: '只接受八達通或港幣現金', tvmPayNo: '不接受信用卡、微信支付或支付寶',
+    hospWarn: '請勿嘗試由 D 出口徒步前往！距離過遠（需步行約 20–25 分鐘），必須乘搭接駁巴士或小巴。',
+    hospFromKat: '由啟德站出發', hospOther: '其他直達路線（不經啟德站）', hospBoard: '{exit} 出口上車', hospSign: '上車位置以站牌為準',
+    opCTB: '城巴', opKMB: '九巴', opGMB: '專線小巴', opREHAB: '復康巴士',
+    fxTitle: '外幣找換指南', fxLocal: '啟德站周邊', fxLocalNote: '啟德站一帶暫未找到可核實的獨立找換店，可使用以下銀行的外幣服務：',
+    fxHot: '熱門車站找換店', fxRoute: '查看轉乘路線', fxMap: '地圖搜尋找換店', fxSummary: '約 {m} 分鐘・八達通 {f}・{x}', fxDirect: '直達', fxTransfers: '轉車 {n} 次',
+    fxTips: '找換前請先比較買入／賣出匯率，並問清楚實收總額；只應光顧持有海關「金錢服務經營者」牌照的找換店。', fxLicence: '查閱海關持牌人登記冊',
+  },
+  en: {
+    octBanner: 'Physical Octopus cards are not sold at Kai Tak Station. Buy one at a station with a full Customer Service Centre counter (e.g. Diamond Hill or Ho Man Tin), or use Mobile Octopus.',
+    tvmTitle: 'Ticket machines at Kai Tak', tvmFuncLabel: 'Services', tvmFuncs: ['Octopus top-up', 'Check balance', 'Monthly Pass', 'Single journey ticket', 'MTR City Saver'],
+    tvmPayLabel: 'Payment', tvmPayOk: 'Octopus or HKD cash only', tvmPayNo: 'No credit cards, WeChat Pay or Alipay',
+    hospWarn: 'Do not try to walk from Exit D! It is too far (about 20–25 minutes on foot). Take a feeder bus or minibus.',
+    hospFromKat: 'From Kai Tak Station', hospOther: 'Other direct routes (not via Kai Tak Station)', hospBoard: 'Board at Exit {exit}', hospSign: 'Check the stop sign for the boarding point',
+    opCTB: 'Citybus', opKMB: 'KMB', opGMB: 'Minibus', opREHAB: 'Rehabus',
+    fxTitle: 'Money exchange guide', fxLocal: 'Around Kai Tak Station', fxLocalNote: 'No verified standalone money changer was found near Kai Tak Station. These banks offer foreign currency services:',
+    fxHot: 'Money changers at popular stations', fxRoute: 'See MTR route', fxMap: 'Find changers on map', fxSummary: '~{m} min · Octopus {f} · {x}', fxDirect: 'Direct', fxTransfers: '{n} change(s)',
+    fxTips: 'Compare buy and sell rates and ask for the total before exchanging. Only use money changers licensed by Customs as Money Service Operators.', fxLicence: 'Check the Customs register of licensees',
+  },
+  ko: {
+    octBanner: '카이탁역에서는 실물 옥토퍼스 카드를 판매하지 않습니다. 고객서비스센터 창구가 있는 역(다이아몬드힐역, 호만틴역 등)에서 구매하거나 모바일 옥토퍼스를 이용하세요.',
+    tvmTitle: '카이탁역 자동발매기', tvmFuncLabel: '이용 가능 서비스', tvmFuncs: ['옥토퍼스 충전', '잔액 조회', '월정액 패스', '편도 승차권', 'MTR 시티 세이버'],
+    tvmPayLabel: '결제 수단', tvmPayOk: '옥토퍼스 또는 홍콩달러 현금만 가능', tvmPayNo: '신용카드, 위챗페이, 알리페이 불가',
+    hospWarn: 'D 출구에서 걸어가지 마세요! 거리가 멀어 도보 약 20–25분이 걸립니다. 연계 버스나 미니버스를 이용하세요.',
+    hospFromKat: '카이탁역 출발', hospOther: '기타 직행 노선 (카이탁역 미경유)', hospBoard: '{exit} 출구에서 승차', hospSign: '승차 위치는 정류장 표지판을 확인하세요',
+    opCTB: '시티버스', opKMB: 'KMB', opGMB: '미니버스', opREHAB: '재활 버스',
+    fxTitle: '환전 안내', fxLocal: '카이탁역 주변', fxLocalNote: '카이탁역 주변에서 확인된 독립 환전소는 없습니다. 다음 은행의 외화 서비스를 이용하세요:',
+    fxHot: '인기 역 주변 환전소', fxRoute: 'MTR 경로 보기', fxMap: '지도에서 환전소 찾기', fxSummary: '약 {m}분 · 옥토퍼스 {f} · {x}', fxDirect: '직통', fxTransfers: '환승 {n}회',
+    fxTips: '환전 전 매입·매도 환율을 비교하고 최종 금액을 확인하세요. 세관의 금전서비스업자 면허가 있는 환전소만 이용하세요.', fxLicence: '세관 면허 등록부 확인',
+  },
+  ja: {
+    octBanner: '啓徳駅では実物のオクトパスカードを販売していません。カスタマーサービスセンター窓口のある駅（鑽石山駅、何文田駅など）で購入するか、モバイルオクトパスをご利用ください。',
+    tvmTitle: '啓徳駅の自動券売機', tvmFuncLabel: '利用できるサービス', tvmFuncs: ['オクトパスのチャージ', '残高照会', '全月通', '片道きっぷ', 'MTR 都会票'],
+    tvmPayLabel: '支払方法', tvmPayOk: 'オクトパスまたは香港ドル現金のみ', tvmPayNo: 'クレジットカード、WeChat Pay、Alipay は利用不可',
+    hospWarn: 'D出口から歩いて行かないでください！距離が遠く徒歩約20–25分かかります。連絡バスまたはミニバスをご利用ください。',
+    hospFromKat: '啓徳駅から', hospOther: 'その他の直通路線（啓徳駅を経由しない）', hospBoard: '{exit} 出口で乗車', hospSign: '乗車位置は停留所の標識で確認してください',
+    opCTB: 'シティバス', opKMB: 'KMB', opGMB: 'ミニバス', opREHAB: 'リハビリバス',
+    fxTitle: '両替ガイド', fxLocal: '啓徳駅周辺', fxLocalNote: '啓徳駅周辺で確認できた独立系の両替店はありません。以下の銀行の外貨サービスをご利用ください：',
+    fxHot: '主要駅周辺の両替店', fxRoute: 'MTR ルートを見る', fxMap: '地図で両替店を探す', fxSummary: '約 {m} 分・オクトパス {f}・{x}', fxDirect: '直通', fxTransfers: '乗換 {n} 回',
+    fxTips: '両替前に買値・売値を比較し、受取総額を確認してください。税関の金銭サービス業者ライセンスを持つ両替店のみ利用しましょう。', fxLicence: '税関のライセンス登録簿を確認',
+  },
+};
+Object.keys(UI_V7).forEach((l) => Object.assign(UI[l], UI_V7[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -306,6 +353,7 @@ const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.e
 const CATS = [
   { id: 'all', Icon: LayoutGrid, label: { zh: '全部', en: 'All', ko: '전체', ja: 'すべて' } },
   { id: 'shopping', Icon: ShoppingBag, emoji: '🛍️', label: { zh: '文娛/購物', en: 'Leisure & Shopping', ko: '쇼핑·문화', ja: 'ショッピング' } },
+  { id: 'dining', Icon: UtensilsCrossed, emoji: '🍽️', label: { zh: '美食餐飲', en: 'Dining', ko: '맛집·식당', ja: 'グルメ' } },
   { id: 'residential', Icon: Home, emoji: '🏠', label: { zh: '住宅屋苑', en: 'Residential', ko: '주거단지', ja: '住宅' } },
   { id: 'education', Icon: GraduationCap, emoji: '🏫', label: { zh: '學校/教育', en: 'Schools', ko: '학교·교육', ja: '学校・教育' } },
   { id: 'government', Icon: Landmark, emoji: '🏛️', label: { zh: '政府/公共', en: 'Government', ko: '정부·공공', ja: '政府・公共' } },
@@ -330,6 +378,7 @@ const CAT_DESC = {
   sports: { ko: '스포츠·공원·명소', ja: 'スポーツ・公園・観光スポット' },
   transport: { ko: '대중교통 환승 시설', ja: '公共交通の乗換施設' },
   bank: { ko: '은행·ATM·외화 서비스', ja: '銀行・ATM・外貨サービス' },
+  dining: { ko: '식당·푸드 구역', ja: 'レストラン・飲食エリア' },
 };
 const EXIT_TIP = {
   A: { zh: 'A 出口連接啟德車站廣場及公共運輸交匯處，出站後按街道指示牌前往。', en: 'Exit A leads to Kai Tak Station Square and the public transport interchange. Follow the street signs.', ko: 'A 출구는 카이탁역 광장과 환승센터로 연결됩니다. 거리 표지판을 따라가세요.', ja: 'A出口は啓徳駅前広場と公共交通ターミナルに通じています。案内標識に従ってください。' },
@@ -384,16 +433,16 @@ const SEED = [
   /* ---------- 公共服務及設施 Public facilities & services（21–40） ---------- */
   mk('p21-green-tl', 'government', 'A', '綠在德朗', 'GREEN@TAK LONG', '社區回收環保站，收集多類回收物。', 'Community recycling store for various recyclables.'),
   mk('p22-skh-youth', 'government', 'A', '香港聖公會九龍城青少年綜合服務中心', 'H.K.S.K.H. Kowloon City Children and Youth Integrated Service Centre', '為兒童及青少年提供輔導及活動的社會服務中心。', 'Social services centre offering counselling and activities for young people.'),
-  mk('p23-hkch', 'medical', 'D', '香港兒童醫院', "Hong Kong Children's Hospital", '全港首間專科兒童醫院。', "Hong Kong's dedicated children's hospital.",
-    ['可於 D 出口步行前往；或於 C 出口乘搭 22S，A 出口設復康穿梭巴士站。', 'Walk from Exit D, take route 22S from Exit C, or use the Rehabus feeder stop at Exit A.']),
+  mk('p23-hkch', 'medical', 'C', '香港兒童醫院', "Hong Kong Children's Hospital", '全港首間專科兒童醫院，位於啟德承昌道1號。', "Hong Kong's dedicated children's hospital at 1 Shing Cheong Road, Kai Tak.",
+    ['請勿由 D 出口步行前往。建議於 C 出口乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk from Exit D. Take Citybus 22S from Exit C or Citybus 22M from Exit A.']),
   mk('p24-irc', 'government', 'C', '稅務中心', 'Inland Revenue Centre', '稅務局總部所在地。', 'Headquarters of the Inland Revenue Department.'),
   mk('p25-kt-arena', 'sports', 'D', '啟德體藝館', 'Kai Tak Arena', '室內體育及文娛表演場館。', 'Indoor arena for sports and performances.'),
   mk('p26-avenue-park', 'sports', 'A', '啟德大道公園', 'Kai Tak Avenue Park', '沿啟德大道而建的休憩公園。', 'Landscaped park along Kai Tak Avenue.'),
   mk('p27-kt-hall', 'government', 'C', '啟德社區會堂', 'Kai Tak Community Hall', '供區內團體舉辦活動的社區會堂。', 'Community hall for local events and activities.'),
   mk('p28-ekt-playground', 'sports', 'B1', '東啟德遊樂場', 'Kai Tak East Playground', '設球場及兒童遊樂設施的遊樂場。', "Playground with sports courts and children's play facilities."),
   mk('p29-ekt-sports', 'sports', 'B1', '東啟德體育館', 'Kai Tak East Sports Centre', '康文署室內體育館。', 'LCSD indoor sports centre.'),
-  mk('p30-kt-hosp', 'medical', 'D', '啟德醫院', 'Kai Tak Hospital', '已正式開幕營運的大型急症醫院。', 'Major acute hospital, now open.',
-    ['可於 D 出口步行前往；或於 C 出口乘搭 22S，A 出口設復康穿梭巴士站。', 'Walk from Exit D, take route 22S from Exit C, or use the Rehabus feeder stop at Exit A.']),
+  mk('p30-kt-hosp', 'medical', 'C', '啟德醫院', 'Kai Tak Hospital', '位於啟德承昌道1號，毗鄰香港兒童醫院。2026 年 10 月 5 日起分階段投入服務，首階段為專科門診大樓及腫瘤科大樓，逐步承接伊利沙伯醫院的臨床服務。', "At 1 Shing Cheong Road, Kai Tak, next to Hong Kong Children's Hospital. Phased opening from 5 October 2026, starting with the Specialist Outpatient Block and the Oncology Block, gradually taking over services from Queen Elizabeth Hospital.",
+    ['請勿由 D 出口步行前往。建議於 C 出口乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk from Exit D. Take Citybus 22S from Exit C or Citybus 22M from Exit A.']),
   mk('p31-ktsp', 'sports', 'D', '啟德體育園', 'Kai Tak Sports Park', '全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.",
     ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。', 'Covered walkway from Exit D. Allow extra time after big events.'], '啟德體育園'),
   mk('p32-kt-stadium', 'sports', 'D', '啟德主場館', 'Kai Tak Stadium', '可容納約五萬人、設開合式上蓋的主場館。', 'About 50,000-seat stadium with a retractable roof.'),
@@ -445,7 +494,7 @@ const SEED = [
 
   /* ---------- 公共交通 Public transport ---------- */
   mk('t-22s-hosp', 'transport', 'C', '往啟德醫院／香港兒童醫院（22S）', "To Kai Tak Hospital / Hong Kong Children's Hospital (22S)", '於 C 出口附近巴士站乘搭 22S 路線。', 'Take route 22S from the bus stop near Exit C.',
-    ['C 出口巴士站上車，上車前請核對車頭路線號碼。', 'Board at the bus stop by Exit C. Check the route number before boarding.'], '啟德站 C出口 巴士站'),
+    ['C 出口巴士站上車；星期一至五 10:30–19:30 設短途班次直達兩間醫院。上車前請核對車頭路線號碼。', 'Board at the bus stop by Exit C. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the route number before boarding.'], '啟德站 C出口 巴士站'),
   mk('t-rehabus-hosp', 'transport', 'A', '復康穿梭巴士站（往啟德醫院／香港兒童醫院）', "Rehabus Feeder Bus Stop (to Kai Tak Hospital / Hong Kong Children's Hospital)", '為有需要人士提供的復康穿梭巴士站。', 'Rehabus feeder stop for passengers with mobility needs.',
     ['位於 A 出口，輪椅使用者可經升降機往返街面。', 'At Exit A. Wheelchair users can use the lift between street and concourse.'], '啟德站 A出口'),
   mk('t-22m-cruise', 'transport', 'A', '往啟德郵輪碼頭（22M）', 'To Kai Tak Cruise Terminal (22M)', '於 A 出口附近巴士站乘搭 22M 路線。', 'Take route 22M from the bus stop near Exit A.',
@@ -461,6 +510,18 @@ const SEED = [
   /* ---------- 新增：最新落成學校 ---------- */
   mk('e74-baptist-rainbow', 'education', 'A', '浸信會孔憲紹天虹小學', 'Baptist Hung Hin Shiu Rainbow Primary School', '位於九龍啟德沐安街2號的新校舍，前身為黃大仙的浸信會天虹小學，2025 年 9 月起改用現名並改屬九龍城 34 校網。', 'New campus at 2 Muk On Street, Kai Tak. Formerly Baptist Rainbow Primary School in Wong Tai Sin, renamed in September 2025.',
     ['經 A 出口沿車站廣場／沐安街步行約 3 至 5 分鐘。', 'From Exit A, walk via Kai Tak Station Square and Muk On Street, about 3 to 5 min.'], '浸信會孔憲紹天虹小學'),
+
+  /* ---------- 新增：美食餐飲（商場食肆眾多且經常轉換，按商場／美食區收錄，撳導航可在 Google 地圖查看最新食肆） ---------- */
+  mk('dn-airside', 'dining', 'C', 'AIRSIDE 餐飲', 'AIRSIDE dining', '商場內多層均有餐飲選擇，由快餐、咖啡店到特色餐廳都有。', 'Dining across several floors, from fast food and cafés to specialty restaurants.', ['C 出口直達 AIRSIDE。', 'Exit C leads straight into AIRSIDE.'], '餐廳 AIRSIDE 啟德'),
+  mk('dn-mikiki', 'dining', 'C', 'Mikiki 食肆', 'Mikiki eateries', '商場內設多間餐廳及快餐店。', 'Restaurants and fast food inside the mall.', null, '餐廳 Mikiki 新蒲崗'),
+  mk('dn-twins1', 'dining', 'B1', '雙子匯1期（SOGO）餐飲', 'The Twins Tower I (SOGO) dining', '崇光百貨及商場一帶的餐飲選擇。', 'Dining around SOGO and The Twins Tower I.', null, '餐廳 SOGO 啟德'),
+  mk('dn-twins2', 'dining', 'A', '雙子匯2期（三道）餐飲', 'The Twins Tower II (SNDO) dining', '雙子匯第二期的餐飲設施。', 'Dining at The Twins Tower II.', null, '餐廳 雙子匯 啟德'),
+  mk('dn-ching-long', 'dining', 'A', '晴朗商場美食', 'Ching Long Shopping Centre food', '屋邨商場內的快餐店及街坊食肆，價錢相宜。', 'Fast food and neighbourhood eateries at affordable prices.', null, '餐廳 晴朗商場'),
+  mk('dn-cullinan', 'dining', 'B2', '天璽天Mall 餐飲', 'Cullinan Sky Mall dining', '住宅基座商場內的餐飲選擇。', 'Dining at the podium mall of Cullinan Sky.', null, '餐廳 天璽天 啟德'),
+  mk('dn-dining-cove', 'dining', 'D', '美食海灣（Dining Cove）', 'Dining Cove', '啟德體育園一帶的餐飲區，活動日人流較多。', 'Dining zone at Kai Tak Sports Park; busy on event days.', null, 'Dining Cove Kai Tak'),
+  mk('dn-kt-mall', 'dining', 'D', '啟德零售館（Kai Tak Mall）餐飲', 'Kai Tak Mall dining', '啟德體育園內的零售館餐廳及小食。', 'Restaurants and snacks at Kai Tak Mall in the Sports Park.', null, '餐廳 Kai Tak Mall'),
+  mk('dn-uplace', 'dining', 'D', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', null, '餐廳 U PLACE Riverside'),
+  mk('dn-spk', 'dining', 'B1/B2', '新蒲崗地道小店', 'San Po Kong local eateries', '工廈區內有不少平民食肆及地道小店。', 'Many affordable local eateries around the industrial buildings.', null, '餐廳 新蒲崗'),
 
   /* ---------- 新增：銀行／自動櫃員機／外幣服務（2026 年 10 月網上搜尋核實，出發前請再向銀行確認） ---------- */
   mk('bk-hsbc-kt', 'bank', 'D', '滙豐 啟德分行（啟德零售館2 2樓 M2-211及212號舖）', 'HSBC Kai Tak Branch (Shop M2-211&212, Level 2, Kai Tak Mall 2)', '提供提款、存款、外幣兌換服務，並設可提取人民幣及外幣的自動櫃員機；同址設卓越理財中心。營業時間：星期一至五 09:00–17:00，星期六 09:00–13:00。', 'Cash withdrawal and deposit, foreign currency exchange, and an RMB / foreign currency ATM; HSBC Premier Centre at the same address. Mon–Fri 09:00–17:00, Sat 09:00–13:00.',
@@ -717,7 +778,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 2 版）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 3 版）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -978,6 +1039,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
           <span><span className="sr-only">{t.tip}: </span>{tx(item.tip, lang)}</span>
         </div>
       )}
+      {HOSPITAL_IDS.has(item.id) && <HospitalGuide t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || item.name.zh)} target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--ink)]">
@@ -988,7 +1050,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   );
 }
 
-function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete }) {
+function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRoute }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
 
@@ -1048,6 +1110,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete }) {
         </div>
       </div>
 
+      {cat === 'bank' && <div className="mt-4"><MoneyExchangeFinder t={t} lang={lang} items={items} onRoute={onRoute} /></div>}
       <p className="mt-3 text-sm text-[var(--muted)]">{fmt(t.count, { n: filtered.length })}</p>
 
       {filtered.length === 0 ? (
@@ -1163,10 +1226,11 @@ function StationDots({ code }) {
   );
 }
 
-function StationRouteFinder({ t, lang, fares, fareStatus }) {
+function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
   const [line, setLine] = useState('ALL');
   const [q, setQ] = useState('');
-  const [dest, setDest] = useState('CEN');
+  const [dest, setDest] = useState(initialDest || 'CEN');
+  useEffect(() => { if (initialDest) { setDest(initialDest); setLine('ALL'); setQ(''); } }, [initialDest]);
 
   const list = useMemo(() => {
     const base = line === 'ALL' ? ALL_STATIONS : LINE_STATIONS[line];
@@ -1326,36 +1390,44 @@ function StationRouteFinder({ t, lang, fares, fareStatus }) {
 
 const TICKETS = {
   zh: [
+    { key: 'oct', title: '實體八達通卡', warn: '啟德站現場不設實體八達通卡發售',
+      body: ['如需購買，請前往設有完整客務中心櫃枱的車站（如鑽石山站或何文田站）。', '旅客亦可改用手機八達通（Mobile Octopus），直接於手機開卡及增值。'] },
     { key: 'mp', title: '全月通 加強版（尖東 – 烏溪沙）', flag: '啟德站位處本全月通指定覆蓋範圍內！',
-      body: ['有效月份內無限次免費乘搭屯馬綫尖東至烏溪沙段（包括啟德、鑽石山、紅磡等站）。', '連接指定範圍以外的路程（例如過海往金鐘、中環），正價車費可享 75 折（25% OFF）優惠。'] },
-    { key: 'cs', title: '港鐵都會票（MTR City Saver）', warn: '客務中心不設發售，只可於啟德站「自動售票機」購買或增值',
-      body: ['40 天內可乘搭 40 程港鐵市區綫（包括啟德站）。', '適合經常跨區長途乘車的乘客。'] },
+      body: ['有效月份內無限次免費乘搭屯馬綫尖東至烏溪沙段（包括啟德、鑽石山、紅磡等站）。', '連接指定範圍以外的路程（例如過海往金鐘、中環），正價車費可享 75 折（25% OFF）優惠。', '可於啟德站自動售票機購買。'] },
+    { key: 'cs', title: '港鐵都會票（MTR City Saver）', warn: '啟德站客務中心不設發售',
+      body: ['40 天內可乘搭 40 程指定市區綫車程。', '啟德站現場只可於自動售票機購買；亦可前往其他設有完整客務中心櫃枱的車站（如鑽石山站、何文田站）購買。'] },
     { key: 'tdp', title: '遊客全日通（Tourist Day Pass）', warn: '啟德站現場不設發售',
-      body: ['請預先於 MTR Mobile App／港鐵官網預訂，或前往設有指定客務中心的車站（如機場站、西九龍站、邊境車站）購買。', '購票後可於啟德站正常感應入閘使用。'] },
+      body: ['必須前往設有完整客務中心櫃枱的車站（如鑽石山站、何文田站等）方可購買。', '購票後可於啟德站正常感應入閘使用。'] },
   ],
   en: [
+    { key: 'oct', title: 'Physical Octopus Card', warn: 'Physical Octopus cards are not sold at Kai Tak Station',
+      body: ['Buy one at a station with a full Customer Service Centre counter, such as Diamond Hill or Ho Man Tin.', 'Visitors can also use Mobile Octopus, which is issued and topped up on the phone.'] },
     { key: 'mp', title: 'Monthly Pass Extra (East TST – Wu Kai Sha)', flag: "Kai Tak is inside this pass's coverage zone!",
-      body: ['Unlimited free rides on the Tuen Ma Line between East Tsim Sha Tsui and Wu Kai Sha (incl. Kai Tak, Diamond Hill, Hung Hom) during the valid month.', 'Journeys beyond the zone (e.g. cross-harbour to Admiralty or Central) get 25% off the regular fare.'] },
-    { key: 'cs', title: 'MTR City Saver', warn: 'Not sold at the Customer Service Centre. Buy or add value only at the ticket machines at Kai Tak.',
-      body: ['40 rides on MTR urban lines (incl. Kai Tak) within 40 days.', 'Good for frequent long-distance riders.'] },
+      body: ['Unlimited free rides on the Tuen Ma Line between East Tsim Sha Tsui and Wu Kai Sha (incl. Kai Tak, Diamond Hill, Hung Hom) during the valid month.', 'Journeys beyond the zone (e.g. cross-harbour to Admiralty or Central) get 25% off the regular fare.', 'Available from the ticket machines at Kai Tak.'] },
+    { key: 'cs', title: 'MTR City Saver', warn: 'Not sold at the Kai Tak Customer Service Centre',
+      body: ['40 rides on designated urban line journeys within 40 days.', 'At Kai Tak, buy it only from the ticket machines, or at other stations with a full Customer Service Centre counter (e.g. Diamond Hill, Ho Man Tin).'] },
     { key: 'tdp', title: 'Tourist Day Pass', warn: 'Not sold at Kai Tak Station',
-      body: ['Book in advance on the MTR Mobile app or website, or buy at a station with a designated Customer Service Centre (e.g. Airport, West Kowloon, boundary stations).', 'Once bought, tap in at Kai Tak as normal.'] },
+      body: ['Buy it at a station with a full Customer Service Centre counter, such as Diamond Hill or Ho Man Tin.', 'Once bought, tap in at Kai Tak as normal.'] },
   ],
   ko: [
+    { key: 'oct', title: '실물 옥토퍼스 카드', warn: '카이탁역에서는 실물 옥토퍼스 카드를 판매하지 않습니다',
+      body: ['구매하려면 고객서비스센터 창구가 있는 역(다이아몬드힐역, 호만틴역 등)을 이용하세요.', '여행객은 휴대폰에서 바로 발급·충전하는 모바일 옥토퍼스(Mobile Octopus)도 이용할 수 있습니다.'] },
     { key: 'mp', title: '월정액 패스 엑스트라 (이스트 침사추이 – 우카이샤)', flag: '카이탁역은 이 패스의 적용 구간에 포함됩니다!',
-      body: ['유효 월 동안 툰마선 이스트 침사추이–우카이샤 구간(카이탁, 다이아몬드힐, 홍함 포함) 무제한 무료 탑승.', '구간 밖으로 이어지는 이동(예: 해저 터널 건너 애드미럴티·센트럴)은 정상 요금의 25% 할인.'] },
-    { key: 'cs', title: 'MTR 시티 세이버 (MTR City Saver)', warn: '고객서비스센터에서는 판매하지 않으며, 카이탁역 자동발매기에서만 구매 또는 충전 가능',
-      body: ['40일 이내 MTR 시내 노선(카이탁역 포함) 40회 탑승.', '장거리 이동이 잦은 승객에게 적합.'] },
+      body: ['유효 월 동안 툰마선 이스트 침사추이–우카이샤 구간(카이탁, 다이아몬드힐, 홍함 포함) 무제한 무료 탑승.', '구간 밖으로 이어지는 이동(예: 애드미럴티·센트럴)은 정상 요금의 25% 할인.', '카이탁역 자동발매기에서 구매 가능.'] },
+    { key: 'cs', title: 'MTR 시티 세이버 (MTR City Saver)', warn: '카이탁역 고객서비스센터에서는 판매하지 않습니다',
+      body: ['40일 이내 지정 시내 노선 40회 탑승.', '카이탁역에서는 자동발매기에서만 구매 가능하며, 고객서비스센터 창구가 있는 다른 역(다이아몬드힐역, 호만틴역 등)에서도 구매할 수 있습니다.'] },
     { key: 'tdp', title: '관광객 1일권 (Tourist Day Pass)', warn: '카이탁역에서는 판매하지 않습니다',
-      body: ['MTR Mobile 앱·공식 웹사이트에서 미리 예약하거나, 지정 고객서비스센터가 있는 역(공항역, 웨스트카오룽역, 국경역 등)에서 구매하세요.', '구매 후 카이탁역에서 평소처럼 개찰구를 통과하면 됩니다.'] },
+      body: ['고객서비스센터 창구가 있는 역(다이아몬드힐역, 호만틴역 등)에서 구매해야 합니다.', '구매 후 카이탁역에서 평소처럼 개찰구를 통과하면 됩니다.'] },
   ],
   ja: [
+    { key: 'oct', title: '実物のオクトパスカード', warn: '啓徳駅では実物のオクトパスカードを販売していません',
+      body: ['購入はカスタマーサービスセンター窓口のある駅（鑽石山駅、何文田駅など）で。', '旅行者はスマホで発行・チャージできるモバイルオクトパス（Mobile Octopus）も利用できます。'] },
     { key: 'mp', title: '全月通 加強版（尖東 – 烏溪沙）', flag: '啓徳駅はこの定期券の対象区間内です！',
-      body: ['有効月内は屯馬線 尖東–烏溪沙 区間（啓徳・鑽石山・紅磡など）が乗り放題。', '区間外へ続く乗車（例：海を渡って金鐘・中環へ）は通常運賃の25%割引。'] },
-    { key: 'cs', title: 'MTR 都会票（MTR City Saver）', warn: 'カスタマーサービスセンターでは販売なし。啓徳駅の自動券売機でのみ購入・チャージ可能',
-      body: ['40日以内に MTR 市街地路線（啓徳駅を含む）を40回乗車可能。', '長距離移動の多い方におすすめ。'] },
+      body: ['有効月内は屯馬線 尖東–烏溪沙 区間（啓徳・鑽石山・紅磡など）が乗り放題。', '区間外へ続く乗車（例：金鐘・中環）は通常運賃の25%割引。', '啓徳駅の自動券売機で購入可能。'] },
+    { key: 'cs', title: 'MTR 都会票（MTR City Saver）', warn: '啓徳駅のカスタマーサービスセンターでは販売なし',
+      body: ['40日以内に指定の市街地路線を40回乗車可能。', '啓徳駅では自動券売機でのみ購入可能。窓口のある他の駅（鑽石山駅、何文田駅など）でも購入できます。'] },
     { key: 'tdp', title: '旅遊全日通（Tourist Day Pass）', warn: '啓徳駅では販売していません',
-      body: ['MTR Mobile アプリ／公式サイトで事前予約するか、指定カスタマーサービスセンターのある駅（空港駅・西九龍駅・境界駅など）で購入してください。', '購入後は啓徳駅で通常通り改札を通過できます。'] },
+      body: ['カスタマーサービスセンター窓口のある駅（鑽石山駅、何文田駅など）で購入してください。', '購入後は啓徳駅で通常通り改札を通過できます。'] },
   ],
 };
 
@@ -1364,7 +1436,10 @@ function TicketZone({ t, lang }) {
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Ticket size={19} />{t.tickets}</h2>
-      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+      <div className="mt-3 flex items-start gap-2 rounded-xl border-2 px-4 py-3 text-sm font-bold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)', borderColor: 'var(--sign)' }}>
+        <AlertTriangle size={18} className="mt-0.5 shrink-0" />{t.octBanner}
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
         {list.map((tk) => (
           <article key={tk.key} className={`flex flex-col rounded-xl border p-4 ${tk.flag ? 'border-2' : 'border-[var(--border)]'}`} style={tk.flag ? { borderColor: LINES.TML.color } : undefined}>
             <h3 className="font-bold leading-snug">{tk.title}</h3>
@@ -1385,13 +1460,27 @@ function TicketZone({ t, lang }) {
         ))}
       </div>
 
+      <div className="mt-4 rounded-xl border border-[var(--border)] p-4">
+        <h3 className="flex items-center gap-2 text-sm font-bold"><Ticket size={16} />{t.tvmTitle}</h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg bg-[var(--surface-2)] p-3">
+            <p className="text-xs font-semibold text-[var(--muted)]">{t.tvmFuncLabel}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {t.tvmFuncs.map((f) => <span key={f} className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold">{f}</span>)}
+            </div>
+          </div>
+          <div className="rounded-lg p-3" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+            <p className="text-xs font-semibold">{t.tvmPayLabel}</p>
+            <p className="mt-2 text-sm font-bold">{t.tvmPayOk}</p>
+            <p className="mt-1 text-xs">{t.tvmPayNo}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-4 grid gap-3 rounded-xl bg-[var(--surface-2)] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-bold"><Info size={16} />{t.service}</h3>
-          <ul className="mt-2 space-y-2 text-sm">
-            <li className="flex items-start gap-2"><Info size={16} className="mt-0.5 shrink-0 text-[var(--muted)]" /><span>{t.csc}</span></li>
-            <li className="flex items-start gap-2"><Ticket size={16} className="mt-0.5 shrink-0 text-[var(--muted)]" /><span>{t.tvm}</span></li>
-          </ul>
+          <p className="mt-2 flex items-start gap-2 text-sm"><Info size={16} className="mt-0.5 shrink-0 text-[var(--muted)]" /><span>{t.csc}</span></p>
         </div>
         <a href={TICKET_URL} target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold text-white" style={{ background: '#16202B' }}>
@@ -1403,7 +1492,7 @@ function TicketZone({ t, lang }) {
 }
 
 let FARE_CACHE = null;
-function MTRGuide({ t, lang }) {
+function MTRGuide({ t, lang, initialDest }) {
   const [fares, setFares] = useState(FARE_CACHE);
   const [fareStatus, setFareStatus] = useState(FARE_CACHE ? 'official' : 'loading');
   useEffect(() => {
@@ -1420,7 +1509,7 @@ function MTRGuide({ t, lang }) {
   return (
     <div className="space-y-4">
       <Arrivals t={t} lang={lang} />
-      <StationRouteFinder t={t} lang={lang} fares={fares} fareStatus={fareStatus} />
+      <StationRouteFinder t={t} lang={lang} fares={fares} fareStatus={fareStatus} initialDest={initialDest} />
       <TicketZone t={t} lang={lang} />
     </div>
   );
@@ -1832,10 +1921,107 @@ function SyncModal({ open, diff, onClose, onApply, t, lang, busy }) {
   );
 }
 
+/* ============================ 醫院交通指引 ============================ */
+const HOSPITAL_IDS = new Set(['p23-hkch', 'p30-kt-hosp']);
+const OP_STYLE = { CTB: { bg: '#F2B705', fg: '#111' }, KMB: { bg: '#C8102E', fg: '#fff' }, GMB: { bg: '#0F7B4F', fg: '#fff' }, REHAB: { bg: '#5A6573', fg: '#fff' } };
+// 由啟德站往返香港兒童醫院／啟德醫院（資料：醫管局、運輸署及 2026 年 10 月報道，出發前請以營辦商公布為準）
+const HOSP_FROM_KAT = [
+  { op: 'CTB', route: '22S', exit: 'C', zh: '啟德站 ↔ 啟德郵輪碼頭（循環線）；星期一至五 10:30–19:30 設短途班次，由啟德站直達啟德醫院及香港兒童醫院。', en: 'Kai Tak Station ↔ Kai Tak Cruise Terminal (circular). Mon–Fri 10:30–19:30 short trips run from Kai Tak Station to both hospitals.' },
+  { op: 'CTB', route: '22M', exit: 'A', zh: '啟德郵輪碼頭 ↔ 土瓜灣（循環線），途經啟德站及兩間醫院。', en: 'Kai Tak Cruise Terminal ↔ To Kwa Wan (circular), via Kai Tak Station and both hospitals.' },
+  { op: 'GMB', route: '88A', exit: null, zh: '黃大仙站 ↔ 啟德醫院（循環線），途經啟德站一帶。', en: 'Wong Tai Sin Station ↔ Kai Tak Hospital (circular), via the Kai Tak Station area.' },
+  { op: 'REHAB', route: '♿', exit: 'A', zh: '復康穿梭巴士站，供有需要人士往返兩間醫院。', en: 'Rehabus feeder stop to both hospitals for passengers who need it.' },
+];
+const HOSP_OTHER = {
+  zh: '城巴 20A、20X、22；九巴 5R、X6C、15A，以及九巴 11A、17A 往啟德醫院特別班次；專線小巴 86（九龍灣站 A 出口，約 10 分鐘）、22A、68、90A、90B。',
+  en: 'Citybus 20A, 20X, 22; KMB 5R, X6C, 15A, plus KMB 11A and 17A special trips to Kai Tak Hospital; green minibus 86 (Kowloon Bay Station Exit A, about 10 min), 22A, 68, 90A, 90B.',
+};
+
+function HospitalGuide({ t, lang }) {
+  const zh = lang === 'zh' || lang === 'ja';
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="flex gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-[13px] font-bold leading-relaxed text-red-700">
+        <AlertTriangle size={16} className="mt-0.5 shrink-0" />{t.hospWarn}
+      </div>
+      <p className="text-xs font-semibold text-[var(--muted)]">{t.hospFromKat}</p>
+      <ul className="space-y-1.5">
+        {HOSP_FROM_KAT.map((r) => (
+          <li key={r.op + r.route} className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-2">
+            <span className="num shrink-0 rounded px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
+            <span className="min-w-0 flex-1 text-xs leading-relaxed">
+              <b>{t['op' + r.op]}</b>　{zh ? r.zh : r.en}
+              <span className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+                {r.exit ? <><ExitPlate exit={r.exit} />{fmt(t.hospBoard, { exit: r.exit })}</> : t.hospSign}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs leading-relaxed text-[var(--muted)]"><b>{t.hospOther}：</b>{zh ? HOSP_OTHER.zh : HOSP_OTHER.en}</p>
+    </div>
+  );
+}
+
+/* ============================ 外幣找換指南 ============================ */
+const FX_LOCAL_IDS = ['bk-hsbc-kt', 'bk-boc-kt'];
+const FX_HOT = [
+  { code: 'TST', zh: '重慶大廈地下一帶找換店集中，可由尖東站經行人隧道前往。', en: 'Money changers cluster on the ground floor of Chungking Mansions, reached from East Tsim Sha Tsui via the subway.', q: 'money exchange Chungking Mansions Tsim Sha Tsui' },
+  { code: 'MOK', zh: '彌敦道一帶有不少找換店。', en: 'Plenty of money changers along Nathan Road.', q: 'money exchange near Mong Kok MTR station' },
+  { code: 'DIH', zh: '屯馬綫一站即達，可在地圖查看車站附近的找換店。', en: 'One stop away on the Tuen Ma Line. Check the map for changers near the station.', q: 'money exchange near Diamond Hill MTR station' },
+];
+const MSO_REGISTER_URL = 'https://eservices.customs.gov.hk/MSOS/wsrh/001s1?request_locale=en';
+
+function MoneyExchangeFinder({ t, lang, items, onRoute }) {
+  const zh = lang === 'zh' || lang === 'ja';
+  const local = FX_LOCAL_IDS.map((id) => items.find((x) => x.id === id)).filter(Boolean);
+  return (
+    <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 text-lg font-bold"><Banknote size={19} />💱 {t.fxTitle}</h2>
+      <h3 className="mt-3 text-sm font-bold">{t.fxLocal}</h3>
+      <p className="mt-1 text-xs text-[var(--muted)]">{t.fxLocalNote}</p>
+      <ul className="mt-2 space-y-1.5">
+        {local.map((x) => (
+          <li key={x.id} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] p-2">
+            <ExitPlate exit={x.exit} />
+            <span className="min-w-0 flex-1 truncate text-sm">{tx(x.name, lang)}</span>
+            <a href={mapsUrl(x.mapQuery || x.name.zh)} target="_blank" rel="noopener noreferrer" aria-label={t.navigate} className="rounded-md p-1.5 hover:bg-[var(--surface)]"><Navigation size={15} /></a>
+          </li>
+        ))}
+      </ul>
+
+      <h3 className="mt-4 text-sm font-bold">{t.fxHot}</h3>
+      <div className="mt-2 grid gap-2 md:grid-cols-3">
+        {FX_HOT.map((h) => {
+          const plan = planTrip(h.code, FARE_CACHE);
+          const xfer = plan && plan.transfers.length ? fmt(t.fxTransfers, { n: plan.transfers.length }) : t.fxDirect;
+          return (
+            <div key={h.code} className="flex flex-col rounded-xl border border-[var(--border)] p-3">
+              <p className="flex items-center gap-2 font-bold"><StationDots code={h.code} />{stName(h.code, lang)}</p>
+              {plan && <p className="num mt-1 text-xs text-[var(--muted)]">{fmt(t.fxSummary, { m: plan.mins, f: money(plan.fare && plan.fare.oct), x: xfer })}</p>}
+              <p className="mt-1.5 flex-1 text-xs leading-relaxed">{zh ? h.zh : h.en}</p>
+              <div className="mt-2 flex gap-1.5">
+                <button onClick={() => onRoute(h.code)} className="flex-1 rounded-lg px-2 py-1.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>{t.fxRoute}</button>
+                <a href={mapsUrl(h.q)} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1.5 text-xs font-bold hover:border-[var(--ink)]"><Navigation size={12} />{t.fxMap}</a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
+        {t.fxTips}{' '}
+        <a href={MSO_REGISTER_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{t.fxLicence}</a>
+      </p>
+    </motion.section>
+  );
+}
+
 /* ============================ App ============================ */
 function App() {
   const [lang, setLang] = useState('zh');
   const [tab, setTab] = useState('land');
+  const [routeDest, setRouteDest] = useState(null);
+  const [octBanner, setOctBanner] = useState(true);
+  const goRoute = (code) => { setRouteDest(code); setTab('mtr'); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {} };
   const [items, setItems] = useState(SEED);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -1925,6 +2111,17 @@ function App() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {octBanner && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden bg-[var(--sign)] text-[#111418]">
+            <div className="mx-auto flex max-w-6xl items-start gap-2 px-4 py-2.5 text-sm font-semibold">
+              <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+              <span className="flex-1">{t.octBanner}</span>
+              <button onClick={() => setOctBanner(false)} aria-label="Close" className="rounded p-0.5 hover:bg-black/10"><X size={16} /></button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <StationBoard t={t} lang={lang} />
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-5">
@@ -1944,9 +2141,9 @@ function App() {
               <LandmarkPortal items={items} lang={lang} t={t} isAdmin={isAdmin}
                 onAdd={() => { setEditing(null); setFormOpen(true); }}
                 onEdit={(it) => { setEditing(it); setFormOpen(true); }}
-                onDelete={askDelete} />
+                onDelete={askDelete} onRoute={goRoute} />
             ) : tab === 'mtr' ? (
-              <MTRGuide t={t} lang={lang} />
+              <MTRGuide t={t} lang={lang} initialDest={routeDest} />
             ) : (
               <BusPanel t={t} lang={lang} items={items} />
             )}
