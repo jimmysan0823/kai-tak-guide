@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v8（美食餐飲：具體餐廳、商場／菜式篩選）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v8.1（美食餐飲：以餐廳名稱為搜尋及展示主題）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -364,6 +364,13 @@ const UI_V8 = {
   ja: { dMall: 'モール・エリア', dCuisine: 'ジャンル', dAll: 'すべて', walkNote: '徒歩時間は目安です。飲食店は入れ替わりが多いため、事前に Google マップでご確認ください。', fMall: 'モール・エリア', fCuisine: 'ジャンル', fFloor: '階・店舗番号', fWalk: '徒歩分数（例：3–5）' },
 };
 Object.keys(UI_V8).forEach((l) => Object.assign(UI[l], UI_V8[l]));
+const UI_V9 = {
+  zh: { searchDining: '🔍 搜尋餐廳名稱、菜式或美食 (例如: 拉麵、CAFE、壽司)...', dAllCuisine: '全部分類', dPopularMall: '熱門商場' },
+  en: { searchDining: '🔍 Search restaurants, cuisines or food (e.g. ramen, café, sushi)...', dAllCuisine: 'All cuisines', dPopularMall: 'Popular malls' },
+  ko: { searchDining: '🔍 식당 이름, 요리 종류, 음식 검색 (예: 라멘, 카페, 스시)...', dAllCuisine: '전체 분류', dPopularMall: '인기 쇼핑몰' },
+  ja: { searchDining: '🔍 店名・ジャンル・料理で検索（例：ラーメン、カフェ、寿司）...', dAllCuisine: 'すべてのジャンル', dPopularMall: '人気モール' },
+};
+Object.keys(UI_V9).forEach((l) => Object.assign(UI[l], UI_V9[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -426,12 +433,12 @@ const mk = (id, category, exit, zh, en, dZh, dEn, tip, q) => ({
 /* ============================ 美食餐飲：商場／菜式分類 ============================ */
 // exit：預設建議出口；walk：由該出口步行的估算分鐘；q：Google 地圖搜尋時附加的地點字眼
 const MALLS = {
-  airside: { exit: 'C', walk: '3–5', q: 'AIRSIDE 啟德', label: { zh: 'AIRSIDE', en: 'AIRSIDE', ko: 'AIRSIDE', ja: 'AIRSIDE' } },
-  twins: { exit: 'B1', walk: '1–3', q: '雙子匯 啟德', label: { zh: '雙子匯', en: 'The Twins', ko: '더 트윈스', ja: 'The Twins（雙子匯）' } },
-  mikiki: { exit: 'C', walk: '10–13', q: 'Mikiki 新蒲崗', label: { zh: 'Mikiki', en: 'Mikiki', ko: 'Mikiki', ja: 'Mikiki' } },
+  airside: { exit: 'C', walk: '3–5', q: 'AIRSIDE', label: { zh: 'AIRSIDE', en: 'AIRSIDE', ko: 'AIRSIDE', ja: 'AIRSIDE' } },
+  twins: { exit: 'B1', walk: '1–3', q: '雙子匯', label: { zh: '雙子匯', en: 'The Twins', ko: '더 트윈스', ja: 'The Twins（雙子匯）' } },
+  mikiki: { exit: 'C', walk: '10–13', q: 'Mikiki', label: { zh: 'Mikiki', en: 'Mikiki', ko: 'Mikiki', ja: 'Mikiki' } },
   chinglong: { exit: 'A', walk: '5', q: '晴朗商場', label: { zh: '晴朗商場', en: 'Ching Long', ko: '칭롱 쇼핑센터', ja: '晴朗商場' } },
   ktsp: { exit: 'D', walk: '8–10', q: '啟德零售館', label: { zh: '啟德體育園區', en: 'Kai Tak Sports Park', ko: '카이탁 스포츠파크', ja: '啓徳スポーツパーク' } },
-  other: { exit: 'A', walk: '', q: '啟德', label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
+  other: { exit: 'A', walk: '', q: '', label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
 };
 const CUISINES = {
   japanese: { zh: '日式料理', en: 'Japanese', ko: '일식', ja: '和食' },
@@ -465,7 +472,7 @@ function mkR(id, mall, cuisine, zh, en, floor, dZh, dEn, exitOverride) {
     name: { zh, en, ko: en, ja: zh },
     desc: { zh: dZh, en: dEn, ko: `${CUISINES[cuisine].ko} · ${m.label.ko}`, ja: `${CUISINES[cuisine].ja}・${m.label.ja}` },
     tip: { zh: tipOf('zh'), en: tipOf('en'), ko: tipOf('ko'), ja: tipOf('ja') },
-    mapQuery: `${zh} ${m.q}`,
+    mapQuery: `${zh} 啟德${m.q ? ` ${m.q}` : ''}`, // 格式：餐廳名稱 + 啟德（附商場名，避免搜到其他分店）
     meta,
   };
 }
@@ -886,7 +893,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 4 版：餐廳）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 5 版：餐廳導航）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -1158,47 +1165,93 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   );
 }
 
+/* ---------- 美食搜尋：菜式大類及關鍵字 ---------- */
+// 篩選標籤用的菜式大類（按乘客常用的找食方式分組）
+const CUISINE_GROUPS = [
+  { id: 'jp', cuisines: ['japanese', 'ramen'], label: { zh: '日式料理', en: 'Japanese', ko: '일식', ja: '和食' } },
+  { id: 'kr', cuisines: ['korean', 'bbq'], label: { zh: '韓式／燒肉', en: 'Korean & BBQ', ko: '한식·고기구이', ja: '韓国料理・焼肉' } },
+  { id: 'cn', cuisines: ['chinese'], label: { zh: '中菜／港台', en: 'Chinese & Taiwanese', ko: '중식·대만식', ja: '中華・台湾' } },
+  { id: 'west', cuisines: ['western', 'fusion', 'cafe'], label: { zh: '西式／CAFE', en: 'Western & café', ko: '양식·카페', ja: '洋食・カフェ' } },
+  { id: 'sweet', cuisines: ['dessert'], label: { zh: '甜品輕食', en: 'Desserts & snacks', ko: '디저트·간식', ja: 'スイーツ・軽食' } },
+  { id: 'hotpot', cuisines: ['hotpot'], label: { zh: '火鍋', en: 'Hotpot', ko: '훠궈', ja: '鍋料理' } },
+  { id: 'sea', cuisines: ['sea'], label: { zh: '泰國／東南亞', en: 'Thai & SE Asian', ko: '태국·동남아', ja: 'タイ・東南アジア' } },
+  { id: 'court', cuisines: ['foodcourt', 'area'], label: { zh: '美食廣場／美食區', en: 'Food courts & areas', ko: '푸드코트·식당가', ja: 'フードコート・飲食エリア' } },
+];
+const POPULAR_MALLS = ['airside', 'twins', 'mikiki'];
+// 菜式關鍵字：令「拉麵」「CAFE」「壽司」等常用字都搜尋得到
+const CUISINE_TAGS = {
+  japanese: ['日本菜', '日式', 'japanese', '和食'],
+  ramen: ['拉麵', 'ラーメン', 'ramen', '烏冬', 'udon', 'noodle'],
+  bbq: ['燒肉', '焼肉', 'yakiniku', 'bbq', '燒烤'],
+  hotpot: ['火鍋', 'hotpot', '涮涮鍋', 'shabu', '打邊爐'],
+  korean: ['韓國', '韓式', 'korean'],
+  chinese: ['中菜', '中式', 'chinese', '台灣', 'taiwanese'],
+  sea: ['泰國', '泰菜', 'thai', '東南亞', 'southeast asian'],
+  western: ['西餐', '西式', 'western'],
+  fusion: ['fusion', '創意', '新派'],
+  cafe: ['cafe', 'café', 'coffee', '咖啡', 'bakery', '烘焙'],
+  dessert: ['甜品', 'dessert', '飲品', 'drinks', '輕食', 'snack'],
+  foodcourt: ['美食廣場', 'food court', 'foodcourt'],
+  area: ['美食區', '食肆', 'eateries'],
+};
+// 統一大小寫、去除重音符號（café → cafe），並將日文「寿」視作「壽」
+const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/寿/g, '壽');
+// 美食搜尋評分：餐廳名稱 > 菜式／關鍵字 > 特色介紹 > 商場；出口號碼不作搜尋依據
+function diningScore(it, k) {
+  const m = it.meta || {};
+  const name = fold(Object.values(it.name || {}).join(' '));
+  const tags = fold([...(m.cuisine && CUISINES[m.cuisine] ? Object.values(CUISINES[m.cuisine]) : []), ...(CUISINE_TAGS[m.cuisine] || [])].join(' '));
+  const desc = fold(Object.values(it.desc || {}).join(' '));
+  const place = fold([...(m.mall && MALLS[m.mall] ? Object.values(MALLS[m.mall].label) : []), ...(m.floor ? Object.values(m.floor) : [])].join(' '));
+  if (name.startsWith(k)) return 5;
+  if (name.includes(k)) return 4;
+  if (tags.includes(k)) return 3;
+  if (desc.includes(k)) return 2;
+  if (place.includes(k)) return 1;
+  return 0;
+}
+
 function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   const meta = item.meta || {};
   const mall = MALLS[meta.mall] || MALLS.other;
   const cuisine = CUISINES[meta.cuisine] || CUISINES.area;
   const floor = meta.floor ? tx(meta.floor, lang) : '';
   const walk = walkText(item.exit, meta.walk, lang);
+  const title = tx(item.name, lang);
+  const sub = [item.name.zh, item.name.en].filter((n) => n && n !== title)[0];
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
-      className="relative flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-      {/* 頂部：最近港鐵出口 */}
-      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: '#16202B' }}>
-        <ExitPlate exit={item.exit} size="lg" />
-        <div className="min-w-0 text-white">
-          <p className="text-sm font-bold">{t.exit} {item.exit}</p>
-          {walk && <p className="flex items-center gap-1 text-[11px] text-white/70"><Footprints size={11} />{walk}</p>}
+      className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      {isAdmin && (
+        <div className="absolute right-2 top-2 flex gap-1">
+          <button onClick={() => onEdit(item)} aria-label={t.edit} className="rounded-md bg-[var(--surface-2)] p-1.5 hover:bg-[var(--border)]"><Pencil size={12} /></button>
+          <button onClick={() => onDelete(item)} aria-label={t.del} className="rounded-md bg-red-600 p-1.5 text-white hover:bg-red-700"><Trash2 size={12} /></button>
         </div>
-        {isAdmin && (
-          <div className="ml-auto flex gap-1">
-            <button onClick={() => onEdit(item)} className="flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 text-xs font-medium text-white hover:bg-white/25"><Pencil size={12} />{t.edit}</button>
-            <button onClick={() => onDelete(item)} className="flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"><Trash2 size={12} />{t.del}</button>
-          </div>
-        )}
+      )}
+      {/* 主標題：餐廳名稱 + 菜式 */}
+      <div className={isAdmin ? 'pr-16' : ''}>
+        <h3 className="text-lg font-bold leading-snug">{title}</h3>
+        {sub && <p className="text-sm text-[var(--muted)]">{sub}</p>}
+        <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
+          <UtensilsCrossed size={12} />{tx(cuisine, lang)}
+        </span>
       </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="text-base font-bold leading-snug">{tx(item.name, lang)}</h3>
-        {item.name.en && item.name.en !== tx(item.name, lang) && <p className="text-xs text-[var(--muted)]">{item.name.en}</p>}
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
-            <UtensilsCrossed size={11} />{tx(cuisine, lang)}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-semibold">
-            <MapPin size={11} />{tx(mall.label, lang)}{floor ? ` · ${floor}` : ''}
-          </span>
-        </div>
-        <p className="mt-2.5 text-sm leading-relaxed">{tx(item.desc, lang)}</p>
-        <div className="mt-auto pt-3.5">
-          <a href={mapsUrl(item.mapQuery || item.name.zh)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
-            📍 {t.navigate}<ExternalLink size={14} />
-          </a>
-        </div>
+      <p className="mt-2.5 text-sm leading-relaxed">{tx(item.desc, lang)}</p>
+      {/* 輔助資料：出口、商場及樓層 */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-3 text-[11px] text-[var(--muted)]">
+        <span className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] py-0.5 pl-0.5 pr-2 font-semibold text-[var(--ink)]">
+          <ExitPlate exit={item.exit} />{t.exit} {item.exit}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 font-semibold text-[var(--ink)]">
+          <MapPin size={11} />{tx(mall.label, lang)}{floor ? ` · ${floor}` : ''}
+        </span>
+        {walk && <span className="inline-flex items-center gap-1 px-1"><Footprints size={11} />{walk}</span>}
+      </div>
+      <div className="mt-auto pt-3.5">
+        <a href={mapsUrl(item.mapQuery || `${item.name.zh} 啟德`)} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
+          📍 {t.navigate}<ExternalLink size={14} />
+        </a>
       </div>
     </motion.article>
   );
@@ -1208,17 +1261,25 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
   const [mallF, setMallF] = useState('all');
-  const [cuisineF, setCuisineF] = useState('all');
+  const [groupF, setGroupF] = useState('all');
 
   const filtered = useMemo(() => {
     const k = q.trim().toLowerCase();
+    // 美食餐飲：以餐廳名稱／菜式為搜尋主題，按相關度排序
+    if (cat === 'dining') {
+      const group = CUISINE_GROUPS.find((g) => g.id === groupF);
+      const fk = fold(k);
+      return items
+        .filter((it) => it.category === 'dining')
+        .filter((it) => mallF === 'all' || (it.meta || {}).mall === mallF)
+        .filter((it) => !group || group.cuisines.includes((it.meta || {}).cuisine))
+        .map((it) => ({ it, s: fk ? diningScore(it, fk) : 1 }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .map((x) => x.it);
+    }
     return items.filter((it) => {
       if (cat !== 'all' && it.category !== cat) return false;
-      if (cat === 'dining') {
-        const m = it.meta || {};
-        if (mallF !== 'all' && m.mall !== mallF) return false;
-        if (cuisineF !== 'all' && m.cuisine !== cuisineF) return false;
-      }
       if (!k) return true;
       const m = it.meta || {};
       const hay = [
@@ -1232,7 +1293,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       if (/^(exit\s*)?[a-d]\d?$/i.test(k)) return it.exit.toLowerCase().split('/').includes(k.replace(/exit\s*/i, ''));
       return hay.includes(k);
     });
-  }, [items, q, cat, mallF, cuisineF]);
+  }, [items, q, cat, mallF, groupF]);
 
   const counts = useMemo(() => {
     const c = { all: items.length };
@@ -1245,7 +1306,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative flex-1">
           <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPh}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={cat === 'dining' ? t.searchDining : t.searchPh}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-3 pl-10 pr-10 text-[15px] outline-none focus:border-[var(--ink)]" />
           {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={16} /></button>}
         </label>
@@ -1278,27 +1339,27 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       {cat === 'bank' && <div className="mt-4"><MoneyExchangeFinder t={t} lang={lang} items={items} onRoute={onRoute} /></div>}
       {cat === 'dining' && (() => {
         const dining = items.filter((x) => x.category === 'dining');
-        const countBy = (key) => dining.reduce((o, x) => { const v = (x.meta || {})[key]; if (v) o[v] = (o[v] || 0) + 1; return o; }, {});
-        const malls = countBy('mall');
-        const cuis = countBy('cuisine');
-        const Chip = ({ active, onClick, children }) => (
-          <button onClick={onClick} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink)]'}`}
+        const groupCount = (g) => dining.filter((x) => g.cuisines.includes((x.meta || {}).cuisine)).length;
+        const mallCount = (m) => dining.filter((x) => (x.meta || {}).mall === m).length;
+        const otherMalls = Object.keys(MALLS).filter((m) => !POPULAR_MALLS.includes(m) && mallCount(m));
+        const Chip = ({ active, onClick, children, big }) => (
+          <button onClick={onClick} className={`whitespace-nowrap rounded-full border font-semibold transition-colors ${big ? 'px-3.5 py-1.5 text-sm' : 'px-3 py-1 text-xs'} ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink)]'}`}
             style={active ? { background: LINES.TML.color } : undefined}>{children}</button>
         );
         return (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dMall}</span>
-              <Chip active={mallF === 'all'} onClick={() => setMallF('all')}>{t.dAll}</Chip>
-              {Object.keys(MALLS).filter((m) => malls[m]).map((m) => (
-                <Chip key={m} active={mallF === m} onClick={() => setMallF(m)}>{tx(MALLS[m].label, lang)} <span className="opacity-70">{malls[m]}</span></Chip>
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 space-y-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+            <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 pb-0.5">
+              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dCuisine}</span>
+              <Chip big active={groupF === 'all'} onClick={() => setGroupF('all')}>{t.dAllCuisine}</Chip>
+              {CUISINE_GROUPS.filter((g) => groupCount(g)).map((g) => (
+                <Chip big key={g.id} active={groupF === g.id} onClick={() => setGroupF(g.id)}>{tx(g.label, lang)} <span className="opacity-70">{groupCount(g)}</span></Chip>
               ))}
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dCuisine}</span>
-              <Chip active={cuisineF === 'all'} onClick={() => setCuisineF('all')}>{t.dAll}</Chip>
-              {Object.keys(CUISINES).filter((c) => cuis[c]).map((c) => (
-                <Chip key={c} active={cuisineF === c} onClick={() => setCuisineF(c)}>{tx(CUISINES[c], lang)} <span className="opacity-70">{cuis[c]}</span></Chip>
+            <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 pb-0.5">
+              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dPopularMall}</span>
+              <Chip active={mallF === 'all'} onClick={() => setMallF('all')}>{t.dAll}</Chip>
+              {[...POPULAR_MALLS, ...otherMalls].filter((m) => mallCount(m)).map((m) => (
+                <Chip key={m} active={mallF === m} onClick={() => setMallF(m)}>{POPULAR_MALLS.includes(m) ? '⭐ ' : ''}{tx(MALLS[m].label, lang)} <span className="opacity-70">{mallCount(m)}</span></Chip>
               ))}
             </div>
             <p className="text-[11px] text-[var(--muted)]">{t.walkNote}</p>
@@ -1310,7 +1371,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       {filtered.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-sm text-[var(--muted)]">{t.noResult}</p>
-          <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setCuisineF('all'); }} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
+          <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setGroupF('all'); }} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
         </div>
       ) : (
         <motion.div layout className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
