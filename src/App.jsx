@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v7.1（票務規則、醫院接駁、美食餐飲、外幣找換指南）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v7.2（醫院接駁路線實時到站）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -346,6 +346,13 @@ const UI_V7 = {
   },
 };
 Object.keys(UI_V7).forEach((l) => Object.assign(UI[l], UI_V7[l]));
+const UI_V71 = {
+  zh: { hospLive: '實時到站', hospLoading: '正在載入實時班次…', hospNoLive: '未能載入實時班次', hospAtStop: '於「{stop}」上車' },
+  en: { hospLive: 'Live ETA', hospLoading: 'Loading live arrivals…', hospNoLive: 'Live arrivals unavailable', hospAtStop: 'Board at "{stop}"' },
+  ko: { hospLive: '실시간 도착', hospLoading: '실시간 도착 정보 불러오는 중…', hospNoLive: '실시간 도착 정보를 불러올 수 없음', hospAtStop: '"{stop}"에서 승차' },
+  ja: { hospLive: 'リアルタイム', hospLoading: 'リアルタイム情報を読み込み中…', hospNoLive: 'リアルタイム情報を取得できません', hospAtStop: '「{stop}」で乗車' },
+};
+Object.keys(UI_V71).forEach((l) => Object.assign(UI[l], UI_V71[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -1936,26 +1943,178 @@ const HOSP_OTHER = {
   en: 'Citybus 20A, 20X, 22; KMB 5R, X6C, 15A, plus KMB 11A and 17A special trips to Kai Tak Hospital; green minibus 86 (Kowloon Bay Station Exit A, about 10 min), 22A, 68, 90A, 90B.',
 };
 
+/* ---------- 醫院接駁路線實時到站（城巴／專線小巴開放數據） ---------- */
+const HOSP_POS = { lat: 22.3163, lng: 114.2088 }; // 香港兒童醫院／啟德醫院（承昌道1號）一帶
+const GMB_BASES = ['/api/gmb', 'https://data.etagmb.gov.hk'];
+const BOARD_RADIUS_M = 450; // 啟德站上車站範圍
+const HOSP_RADIUS_M = 350;  // 醫院下車站範圍
+
+// 由車站序列中，揀出「啟德站附近、之後最少站數即到醫院」的上車站
+function pickBoardingStop(stops, posOf) {
+  let best = null;
+  stops.forEach((s, idx) => {
+    const p = posOf(s);
+    if (!p) return;
+    const d = distM(KAT_POS, p);
+    if (d > BOARD_RADIUS_M) return;
+    for (let k = idx + 1; k < stops.length; k++) {
+      const q = posOf(stops[k]);
+      if (q && distM(HOSP_POS, q) <= HOSP_RADIUS_M) {
+        const hops = k - idx;
+        if (!best || hops < best.hops || (hops === best.hops && d < best.d)) best = { s, d, hops };
+        break;
+      }
+    }
+  });
+  return best;
+}
+
+async function findCtbHospStop(route) {
+  let best = null;
+  const info = lsGet('kat-ctb-stopinfo-v1') || {};
+  for (const dir of ['outbound', 'inbound']) {
+    const rs = await apiGet(CTB_BASES, `/route-stop/CTB/${route}/${dir}`);
+    const seq = ((rs && rs.data) || []).map((r) => ({ id: r.stop, seq: +r.seq }));
+    if (!seq.length) continue;
+    const missing = seq.map((s) => s.id).filter((id) => !info[id]);
+    await inBatches(missing, 10, async (id) => {
+      const j = await apiGet(CTB_BASES, `/stop/${id}`);
+      const s = j && j.data;
+      if (s && s.lat) info[id] = { zh: s.name_tc, en: s.name_en, lat: +s.lat, lng: +s.long };
+    });
+    const pick = pickBoardingStop(seq, (s) => info[s.id]);
+    if (pick && (!best || pick.hops < best.hops)) {
+      const p = info[pick.s.id];
+      best = { co: 'CTB', route, dir, seq: pick.s.seq, id: pick.s.id, zh: p.zh, en: p.en, d: pick.d, hops: pick.hops };
+    }
+  }
+  lsSet('kat-ctb-stopinfo-v1', info);
+  return best;
+}
+
+async function findGmbHospStop(code) {
+  const j = await apiGet(GMB_BASES, `/route/KLN/${code}`);
+  const routes = (j && j.data) || [];
+  const info = lsGet('kat-gmb-stopinfo-v1') || {};
+  let best = null;
+  for (const r of routes) {
+    for (const dirn of r.directions || []) {
+      const rs = await apiGet(GMB_BASES, `/route-stop/${r.route_id}/${dirn.route_seq}`);
+      const stops = (rs && rs.data && rs.data.route_stops) || [];
+      await inBatches(stops.filter((s) => !info[s.stop_id]), 10, async (s) => {
+        const st = await apiGet(GMB_BASES, `/stop/${s.stop_id}`);
+        const c = st && st.data && st.data.coordinates && st.data.coordinates.wgs84;
+        if (c) info[s.stop_id] = { lat: +c.latitude, lng: +c.longitude };
+      });
+      const pick = pickBoardingStop(stops, (s) => info[s.stop_id]);
+      if (pick && (!best || pick.hops < best.hops)) {
+        best = { co: 'GMB', route: code, routeId: r.route_id, routeSeq: dirn.route_seq, stopSeq: pick.s.stop_seq, zh: pick.s.name_tc, en: pick.s.name_en, d: pick.d, hops: pick.hops };
+      }
+    }
+  }
+  lsSet('kat-gmb-stopinfo-v1', info);
+  return best;
+}
+
+// 上車站配置每 24 小時重新計算一次（路線改道或新增車站會自動更新）
+async function getHospPlan() {
+  const cache = lsGet('kat-hosp-plan-v1');
+  if (cache && Date.now() - cache.t < 864e5) return cache.plan;
+  const [s22S, s22M, s88A] = await Promise.all([findCtbHospStop('22S'), findCtbHospStop('22M'), findGmbHospStop('88A')]);
+  const plan = { '22S': s22S, '22M': s22M, '88A': s88A };
+  if (!s22S && !s22M && !s88A) return cache ? cache.plan : null;
+  lsSet('kat-hosp-plan-v1', { t: Date.now(), plan });
+  return plan;
+}
+
+async function loadHospEtas() {
+  const plan = await getHospPlan();
+  if (!plan) return null;
+  const out = {};
+  await Promise.all(Object.entries(plan).map(async ([route, s]) => {
+    if (!s) { out[route] = null; return; }
+    if (s.co === 'CTB') {
+      const j = await apiGet(CTB_BASES, `/eta/CTB/${s.id}/${route}`);
+      if (!j) { out[route] = { stop: s, etas: null }; return; }
+      const rows = (j.data || []).filter((e) => (s.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O') && (e.seq == null || +e.seq === s.seq) && e.eta);
+      out[route] = { stop: s, etas: rows.map((e) => ({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en })) };
+    } else {
+      const j = await apiGet(GMB_BASES, `/eta/route-stop/${s.routeId}/${s.routeSeq}/${s.stopSeq}`);
+      if (!j) { out[route] = { stop: s, etas: null }; return; }
+      const list = (j.data && j.data.eta) || [];
+      out[route] = { stop: s, etas: list.map((e) => ({ at: e.timestamp ? Date.parse(e.timestamp) : Date.now() + (e.diff || 0) * 60000, rmkZh: e.remarks_tc, rmkEn: e.remarks_en })) };
+    }
+    if (out[route].etas) out[route].etas = out[route].etas.filter((e) => !Number.isNaN(e.at)).sort((a, b) => a.at - b.at).slice(0, 3);
+  }));
+  return out;
+}
+
+// 兩張醫院卡片共用同一份數據，25 秒內不重複下載
+let HOSP_ETA = { t: 0, p: null };
+function getHospEtas(force) {
+  if (!force && HOSP_ETA.p && Date.now() - HOSP_ETA.t < 25000) return HOSP_ETA.p;
+  HOSP_ETA = { t: Date.now(), p: loadHospEtas().catch(() => null) };
+  return HOSP_ETA.p;
+}
+
 function HospitalGuide({ t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
+  const [live, setLive] = useState(null);
+  const [status, setStatus] = useState('loading');
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    let alive = true;
+    const load = (force) => getHospEtas(force).then((d) => {
+      if (!alive) return;
+      if (d) { setLive(d); setStatus('live'); } else setStatus((s) => (s === 'live' ? 'live' : 'offline'));
+    });
+    load(false);
+    const i = setInterval(() => load(true), 30000);
+    const k = setInterval(() => setNow(Date.now()), 15000);
+    return () => { alive = false; clearInterval(i); clearInterval(k); };
+  }, []);
+  const etaLabel = (at) => {
+    const m = Math.round((at - now) / 60000);
+    return m <= 0 ? t.busArriving : fmt(t.busMin, { n: m });
+  };
+  const liveLine = (route) => {
+    if (status === 'loading') return <span className="text-[var(--muted)]">{t.hospLoading}</span>;
+    const r = live && live[route];
+    if (status === 'offline' || !r || r.etas === null) return <span className="text-[var(--muted)]">{t.hospNoLive}</span>;
+    if (!r.etas.length) return <span className="text-[var(--muted)]">{t.busNoEta}</span>;
+    return (
+      <span className="flex flex-wrap items-baseline gap-x-2">
+        <span className="num text-sm font-bold" style={{ color: 'var(--tml)' }}>{etaLabel(r.etas[0].at)}</span>
+        {r.etas.slice(1).map((e, i) => <span key={i} className="num text-[11px] text-[var(--muted)]">{etaLabel(e.at)}</span>)}
+      </span>
+    );
+  };
+
   return (
     <div className="mt-3 space-y-2">
       <div className="flex gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-[13px] font-bold leading-relaxed text-red-700">
         <AlertTriangle size={16} className="mt-0.5 shrink-0" />{t.hospWarn}
       </div>
-      <p className="text-xs font-semibold text-[var(--muted)]">{t.hospFromKat}</p>
+      <p className="flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
+        <span>{t.hospFromKat}</span>
+        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.hospLive}</span>}
+      </p>
       <ul className="space-y-1.5">
-        {HOSP_FROM_KAT.map((r) => (
-          <li key={r.op + r.route} className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-2">
-            <span className="num shrink-0 rounded px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
-            <span className="min-w-0 flex-1 text-xs leading-relaxed">
-              <b>{t['op' + r.op]}</b>　{zh ? r.zh : r.en}
-              <span className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
-                {r.exit ? <><ExitPlate exit={r.exit} />{fmt(t.hospBoard, { exit: r.exit })}</> : t.hospSign}
+        {HOSP_FROM_KAT.map((r) => {
+          const stop = live && live[r.route] && live[r.route].stop;
+          return (
+            <li key={r.op + r.route} className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-2">
+              <span className="num shrink-0 rounded px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
+              <span className="min-w-0 flex-1 text-xs leading-relaxed">
+                <b>{t['op' + r.op]}</b>　{zh ? r.zh : r.en}
+                <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
+                  {r.exit ? <><ExitPlate exit={r.exit} />{fmt(t.hospBoard, { exit: r.exit })}</> : (stop ? fmt(t.hospAtStop, { stop: zh ? stop.zh : stop.en }) : t.hospSign)}
+                </span>
+                {r.op !== 'REHAB' && <span className="mt-1 block">{liveLine(r.route)}</span>}
               </span>
-            </span>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
       <p className="text-xs leading-relaxed text-[var(--muted)]"><b>{t.hospOther}：</b>{zh ? HOSP_OTHER.zh : HOSP_OTHER.en}</p>
     </div>

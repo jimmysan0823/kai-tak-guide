@@ -3,6 +3,6 @@
     { "source": "/api/mtr-schedule", "destination": "https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php" },
     { "source": "/api/mtr-fares", "destination": "https://opendata.mtr.com.hk/data/mtr_lines_fares.csv" },
     { "source": "/api/kmb/:path*", "destination": "https://data.etabus.gov.hk/v1/transport/kmb/:path*" },
-    { "source": "/api/ctb/:path*", "destination": "https://rt.data.gov.hk/v2/transport/citybus/:path*" }
+    { "source": "/api/ctb/:path*", "destination": "https://rt.data.gov.hk/v2/transport/citybus/:path*" },
+    { "source": "/api/gmb/:path*", "destination": "https://data.etagmb.gov.hk/:path*" }
   ]
-}

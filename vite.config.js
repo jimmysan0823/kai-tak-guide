@@ -30,6 +30,13 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (p) => p.replace('/api/ctb', '/v2/transport/citybus'),
       },
+
+      // 專線小巴實時到站
+      '/api/gmb': {
+        target: 'https://data.etagmb.gov.hk',
+        changeOrigin: true,
+        rewrite: (p) => p.replace('/api/gmb', ''),
+      },
     },
   },
 });
