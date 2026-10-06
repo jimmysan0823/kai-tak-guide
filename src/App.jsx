@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v7.2（醫院接駁路線實時到站）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v8（美食餐飲：具體餐廳、商場／菜式篩選）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -37,8 +37,12 @@ const ADMIN_EMAIL = ENV.VITE_ADMIN_EMAIL || '';
 const supabase = createClient && SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 const LS_KEY = 'kat-landmarks-v2';
-const toRow = (x, i) => ({ id: x.id, category: x.category, exit: x.exit, name: x.name, desc: x.desc, tip: x.tip, map_query: x.mapQuery, sort: i });
-const fromRow = (r) => ({ id: r.id, category: r.category, exit: r.exit, name: r.name, desc: r.desc, tip: r.tip || {}, mapQuery: r.map_query });
+// 餐廳等額外資料（meta）存放於 tip 欄位內的 _meta，毋須修改 Supabase 資料表結構
+const toRow = (x, i) => ({ id: x.id, category: x.category, exit: x.exit, name: x.name, desc: x.desc, tip: x.meta ? { ...(x.tip || {}), _meta: x.meta } : x.tip, map_query: x.mapQuery, sort: i });
+const fromRow = (r) => {
+  const { _meta, ...tip } = r.tip || {};
+  return { id: r.id, category: r.category, exit: r.exit, name: r.name, desc: r.desc, tip, mapQuery: r.map_query, ...(_meta ? { meta: _meta } : {}) };
+};
 
 const db = {
   mode: supabase ? 'cloud' : 'local',
@@ -353,6 +357,13 @@ const UI_V71 = {
   ja: { hospLive: 'リアルタイム', hospLoading: 'リアルタイム情報を読み込み中…', hospNoLive: 'リアルタイム情報を取得できません', hospAtStop: '「{stop}」で乗車' },
 };
 Object.keys(UI_V71).forEach((l) => Object.assign(UI[l], UI_V71[l]));
+const UI_V8 = {
+  zh: { dMall: '商場／區域', dCuisine: '菜式', dAll: '全部', walkNote: '步行時間為估算；食肆經常轉換，出發前請以 Google 地圖為準。', fMall: '商場／區域', fCuisine: '菜式', fFloor: '樓層及舖號', fWalk: '步行分鐘（例如 3–5）' },
+  en: { dMall: 'Mall / area', dCuisine: 'Cuisine', dAll: 'All', walkNote: 'Walking times are estimates. Restaurants change often, so check Google Maps before you go.', fMall: 'Mall / area', fCuisine: 'Cuisine', fFloor: 'Floor and shop no.', fWalk: 'Walking minutes (e.g. 3–5)' },
+  ko: { dMall: '쇼핑몰·지역', dCuisine: '요리 종류', dAll: '전체', walkNote: '도보 시간은 예상치입니다. 식당은 자주 바뀌므로 방문 전 Google 지도를 확인하세요.', fMall: '쇼핑몰·지역', fCuisine: '요리 종류', fFloor: '층·점포 번호', fWalk: '도보 분 (예: 3–5)' },
+  ja: { dMall: 'モール・エリア', dCuisine: 'ジャンル', dAll: 'すべて', walkNote: '徒歩時間は目安です。飲食店は入れ替わりが多いため、事前に Google マップでご確認ください。', fMall: 'モール・エリア', fCuisine: 'ジャンル', fFloor: '階・店舗番号', fWalk: '徒歩分数（例：3–5）' },
+};
+Object.keys(UI_V8).forEach((l) => Object.assign(UI[l], UI_V8[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -412,6 +423,53 @@ const mk = (id, category, exit, zh, en, dZh, dEn, tip, q) => ({
 
 // 以下 80 個地點按港鐵啟德站官方指南（09/2026）逐項核對：中英文名稱、建議出口、分類
 // 官方「主要大廈」→ 🏭 工商業區；官方「公共服務及設施」→ 按性質分入 🏛️ 政府/公共、🏥 醫療、🚢 體育/景點
+/* ============================ 美食餐飲：商場／菜式分類 ============================ */
+// exit：預設建議出口；walk：由該出口步行的估算分鐘；q：Google 地圖搜尋時附加的地點字眼
+const MALLS = {
+  airside: { exit: 'C', walk: '3–5', q: 'AIRSIDE 啟德', label: { zh: 'AIRSIDE', en: 'AIRSIDE', ko: 'AIRSIDE', ja: 'AIRSIDE' } },
+  twins: { exit: 'B1', walk: '1–3', q: '雙子匯 啟德', label: { zh: '雙子匯', en: 'The Twins', ko: '더 트윈스', ja: 'The Twins（雙子匯）' } },
+  mikiki: { exit: 'C', walk: '10–13', q: 'Mikiki 新蒲崗', label: { zh: 'Mikiki', en: 'Mikiki', ko: 'Mikiki', ja: 'Mikiki' } },
+  chinglong: { exit: 'A', walk: '5', q: '晴朗商場', label: { zh: '晴朗商場', en: 'Ching Long', ko: '칭롱 쇼핑센터', ja: '晴朗商場' } },
+  ktsp: { exit: 'D', walk: '8–10', q: '啟德零售館', label: { zh: '啟德體育園區', en: 'Kai Tak Sports Park', ko: '카이탁 스포츠파크', ja: '啓徳スポーツパーク' } },
+  other: { exit: 'A', walk: '', q: '啟德', label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
+};
+const CUISINES = {
+  japanese: { zh: '日式料理', en: 'Japanese', ko: '일식', ja: '和食' },
+  ramen: { zh: '拉麵／烏冬', en: 'Ramen & udon', ko: '라멘·우동', ja: 'ラーメン・うどん' },
+  bbq: { zh: '燒肉', en: 'Yakiniku / BBQ', ko: '야키니쿠·고기구이', ja: '焼肉' },
+  hotpot: { zh: '火鍋', en: 'Hotpot', ko: '훠궈·샤부샤부', ja: '鍋料理' },
+  korean: { zh: '韓式', en: 'Korean', ko: '한식', ja: '韓国料理' },
+  chinese: { zh: '中菜／台菜', en: 'Chinese & Taiwanese', ko: '중식·대만식', ja: '中華・台湾料理' },
+  sea: { zh: '泰國／東南亞', en: 'Thai & SE Asian', ko: '태국·동남아', ja: 'タイ・東南アジア' },
+  western: { zh: '西式／意式', en: 'Western & Italian', ko: '양식·이탈리안', ja: '洋食・イタリアン' },
+  fusion: { zh: '創意 Fusion', en: 'Fusion', ko: '퓨전', ja: '創作料理' },
+  cafe: { zh: '咖啡室／烘焙', en: 'Café & bakery', ko: '카페·베이커리', ja: 'カフェ・ベーカリー' },
+  dessert: { zh: '甜品／飲品', en: 'Desserts & drinks', ko: '디저트·음료', ja: 'スイーツ・ドリンク' },
+  foodcourt: { zh: '美食廣場', en: 'Food court', ko: '푸드코트', ja: 'フードコート' },
+  area: { zh: '美食區', en: 'Dining area', ko: '식당가', ja: '飲食エリア' },
+};
+const walkText = (exit, walk, lang) => {
+  if (!walk) return '';
+  return { zh: `${exit} 出口步行約 ${walk} 分鐘`, en: `About ${walk} min walk from Exit ${exit}`, ko: `${exit} 출구에서 도보 약 ${walk}분`, ja: `${exit}出口から徒歩約${walk}分` }[lang] || '';
+};
+
+// mkR(id, 商場, 菜式, 中文名, 英文名, 樓層舖號, 中文簡介, 英文簡介, 出口?)
+function mkR(id, mall, cuisine, zh, en, floor, dZh, dEn, exitOverride) {
+  const m = MALLS[mall];
+  const exit = exitOverride || m.exit;
+  const walk = mall === 'twins' && exit === 'A' ? '2–4' : (mall === 'other' ? '' : m.walk);
+  const meta = { mall, cuisine, floor: { zh: floor, en: floor }, walk };
+  const tipOf = (l) => walkText(exit, walk, l);
+  return {
+    id, category: 'dining', exit,
+    name: { zh, en, ko: en, ja: zh },
+    desc: { zh: dZh, en: dEn, ko: `${CUISINES[cuisine].ko} · ${m.label.ko}`, ja: `${CUISINES[cuisine].ja}・${m.label.ja}` },
+    tip: { zh: tipOf('zh'), en: tipOf('en'), ko: tipOf('ko'), ja: tipOf('ja') },
+    mapQuery: `${zh} ${m.q}`,
+    meta,
+  };
+}
+
 const SEED = [
   /* ---------- 文娛及購物 Leisure / Shopping（1–11） ---------- */
   mk('s01-airside', 'shopping', 'C', 'AIRSIDE', 'AIRSIDE', '啟德地標式商場，集購物、餐飲及天台花園。', 'Landmark mall with shopping, dining and a rooftop garden.', null, 'AIRSIDE 啟德'),
@@ -518,17 +576,60 @@ const SEED = [
   mk('e74-baptist-rainbow', 'education', 'A', '浸信會孔憲紹天虹小學', 'Baptist Hung Hin Shiu Rainbow Primary School', '位於九龍啟德沐安街2號的新校舍，前身為黃大仙的浸信會天虹小學，2025 年 9 月起改用現名並改屬九龍城 34 校網。', 'New campus at 2 Muk On Street, Kai Tak. Formerly Baptist Rainbow Primary School in Wong Tai Sin, renamed in September 2025.',
     ['經 A 出口沿車站廣場／沐安街步行約 3 至 5 分鐘。', 'From Exit A, walk via Kai Tak Station Square and Muk On Street, about 3 to 5 min.'], '浸信會孔憲紹天虹小學'),
 
-  /* ---------- 新增：美食餐飲（商場食肆眾多且經常轉換，按商場／美食區收錄，撳導航可在 Google 地圖查看最新食肆） ---------- */
-  mk('dn-airside', 'dining', 'C', 'AIRSIDE 餐飲', 'AIRSIDE dining', '商場內多層均有餐飲選擇，由快餐、咖啡店到特色餐廳都有。', 'Dining across several floors, from fast food and cafés to specialty restaurants.', ['C 出口直達 AIRSIDE。', 'Exit C leads straight into AIRSIDE.'], '餐廳 AIRSIDE 啟德'),
-  mk('dn-mikiki', 'dining', 'C', 'Mikiki 食肆', 'Mikiki eateries', '商場內設多間餐廳及快餐店。', 'Restaurants and fast food inside the mall.', null, '餐廳 Mikiki 新蒲崗'),
-  mk('dn-twins1', 'dining', 'B1', '雙子匯1期（SOGO）餐飲', 'The Twins Tower I (SOGO) dining', '崇光百貨及商場一帶的餐飲選擇。', 'Dining around SOGO and The Twins Tower I.', null, '餐廳 SOGO 啟德'),
-  mk('dn-twins2', 'dining', 'A', '雙子匯2期（三道）餐飲', 'The Twins Tower II (SNDO) dining', '雙子匯第二期的餐飲設施。', 'Dining at The Twins Tower II.', null, '餐廳 雙子匯 啟德'),
-  mk('dn-ching-long', 'dining', 'A', '晴朗商場美食', 'Ching Long Shopping Centre food', '屋邨商場內的快餐店及街坊食肆，價錢相宜。', 'Fast food and neighbourhood eateries at affordable prices.', null, '餐廳 晴朗商場'),
-  mk('dn-cullinan', 'dining', 'B2', '天璽天Mall 餐飲', 'Cullinan Sky Mall dining', '住宅基座商場內的餐飲選擇。', 'Dining at the podium mall of Cullinan Sky.', null, '餐廳 天璽天 啟德'),
-  mk('dn-dining-cove', 'dining', 'D', '美食海灣（Dining Cove）', 'Dining Cove', '啟德體育園一帶的餐飲區，活動日人流較多。', 'Dining zone at Kai Tak Sports Park; busy on event days.', null, 'Dining Cove Kai Tak'),
-  mk('dn-kt-mall', 'dining', 'D', '啟德零售館（Kai Tak Mall）餐飲', 'Kai Tak Mall dining', '啟德體育園內的零售館餐廳及小食。', 'Restaurants and snacks at Kai Tak Mall in the Sports Park.', null, '餐廳 Kai Tak Mall'),
-  mk('dn-uplace', 'dining', 'D', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', null, '餐廳 U PLACE Riverside'),
-  mk('dn-spk', 'dining', 'B1/B2', '新蒲崗地道小店', 'San Po Kong local eateries', '工廈區內有不少平民食肆及地道小店。', 'Many affordable local eateries around the industrial buildings.', null, '餐廳 新蒲崗'),
+  /* ---------- 美食餐飲：具體餐廳（2026 年 10 月按 2025–2026 年飲食媒體報道整理；食肆經常轉換，出發前請以 Google 地圖或商場公布為準） ---------- */
+  // 步行時間為由建議出口出發的估算
+  mkR('r-ai-uogashi', 'airside', 'japanese', '魚がし日本一', 'Uogashi Nihon-Ichi', 'G/F G001', '立食壽司店，主打日本直送時令壽司。', 'Stand-up sushi bar with seasonal fish from Japan.'),
+  mkR('r-ai-machida', 'airside', 'ramen', '橫濱家系 町田商店', 'Machida Shoten', 'G/F G011', '日本橫濱家系拉麵連鎖店。', 'Yokohama iekei-style ramen chain from Japan.'),
+  mkR('r-ai-nanas', 'airside', 'dessert', "nana's green tea", "nana's green tea", 'B1 B128', '日本抹茶茶室，供應各式茶飲及抹茶甜品。', 'Japanese matcha café with tea drinks and matcha desserts.'),
+  mkR('r-ai-katsugyu', 'airside', 'japanese', '京都勝牛', 'Gyukatsu Kyoto Katsugyu', 'B1 B129', '京都炸牛排專門店。', 'Kyoto-style deep-fried beef cutlet specialist.'),
+  mkR('r-ai-homebake', 'airside', 'cafe', 'Homebake', 'Homebake', 'B1 B132A–B132B', '烘焙店，主打飯團包及低溫熟成吐司。', 'Bakery known for rice-ball buns and slow-proofed toast.'),
+  mkR('r-ai-thaijam', 'airside', 'sea', '泰沾麵', '泰沾麵', '2/F L205', '泰式粉麵店。', 'Thai noodle shop.'),
+  mkR('r-ai-kagura', 'airside', 'bbq', '燒肉火蔵 KAGURA', 'Yakiniku KAGURA', '2/F L206', '日式燒肉店。', 'Japanese yakiniku grill.'),
+  mkR('r-ai-cafe', 'airside', 'cafe', 'AIRSIDE Café', 'AIRSIDE Café', '3/F 322–323', '玻璃屋頂咖啡室，供應新派料理及海鮮菜式。', 'Glass-roofed café serving modern dishes and seafood.'),
+  mkR('r-ai-lemon', 'airside', 'dessert', '林香檸', 'Lam Heung Ning', '5/F L501', '手打檸檬茶專門店。', 'Hand-pounded lemon tea specialist.'),
+  mkR('r-ai-foodmuse', 'airside', 'foodcourt', 'FOODMUSE 美食廣場', 'FOODMUSE Food Court', '5/F L504–L505', '過萬呎美食廣場，集合多國菜式。', 'Food court of over 10,000 sq ft with dishes from many cuisines.'),
+  mkR('r-ai-dongbaek', 'airside', 'korean', '冬柏 Yuk Mi Jeong Dam', 'Yuk Mi Jeong Dam', '5/F L506', '來自釜山的韓式燒肉店。', 'Korean barbecue from Busan.'),
+  mkR('r-ai-coucou', 'airside', 'hotpot', '湊湊火鍋．茶憩', 'Coucou Hotpot & Tea Break', '6/F L603', '台式火鍋連茶飲。', 'Taiwanese-style hotpot with tea drinks.'),
+  mkR('r-ai-terrace', 'airside', 'korean', 'Terrace in seaside', 'Terrace in seaside', '6/F 604', '韓式輕食及柑橘甜品，設戶外寵物友善座位。', 'Korean light meals and citrus desserts, with pet-friendly outdoor seats.'),
+
+  mkR('r-tw-washabu', 'twins', 'hotpot', 'Washabu', 'Washabu', '雙子匯1期 12/F 1202', '日式和牛涮涮鍋，設一人前火鍋。', 'Japanese wagyu shabu-shabu, with single-person sets.', 'B1'),
+  mkR('r-tw-sunakku', 'twins', 'japanese', 'Sunakku Mama', 'Sunakku Mama', '雙子匯1期 12/F 1203', '日式小酒館，供應清酒及佐酒小食。', 'Japanese izakaya with sake and bar snacks.', 'B1'),
+  mkR('r-tw-okosta', 'twins', 'japanese', 'OKOSTA 御將燒', 'OKOSTA', '雙子匯1期 12/F 1201', '日式料理餐廳。', 'Japanese restaurant.', 'B1'),
+  mkR('r-tw-unme', 'twins', 'fusion', 'UnME', 'UnME', '雙子匯1期 14/F 1401', '日、韓、西式新派 Fusion 菜。', 'Modern fusion of Japanese, Korean and Western dishes.', 'B1'),
+  mkR('r-tw-nisugu', 'twins', 'fusion', 'Nisugu', 'Nisugu', '雙子匯1期 14/F 1402', '日式居酒屋結合西班牙 Tapas 風格。', 'Japanese izakaya meets Spanish tapas.', 'B1'),
+  mkR('r-tw-wowdon', 'twins', 'ramen', 'WOWDON 手工烏冬', 'WOWDON Udon', '雙子匯1期 14/F 1403', '手工烏冬店。', 'Handmade udon shop.', 'B1'),
+  mkR('r-tw-santhai', 'twins', 'sea', '新泰東南亞餐廳', '新泰東南亞餐廳', '雙子匯1期 14/F 1404–1405', '東南亞菜餐廳。', 'Southeast Asian restaurant.', 'B1'),
+  mkR('r-tw-sogocafe', 'twins', 'cafe', 'SOGO Cafe', 'SOGO Cafe', '雙子匯1期 崇光 1/F 106', '崇光百貨內的咖啡室。', 'Café inside SOGO.', 'B1'),
+  mkR('r-tw-yonna', 'twins', 'dessert', 'YONNA YONNA Gelato', 'YONNA YONNA Gelato', '雙子匯2期 G/F G16', '意式手工雪糕店。', 'Italian-style gelato shop.', 'A'),
+
+  mkR('r-mk-gyukakuj', 'ktsp', 'bbq', '牛角J', 'Gyu-Kaku J', '啟德零售館2 3/F M2-301', '牛角平價副線，主打一人燒肉定食。', "Gyu-Kaku's budget line with single-person yakiniku sets."),
+  mkR('r-mk-mingyuen', 'ktsp', 'chinese', '名苑酒家．八珍玉食', 'Ming Yuen Restaurant', '啟德零售館2 3/F M2-310', '約 4,700 呎粵菜酒家。', 'Cantonese restaurant of about 4,700 sq ft.'),
+  mkR('r-mk-ironcow', 'ktsp', 'chinese', '鐵牛台灣牛肉麵', '鐵牛台灣牛肉麵', '啟德零售館2 1/F M2-103', '台灣牛肉麵店。', 'Taiwanese beef noodle shop.'),
+  mkR('r-mk-greyhound', 'ktsp', 'sea', 'Greyhound Café', 'Greyhound Café', '啟德零售館2 1/F M2-112', '泰國菜餐廳。', 'Thai restaurant.'),
+  mkR('r-mk-nburger', 'ktsp', 'western', 'N+ Burger', 'N+ Burger', '啟德零售館2 1/F M2-102', '航空主題漢堡店。', 'Aviation-themed burger restaurant.'),
+  mkR('r-mk-dayvi', 'ktsp', 'dessert', 'Dayvi Gelateria', 'Dayvi Gelateria', '啟德零售館2 1/F M2-115', '意大利手工 Gelato。', 'Italian handmade gelato.'),
+  mkR('r-mk-gonuts', 'ktsp', 'cafe', 'GoNuts', 'GoNuts', '啟德零售館2 G/F M2-016', '咖啡室。', 'Café.'),
+  mkR('r-mk-pizzamaru', 'ktsp', 'western', 'Pizza Maru', 'Pizza Maru', '啟德零售館2 G/F M2-010', '薄餅店。', 'Pizza restaurant.'),
+  mkR('r-mk-shabudays', 'ktsp', 'hotpot', '好鍋日子', 'Shabu Days', '啟德零售館1 2/F M1-206', '牛角集團一人火鍋品牌。', 'Single-person hotpot brand by the Gyu-Kaku group.'),
+  mkR('r-mk-ankimdo', 'ktsp', 'korean', '安金稻朝鮮拌飯', '安金稻朝鮮拌飯', '啟德零售館1 2/F M1-215', '傳統朝鮮拌飯。', 'Traditional Korean bibimbap.'),
+
+  mkR('r-mi-sushiro', 'mikiki', 'japanese', '壽司郎', 'Sushiro', '1/F 110', '迴轉壽司連鎖店。', 'Conveyor-belt sushi chain.'),
+  mkR('r-mi-ichigen', 'mikiki', 'ramen', '一幻拉麵', 'Ebisoba Ichigen', '1/F 118A', '蝦湯拉麵專門店。', 'Shrimp-broth ramen specialist.'),
+  mkR('r-mi-genki', 'mikiki', 'japanese', '元気寿司', 'Genki Sushi', '1/F 105–105A', '壽司及刺身連鎖店。', 'Sushi and sashimi chain.'),
+  mkR('r-mi-gyukaku', 'mikiki', 'bbq', '牛角日本燒肉專門店', 'Gyu-Kaku', '1/F 120', '日式燒肉店，設放題。', 'Japanese yakiniku, with all-you-can-eat options.'),
+  mkR('r-mi-plato', 'mikiki', 'western', 'Plato Cafe & Bistro', 'Plato Cafe & Bistro', '1/F 116', '意式及西式料理。', 'Italian and Western dishes.'),
+  mkR('r-mi-yakinikulike', 'mikiki', 'bbq', '燒肉LIKE', 'Yakiniku Like', 'G/F G27', '一人燒肉店。', 'Single-person yakiniku.'),
+  mkR('r-mi-meetfresh', 'mikiki', 'dessert', '鮮芋仙', 'Meet Fresh', 'G/F G03C', '台灣甜品店。', 'Taiwanese dessert shop.'),
+  mkR('r-mi-tapasbrew', 'mikiki', 'western', 'Tapas Brew', 'Tapas Brew', 'G/F G02A', '西班牙餐廳。', 'Spanish restaurant.'),
+  mkR('r-mi-dasbier', 'mikiki', 'western', '德國餐廳 Das Bier', 'Das Bier', 'G/F G03B', '德國菜餐廳。', 'German restaurant.'),
+  mkR('r-mi-tamjai', 'mikiki', 'chinese', '譚仔雲南米線', 'TamJai Yunnan Mixian', 'LG LG8', '雲南米線。', 'Yunnan rice noodles.'),
+
+  /* ---------- 未能核實個別食肆的美食區（撳導航可在 Google 地圖查看） ---------- */
+  mkR('dn-ching-long', 'chinglong', 'area', '晴朗商場美食', 'Ching Long Shopping Centre food', '', '屋邨商場內的快餐店及街坊食肆。', 'Fast food and neighbourhood eateries in the estate mall.'),
+  mkR('dn-cullinan', 'other', 'area', '天璽天Mall 餐飲', 'Cullinan Sky Mall dining', '', '住宅基座商場內的餐飲選擇。', 'Dining at the podium mall of Cullinan Sky.', 'B2'),
+  mkR('dn-dining-cove', 'ktsp', 'area', '美食海灣（Dining Cove）', 'Dining Cove', '', '啟德體育園一帶的餐飲區，活動日人流較多。', 'Dining zone at Kai Tak Sports Park; busy on event days.'),
+  mkR('dn-uplace', 'other', 'area', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', 'D'),
+  mkR('dn-spk', 'other', 'area', '新蒲崗地道小店', 'San Po Kong local eateries', '', '工廈區內有不少平民食肆及地道小店。', 'Many affordable local eateries around the industrial buildings.', 'B1/B2'),
 
   /* ---------- 新增：銀行／自動櫃員機／外幣服務（2026 年 10 月網上搜尋核實，出發前請再向銀行確認） ---------- */
   mk('bk-hsbc-kt', 'bank', 'D', '滙豐 啟德分行（啟德零售館2 2樓 M2-211及212號舖）', 'HSBC Kai Tak Branch (Shop M2-211&212, Level 2, Kai Tak Mall 2)', '提供提款、存款、外幣兌換服務，並設可提取人民幣及外幣的自動櫃員機；同址設卓越理財中心。營業時間：星期一至五 09:00–17:00，星期六 09:00–13:00。', 'Cash withdrawal and deposit, foreign currency exchange, and an RMB / foreign currency ATM; HSBC Premier Centre at the same address. Mon–Fri 09:00–17:00, Sat 09:00–13:00.',
@@ -785,9 +886,9 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 3 版）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 4 版：餐廳）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
-const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery], (k, v) =>
+const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
 
 // 比較雲端資料與最新官方資料：新增、修改、移除
@@ -1057,24 +1158,81 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   );
 }
 
+function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
+  const meta = item.meta || {};
+  const mall = MALLS[meta.mall] || MALLS.other;
+  const cuisine = CUISINES[meta.cuisine] || CUISINES.area;
+  const floor = meta.floor ? tx(meta.floor, lang) : '';
+  const walk = walkText(item.exit, meta.walk, lang);
+  return (
+    <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
+      className="relative flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+      {/* 頂部：最近港鐵出口 */}
+      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: '#16202B' }}>
+        <ExitPlate exit={item.exit} size="lg" />
+        <div className="min-w-0 text-white">
+          <p className="text-sm font-bold">{t.exit} {item.exit}</p>
+          {walk && <p className="flex items-center gap-1 text-[11px] text-white/70"><Footprints size={11} />{walk}</p>}
+        </div>
+        {isAdmin && (
+          <div className="ml-auto flex gap-1">
+            <button onClick={() => onEdit(item)} className="flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 text-xs font-medium text-white hover:bg-white/25"><Pencil size={12} />{t.edit}</button>
+            <button onClick={() => onDelete(item)} className="flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"><Trash2 size={12} />{t.del}</button>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="text-base font-bold leading-snug">{tx(item.name, lang)}</h3>
+        {item.name.en && item.name.en !== tx(item.name, lang) && <p className="text-xs text-[var(--muted)]">{item.name.en}</p>}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
+            <UtensilsCrossed size={11} />{tx(cuisine, lang)}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-semibold">
+            <MapPin size={11} />{tx(mall.label, lang)}{floor ? ` · ${floor}` : ''}
+          </span>
+        </div>
+        <p className="mt-2.5 text-sm leading-relaxed">{tx(item.desc, lang)}</p>
+        <div className="mt-auto pt-3.5">
+          <a href={mapsUrl(item.mapQuery || item.name.zh)} target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
+            📍 {t.navigate}<ExternalLink size={14} />
+          </a>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
 function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRoute }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
+  const [mallF, setMallF] = useState('all');
+  const [cuisineF, setCuisineF] = useState('all');
 
   const filtered = useMemo(() => {
     const k = q.trim().toLowerCase();
     return items.filter((it) => {
       if (cat !== 'all' && it.category !== cat) return false;
+      if (cat === 'dining') {
+        const m = it.meta || {};
+        if (mallF !== 'all' && m.mall !== mallF) return false;
+        if (cuisineF !== 'all' && m.cuisine !== cuisineF) return false;
+      }
       if (!k) return true;
+      const m = it.meta || {};
       const hay = [
         ...Object.values(it.name || {}), ...Object.values(it.desc || {}), ...Object.values(it.tip || {}),
         it.exit, `exit ${it.exit}`, `${it.exit} 出口`, it.mapQuery, ...Object.values(catById(it.category).label),
+        ...(m.mall && MALLS[m.mall] ? Object.values(MALLS[m.mall].label) : []),
+        ...(m.cuisine && CUISINES[m.cuisine] ? Object.values(CUISINES[m.cuisine]) : []),
+        ...(m.floor ? Object.values(m.floor) : []),
       ].join(' ').toLowerCase();
       // 單獨輸入出口代號（如 "c"、"b1"）時，精確比對出口
       if (/^(exit\s*)?[a-d]\d?$/i.test(k)) return it.exit.toLowerCase().split('/').includes(k.replace(/exit\s*/i, ''));
       return hay.includes(k);
     });
-  }, [items, q, cat]);
+  }, [items, q, cat, mallF, cuisineF]);
 
   const counts = useMemo(() => {
     const c = { all: items.length };
@@ -1118,18 +1276,49 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       </div>
 
       {cat === 'bank' && <div className="mt-4"><MoneyExchangeFinder t={t} lang={lang} items={items} onRoute={onRoute} /></div>}
+      {cat === 'dining' && (() => {
+        const dining = items.filter((x) => x.category === 'dining');
+        const countBy = (key) => dining.reduce((o, x) => { const v = (x.meta || {})[key]; if (v) o[v] = (o[v] || 0) + 1; return o; }, {});
+        const malls = countBy('mall');
+        const cuis = countBy('cuisine');
+        const Chip = ({ active, onClick, children }) => (
+          <button onClick={onClick} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink)]'}`}
+            style={active ? { background: LINES.TML.color } : undefined}>{children}</button>
+        );
+        return (
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dMall}</span>
+              <Chip active={mallF === 'all'} onClick={() => setMallF('all')}>{t.dAll}</Chip>
+              {Object.keys(MALLS).filter((m) => malls[m]).map((m) => (
+                <Chip key={m} active={mallF === m} onClick={() => setMallF(m)}>{tx(MALLS[m].label, lang)} <span className="opacity-70">{malls[m]}</span></Chip>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dCuisine}</span>
+              <Chip active={cuisineF === 'all'} onClick={() => setCuisineF('all')}>{t.dAll}</Chip>
+              {Object.keys(CUISINES).filter((c) => cuis[c]).map((c) => (
+                <Chip key={c} active={cuisineF === c} onClick={() => setCuisineF(c)}>{tx(CUISINES[c], lang)} <span className="opacity-70">{cuis[c]}</span></Chip>
+              ))}
+            </div>
+            <p className="text-[11px] text-[var(--muted)]">{t.walkNote}</p>
+          </motion.div>
+        );
+      })()}
       <p className="mt-3 text-sm text-[var(--muted)]">{fmt(t.count, { n: filtered.length })}</p>
 
       {filtered.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-sm text-[var(--muted)]">{t.noResult}</p>
-          <button onClick={() => { setQ(''); setCat('all'); }} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
+          <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setCuisineF('all'); }} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
         </div>
       ) : (
         <motion.div layout className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {filtered.map((it) => (
-              <LandmarkCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} />
+              it.category === 'dining' && it.meta
+                ? <RestaurantCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} />
+                : <LandmarkCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} />
             ))}
           </AnimatePresence>
         </motion.div>
@@ -1573,6 +1762,7 @@ function LoginModal({ open, onClose, onSuccess, t }) {
 const emptyForm = () => ({
   id: null, category: 'shopping', exit: 'A', mapQuery: '',
   name: { zh: '', en: '', ko: '', ja: '' }, desc: { zh: '', en: '', ko: '', ja: '' }, tip: { zh: '', en: '', ko: '', ja: '' },
+  meta: { mall: 'airside', cuisine: 'japanese', floor: { zh: '', en: '', ko: '', ja: '' }, walk: '' },
 });
 
 function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
@@ -1582,7 +1772,10 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
   useEffect(() => {
     if (open) {
       const base = emptyForm();
-      setF(initial ? { ...base, ...initial, name: { ...base.name, ...initial.name }, desc: { ...base.desc, ...initial.desc }, tip: { ...base.tip, ...initial.tip } } : base);
+      setF(initial ? {
+        ...base, ...initial, name: { ...base.name, ...initial.name }, desc: { ...base.desc, ...initial.desc }, tip: { ...base.tip, ...initial.tip },
+        meta: { ...base.meta, ...(initial.meta || {}), floor: { ...base.meta.floor, ...((initial.meta || {}).floor || {}) } },
+      } : base);
       setTab('zh'); setErr('');
     }
   }, [open, initial]);
@@ -1590,7 +1783,8 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
   const setL = (field, v) => setF((p) => ({ ...p, [field]: { ...p[field], [tab]: v } }));
   const submit = () => {
     if (!f.name.zh.trim() || !f.exit.trim()) { setErr(t.required); return; }
-    onSave({ ...f, id: f.id || `lm-${Date.now()}`, mapQuery: f.mapQuery.trim() || f.name.zh.trim() });
+    const { meta, ...rest } = f;
+    onSave({ ...rest, ...(f.category === 'dining' ? { meta } : {}), id: f.id || `lm-${Date.now()}`, mapQuery: f.mapQuery.trim() || f.name.zh.trim() });
   };
   const inputCls = 'w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--ink)]';
 
@@ -1635,6 +1829,26 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
             </div>
           </label>
         </div>
+        {f.category === 'dining' && (
+          <div className="grid gap-3 rounded-lg border border-dashed border-[var(--border)] p-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">{t.fMall}
+              <select className={`${inputCls} mt-1`} value={f.meta.mall} onChange={(e) => setF({ ...f, meta: { ...f.meta, mall: e.target.value } })}>
+                {Object.keys(MALLS).map((m) => <option key={m} value={m}>{tx(MALLS[m].label, lang)}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm font-medium">{t.fCuisine}
+              <select className={`${inputCls} mt-1`} value={f.meta.cuisine} onChange={(e) => setF({ ...f, meta: { ...f.meta, cuisine: e.target.value } })}>
+                {Object.keys(CUISINES).map((c) => <option key={c} value={c}>{tx(CUISINES[c], lang)}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm font-medium">{t.fFloor}
+              <input className={`${inputCls} mt-1`} value={f.meta.floor[tab] || ''} placeholder="例如：3/F L301" onChange={(e) => setF({ ...f, meta: { ...f.meta, floor: { ...f.meta.floor, [tab]: e.target.value } } })} />
+            </label>
+            <label className="block text-sm font-medium">{t.fWalk}
+              <input className={`${inputCls} mt-1`} value={f.meta.walk} onChange={(e) => setF({ ...f, meta: { ...f.meta, walk: e.target.value } })} />
+            </label>
+          </div>
+        )}
         <label className="block text-sm font-medium">{t.fQuery}
           <input className={`${inputCls} mt-1`} value={f.mapQuery} placeholder="例如：AIRSIDE 啟德" onChange={(e) => setF({ ...f, mapQuery: e.target.value })} />
         </label>
