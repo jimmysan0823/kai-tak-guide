@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.1（美食餐飲：新增啟德體育園區及啟欣苑／周邊）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.2（美食餐飲：聚焦啟德站周邊住宅區及商場）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -375,6 +375,13 @@ const UI_V10 = {
   zh: { concourse: '車站大堂（閘外）' }, en: { concourse: 'Station concourse' }, ko: { concourse: '역 대합실' }, ja: { concourse: '駅構内' },
 };
 Object.keys(UI_V10).forEach((l) => Object.assign(UI[l], UI_V10[l]));
+const UI_V11 = {
+  zh: { searchDining: '🔍 搜尋餐廳名稱、菜式 (例如: 麥當勞、拉麵、CAFE、壽司)...', dArea: '區域', dAllArea: '全部區域' },
+  en: { searchDining: "🔍 Search restaurants or cuisines (e.g. McDonald's, ramen, café, sushi)...", dArea: 'Area', dAllArea: 'All areas' },
+  ko: { searchDining: '🔍 식당 이름·요리 검색 (예: 맥도날드, 라멘, 카페, 스시)...', dArea: '지역', dAllArea: '전체 지역' },
+  ja: { searchDining: '🔍 店名・ジャンルで検索（例：マクドナルド、ラーメン、カフェ、寿司）...', dArea: 'エリア', dAllArea: 'すべてのエリア' },
+};
+Object.keys(UI_V11).forEach((l) => Object.assign(UI[l], UI_V11[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -441,11 +448,16 @@ const MALLS = {
   airside: { exit: 'C', walk: '3–5', q: 'AIRSIDE', label: { zh: 'AIRSIDE', en: 'AIRSIDE', ko: 'AIRSIDE', ja: 'AIRSIDE' } },
   mikiki: { exit: 'C', walk: '10–13', q: 'Mikiki', label: { zh: 'Mikiki', en: 'Mikiki', ko: 'Mikiki', ja: 'Mikiki' } },
   twins: { exit: 'B1', walk: '1–3', q: '雙子匯', label: { zh: '雙子匯', en: 'The Twins', ko: '더 트윈스', ja: 'The Twins（雙子匯）' } },
-  // 啟德體育園區：經啟德車站廣場步行；亦可由宋皇臺站 D 出口前往
-  ktsp: { exit: 'D', walk: '5–8', icon: '🏟️', mq: '啟德體育園', label: { zh: '啟德體育園區', en: 'Kai Tak Sports Park', ko: '카이탁 스포츠파크', ja: '啓徳スポーツパーク' },
-    note: { zh: '經啟德車站廣場前往；亦可由宋皇臺站 D 出口前往', en: 'via Kai Tak Station Square; or from Sung Wong Toi Station Exit D', ko: '카이탁역 광장 경유, 송웡토이역 D 출구에서도 갈 수 있음', ja: '啓徳駅前広場経由。宋皇臺駅D出口からも行けます' } },
-  // 啟欣苑及周邊（沐禮街、沐寧街、沐泰街一帶）
-  kaiyan: { exit: 'A', walk: '5–10', icon: '🏠', mq: '啟欣苑', label: { zh: '啟欣苑／周邊', en: 'Kai Yan Court & nearby', ko: '카이얀 코트·주변', ja: '啓欣苑・周辺' } },
+  // 啟德體育園區（以啟德站 D 出口經啟德車站廣場步行為準）
+  ktsp: { exit: 'D', walk: '5–8', mq: '啟德體育園', label: { zh: '啟德體育園區', en: 'Kai Tak Sports Park', ko: '카이탁 스포츠파크', ja: '啓徳スポーツパーク' },
+    note: { zh: '經啟德車站廣場前往', en: 'via Kai Tak Station Square', ko: '카이탁역 광장 경유', ja: '啓徳駅前広場経由' } },
+  // 新居屋及公營房屋圈
+  kaiyan: { exit: 'A', walk: '5–10', q: '啟欣苑', label: { zh: '啟欣苑', en: 'Kai Yan Court', ko: '카이얀 코트', ja: '啓欣苑' } },
+  kaiyuet: { exit: 'D', walk: '8–10', q: '啟悅苑', label: { zh: '啟悅苑', en: 'Kai Yuet Court', ko: '카이윗 코트', ja: '啓悦苑' } },
+  kaiying: { exit: 'D', walk: '8–10', q: '啟盈苑', label: { zh: '啟盈苑', en: 'Kai Ying Court', ko: '카이잉 코트', ja: '啓盈苑' } },
+  lph: { exit: 'D', walk: '', q: '世運道', label: { zh: '世運道簡約公屋', en: 'Olympic Avenue Light Public Housing', ko: '올림픽 애비뉴 간이 공공주택', ja: '世運道簡易公営住宅' } },
+  // 沐泰街／沐寧街私人屋苑地舖
+  muktai: { exit: 'D', walk: '5–10', label: { zh: '沐泰街屋苑地舖', en: 'Muk Tai Street shops', ko: '묵타이 스트리트 상점가', ja: '沐泰街の店舗' } },
   cullinan: { exit: 'B2', walk: '1–3', q: '天璽天', label: { zh: '天璽天Mall', en: 'Cullinan Sky Mall', ko: 'Cullinan Sky Mall', ja: '天璽天Mall' } },
   kat: { exit: 'KAT', walk: '', q: '啟德站', label: { zh: '啟德站大堂', en: 'Kai Tak Station', ko: '카이탁역 대합실', ja: '啓徳駅構内' } },
   other: { exit: 'A', walk: '', q: '', label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
@@ -633,6 +645,7 @@ const SEED = [
   mkR('r-ai-thaijam', 'airside', 'sea', '泰沾麵', '泰沾麵', '2/F L205', '泰式粉麵店。', 'Thai noodle shop.'),
   mkR('r-ai-kagura', 'airside', 'bbq', '燒肉火蔵 KAGURA', 'Yakiniku KAGURA', '2/F L206', '日式燒肉店。', 'Japanese yakiniku grill.'),
   mkR('r-ai-senryo', 'airside', 'japanese', '千両', 'SEN-RYO', '2/F L207', '日式壽司及料理。', 'Japanese sushi and dishes.'),
+  mkR('r-ai-lanyue', 'airside', 'chinese', '嵐月', 'Lan Yue', '3/F L301–L302', '精緻中菜，招牌叉燒及糯米燒賣。', 'Refined Chinese cuisine, known for char siu and glutinous rice siu mai.'),
   mkR('r-ai-cafe', 'airside', 'cafe', 'AIRSIDE Café', 'AIRSIDE Café', '3/F 322–323', '玻璃屋頂咖啡室，供應新派料理及海鮮菜式。', 'Glass-roofed café serving modern dishes and seafood.'),
   mkR('r-ai-paradise', 'airside', 'chinese', '樂天皇朝薈萃', 'Paradise Dynasty', '4/F 418', '小籠包及中式料理。', 'Xiao long bao and Chinese dishes.'),
   mkR('r-ai-lemon', 'airside', 'drinks', '林香檸', 'Lam Heung Ning', '5/F L501', '手打檸檬茶專門店。', 'Hand-pounded lemon tea specialist.'),
@@ -688,6 +701,13 @@ const SEED = [
   mkR('r-kt-ironcow', 'ktsp', 'chinese', '鐵牛台灣牛肉麵', '鐵牛台灣牛肉麵', '啟德零售館2 1/F M2-103', '台灣牛肉麵店。', 'Taiwanese beef noodle shop.'),
   mkR('r-kt-greyhound', 'ktsp', 'sea', 'Greyhound Café', 'Greyhound Café', '啟德零售館2 1/F M2-112', '泰國菜餐廳。', 'Thai restaurant.'),
   mkR('r-kt-dayvi', 'ktsp', 'dessert', 'Dayvi Gelateria', 'Dayvi Gelateria', '啟德零售館2 1/F M2-115', '意大利手工 Gelato。', 'Italian handmade gelato.'),
+  mkR('r-kt-donq', 'ktsp', 'bakery', 'DONQ', 'DONQ', '啟德零售館2 1/F', '日式麵包店。', 'Japanese bakery.'),
+  mkR('r-kt-manen', 'ktsp', 'bakery', 'Manen Bakery', 'Manen Bakery', '啟德零售館2 1/F', '麵包店。', 'Bakery.'),
+  mkR('r-kt-coffeebread', 'ktsp', 'cafe', 'Coffee and Bread', 'Coffee and Bread', '啟德零售館2 1/F', '咖啡及麵包。', 'Coffee and bread.'),
+  mkR('r-kt-liangcha', 'ktsp', 'drinks', '良茶隅', '良茶隅', '啟德零售館2 1/F', '茶飲店。', 'Tea drinks shop.'),
+  mkR('r-kt-jiro', 'ktsp', 'ramen', '次郎拉麵', 'Jiro Ramen', '啟德零售館2 2/F', '日式拉麵。', 'Japanese ramen.'),
+  mkR('r-kt-seiryu', 'ktsp', 'bar', '清流 Sake Z Plus', 'Sake Z Plus', '啟德零售館2 2/F', '日本清酒專門店及酒吧。', 'Japanese sake shop and bar.'),
+  mkR('r-kt-peace', 'ktsp', 'chinese', '和平飯店', 'Peace Cuisine', '啟德零售館2 3/F M2-301', '中菜館。', 'Chinese restaurant.'),
   mkR('r-kt-sharetea', 'ktsp', 'drinks', 'Sharetea 歇腳亭', 'Sharetea', '啟德零售館2 2/F', '台式手搖茶飲。', 'Taiwanese bubble tea.'),
   mkR('r-kt-wangjiasha', 'ktsp', 'chinese', '王家沙．花樣年華', 'Wang Jia Sha', '啟德零售館2 2/F M2-201', '上海菜及點心。', 'Shanghainese dishes and dim sum.'),
   mkR('r-kt-gyukakuj', 'ktsp', 'bbq', '牛角J', 'Gyu-Kaku J', '啟德零售館2 3/F M2-301', '牛角平價副線，主打一人燒肉定食。', "Gyu-Kaku's budget line with single-person yakiniku sets."),
@@ -712,18 +732,25 @@ const SEED = [
   mkR('r-kat-hana', 'kat', 'japanese', '華御結', 'Hana-Musubi', 'KAT 5（近 D 出口）', '日式飯糰外賣店。', 'Japanese rice-ball takeaway.'),
   mkR('r-kat-hft', 'kat', 'drinks', '鴻福堂', 'Hung Fook Tong', 'KAT 8', '涼茶、湯水及小食。', 'Herbal teas, soups and snacks.'),
 
-  /* 啟欣苑及周邊（沐禮街、沐寧街、沐泰街一帶） */
+  /* 新居屋及公營房屋圈：啟欣苑（A 出口） */
   mkR('r-ky-daichi', 'kaiyan', 'chinese', '大池小館', '大池小館', '啟欣苑零售大樓 1/F（沐禮街6號）', '點心店。', 'Dim sum restaurant.'),
   mkR('r-ky-sangatsu', 'kaiyan', 'western', '三月見', '三月見', '啟欣苑零售大樓 G/F（沐禮街6號）', '西餐廳。', 'Western restaurant.'),
   mkR('r-ky-cheungheung', 'kaiyan', 'hkcafe', '祥香園', '祥香園', '啟欣苑零售大樓 G/F（沐禮街6號）', '港式茶餐廳。', 'Hong Kong-style café.'),
-  mkR('r-ky-goodday', 'kaiyan', 'cafe', 'GoodDay Solar', 'GoodDay Solar', '嘉峯匯商舖 1/F 11號舖', '水泥風日光 Cafe；營業時間 08:30–21:15。', 'Sunny industrial-style café; open 08:30–21:15.', { exit: 'D', q: '嘉峯匯' }),
-  mkR('r-ot-fairwood', 'kaiyan', 'fastfood', '大快活', 'Fairwood', '啟德1號(II) 1/F A舖（沐寧街8號）', '港式連鎖快餐。', 'Hong Kong fast-food chain.', { exit: 'D', q: '啟德1號' }),
-  mkR('r-ky-711', 'kaiyan', 'conv', '7-Eleven', '7-Eleven', '啟德1號(II) G/F 08–09號舖（沐寧街8號）', '便利店，提供飲品、輕食及微波食品。', 'Convenience store with drinks, snacks and ready meals.', { exit: 'D', q: '啟德1號' }),
+  /* 新居屋：啟悅苑、啟盈苑（零售大樓已落成或即將啟用，個別食肆未能核實） */
+  mkR('dn-kaiyuet', 'kaiyuet', 'area', '啟悅苑零售大樓', 'Kai Yuet Court retail block', '沐和街2號', '2025 年入伙居屋，設兩層高零售大樓；暫未能核實個別食肆，撳導航可在 Google 地圖查看最新食肆。', 'HOS court completed in 2025 with a two-storey retail block. Individual eateries are not yet verified; use the map to check.'),
+  mkR('dn-kaiying', 'kaiying', 'area', '啟盈苑零售大樓', 'Kai Ying Court retail block', '沐和街6號', '2026 年入伙居屋，設零售大樓；暫未能核實個別食肆，撳導航可在 Google 地圖查看最新食肆。', 'HOS court completing in 2026 with a retail block. Individual eateries are not yet verified; use the map to check.'),
+
+  /* 沐泰街／沐寧街私人屋苑地舖（D 出口） */
+  mkR('r-mt-root', 'muktai', 'cafe', '根', 'Root Café', 'Parkside At The Henley 零售區1座 G/F 4號舖（沐泰街7號）', 'MIRROR 成員柳應廷開設的植物主題 Cafe，主打西餐及造型甜品。', 'Plant-themed café opened by MIRROR member Jer Lau, serving Western dishes and creative desserts.', { q: 'The Henley' }),
+  mkR('r-mt-noc', 'muktai', 'cafe', 'NOC Coffee Co.', 'NOC Coffee Co.', 'THE HENLEY Retail 二期 G/F F&B 1 及 1/F F&B 5（沐泰街7號）', '太空主題精品咖啡店。', 'Space-themed specialty coffee shop.', { q: 'The Henley' }),
+  mkR('r-ky-goodday', 'muktai', 'cafe', 'GoodDay Solar', 'GoodDay Solar', '嘉峯匯商舖 1/F 11號舖', '水泥風日光 Cafe；營業時間 08:30–21:15。', 'Sunny industrial-style café; open 08:30–21:15.', { exit: 'D', q: '嘉峯匯' }),
+  mkR('r-ot-fairwood', 'muktai', 'fastfood', '大快活', 'Fairwood', '啟德1號(II) 1/F A舖（沐寧街8號）', '港式連鎖快餐。', 'Hong Kong fast-food chain.', { exit: 'D', q: '啟德1號' }),
+  mkR('r-ky-711', 'muktai', 'conv', '7-Eleven', '7-Eleven', '啟德1號(II) G/F 08–09號舖（沐寧街8號）', '便利店，提供飲品、輕食及微波食品。', 'Convenience store with drinks, snacks and ready meals.', { exit: 'D', q: '啟德1號' }),
 
   /* 其他 */
-  mkR('r-ot-lstbakery', 'other', 'bakery', '啟德社區廚房（樂善堂）', 'Lok Sin Tong Kai Tak Community Kitchen', '世運道簡約公屋第6座 G/F', '社企餅店及咖啡室。', 'Social-enterprise bakery and café.', 'D'),
+  mkR('r-ot-lstbakery', 'lph', 'bakery', '啟德社區廚房（樂善堂）', 'Lok Sin Tong Kai Tak Community Kitchen', '世運道簡約公屋第6座 G/F', '社企餅店及咖啡室。', 'Social-enterprise bakery and café.'),
   mkR('r-ot-charsiu', 'other', 'hkcafe', '叉燒丼家', 'The Master of Char Siu', '景福街99–101號啟德工廠大廈二期 G/F', '叉燒飯專門店。', 'Char siu rice specialist.', 'B1/B2'),
-  mkR('dn-uplace', 'other', 'area', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', 'D'),
+  mkR('dn-uplace', 'muktai', 'area', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', { q: 'U PLACE Riverside' }),
   mkR('dn-spk', 'other', 'area', '新蒲崗地道小店', 'San Po Kong local eateries', '', '工廈區內有不少平民食肆及地道小店。', 'Many affordable local eateries around the industrial buildings.', 'B1/B2'),
 
   /* ---------- 新增：銀行／自動櫃員機／外幣服務（2026 年 10 月網上搜尋核實，出發前請再向銀行確認） ---------- */
@@ -981,7 +1008,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 7 版：體育園區及啟欣苑）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 8 版：住宅區食肆）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -1267,7 +1294,15 @@ const CUISINE_GROUPS = [
   { id: 'court', cuisines: ['foodcourt', 'area'], label: { zh: '美食廣場／美食區', en: 'Food courts & areas', ko: '푸드코트·식당가', ja: 'フードコート・飲食エリア' } },
 ];
 const groupOf = (cuisine) => CUISINE_GROUPS.find((g) => g.cuisines.includes(cuisine));
-const POPULAR_MALLS = ['ktsp', 'kaiyan', 'chinglong', 'airside', 'mikiki', 'twins'];
+// 區域篩選標籤：每個標籤包含一組商場／屋苑
+const AREA_TABS = [
+  { id: 'core', malls: ['airside', 'twins', 'cullinan', 'kat'], label: { zh: '🛒 AIRSIDE / 雙子匯', en: '🛒 AIRSIDE / The Twins', ko: '🛒 AIRSIDE / 더 트윈스', ja: '🛒 AIRSIDE / The Twins' } },
+  { id: 'ktsp', malls: ['ktsp'], label: { zh: '🏟️ 體育園 / 啟德零售館', en: '🏟️ Sports Park / Kai Tak Mall', ko: '🏟️ 스포츠파크 / 카이탁 몰', ja: '🏟️ スポーツパーク／啓徳モール' } },
+  { id: 'estates', malls: ['kaiyuet', 'kaiying', 'kaiyan', 'chinglong', 'lph'], label: { zh: '🏠 啟悅/啟陽/啟欣/晴朗', en: '🏠 Public housing & HOS courts', ko: '🏠 공공주택 단지', ja: '🏠 公営住宅エリア' } },
+  { id: 'muktai', malls: ['muktai'], label: { zh: '☕ 沐泰街屋苑地舖', en: '☕ Muk Tai Street shops', ko: '☕ 묵타이 스트리트', ja: '☕ 沐泰街の店舗' } },
+  { id: 'mikiki', malls: ['mikiki'], label: { zh: '🏬 Mikiki', en: '🏬 Mikiki', ko: '🏬 Mikiki', ja: '🏬 Mikiki' } },
+  { id: 'other', malls: ['other'], label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
+];
 // 菜式關鍵字：令「快餐」「茶餐廳」「CAFE」「拉麵」等常用字都搜尋得到
 const CUISINE_TAGS = {
   fastfood: ['快餐', 'fast food', 'fastfood', '連鎖', 'chain'],
@@ -1376,7 +1411,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       const fk = fold(k);
       return items
         .filter((it) => it.category === 'dining')
-        .filter((it) => mallF === 'all' || (it.meta || {}).mall === mallF)
+        .filter((it) => mallF === 'all' || ((AREA_TABS.find((a) => a.id === mallF) || { malls: [] }).malls.includes((it.meta || {}).mall)))
         .filter((it) => !group || group.cuisines.includes((it.meta || {}).cuisine))
         .map((it) => ({ it, s: fk ? diningScore(it, fk) : 1 }))
         .filter((x) => x.s > 0)
@@ -1445,8 +1480,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       {cat === 'dining' && (() => {
         const dining = items.filter((x) => x.category === 'dining');
         const groupCount = (g) => dining.filter((x) => g.cuisines.includes((x.meta || {}).cuisine)).length;
-        const mallCount = (m) => dining.filter((x) => (x.meta || {}).mall === m).length;
-        const otherMalls = Object.keys(MALLS).filter((m) => !POPULAR_MALLS.includes(m) && mallCount(m));
+        const areaCount = (a) => dining.filter((x) => a.malls.includes((x.meta || {}).mall)).length;
         const Chip = ({ active, onClick, children, big }) => (
           <button onClick={onClick} className={`whitespace-nowrap rounded-full border font-semibold transition-colors ${big ? 'px-3.5 py-1.5 text-sm' : 'px-3 py-1 text-xs'} ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink)]'}`}
             style={active ? { background: LINES.TML.color } : undefined}>{children}</button>
@@ -1461,10 +1495,10 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
               ))}
             </div>
             <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 pb-0.5">
-              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dPopularMall}</span>
-              <Chip active={mallF === 'all'} onClick={() => setMallF('all')}>{t.dAll}</Chip>
-              {[...POPULAR_MALLS, ...otherMalls].filter((m) => mallCount(m)).map((m) => (
-                <Chip key={m} active={mallF === m} onClick={() => setMallF(m)}>{MALLS[m].icon ? `${MALLS[m].icon} ` : POPULAR_MALLS.includes(m) ? '⭐ ' : ''}{tx(MALLS[m].label, lang)} <span className="opacity-70">{mallCount(m)}</span></Chip>
+              <span className="shrink-0 text-xs font-bold text-[var(--muted)]">{t.dArea}</span>
+              <Chip active={mallF === 'all'} onClick={() => setMallF('all')}>{t.dAllArea}</Chip>
+              {AREA_TABS.filter((a) => areaCount(a)).map((a) => (
+                <Chip key={a.id} active={mallF === a.id} onClick={() => setMallF(a.id)}>{tx(a.label, lang)} <span className="opacity-70">{areaCount(a)}</span></Chip>
               ))}
             </div>
             <p className="text-[11px] text-[var(--muted)]">{t.walkNote}</p>
