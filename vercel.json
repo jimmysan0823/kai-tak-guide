@@ -6,3 +6,4 @@
     { "source": "/api/ctb/:path*", "destination": "https://rt.data.gov.hk/v2/transport/citybus/:path*" },
     { "source": "/api/gmb/:path*", "destination": "https://data.etagmb.gov.hk/:path*" }
   ]
+}
