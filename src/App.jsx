@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v8.1（美食餐飲：以餐廳名稱為搜尋及展示主題）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9（美食餐飲：全類型食肆，由連鎖快餐到特色餐廳）
  * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -371,6 +371,10 @@ const UI_V9 = {
   ja: { searchDining: '🔍 店名・ジャンル・料理で検索（例：ラーメン、カフェ、寿司）...', dAllCuisine: 'すべてのジャンル', dPopularMall: '人気モール' },
 };
 Object.keys(UI_V9).forEach((l) => Object.assign(UI[l], UI_V9[l]));
+const UI_V10 = {
+  zh: { concourse: '車站大堂（閘外）' }, en: { concourse: 'Station concourse' }, ko: { concourse: '역 대합실' }, ja: { concourse: '駅構内' },
+};
+Object.keys(UI_V10).forEach((l) => Object.assign(UI[l], UI_V10[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -433,34 +437,40 @@ const mk = (id, category, exit, zh, en, dZh, dEn, tip, q) => ({
 /* ============================ 美食餐飲：商場／菜式分類 ============================ */
 // exit：預設建議出口；walk：由該出口步行的估算分鐘；q：Google 地圖搜尋時附加的地點字眼
 const MALLS = {
+  chinglong: { exit: 'A', walk: '5', q: '晴朗商場', label: { zh: '晴朗商場', en: 'Ching Long Shopping Centre', ko: '칭롱 쇼핑센터', ja: '晴朗商場' } },
   airside: { exit: 'C', walk: '3–5', q: 'AIRSIDE', label: { zh: 'AIRSIDE', en: 'AIRSIDE', ko: 'AIRSIDE', ja: 'AIRSIDE' } },
-  twins: { exit: 'B1', walk: '1–3', q: '雙子匯', label: { zh: '雙子匯', en: 'The Twins', ko: '더 트윈스', ja: 'The Twins（雙子匯）' } },
   mikiki: { exit: 'C', walk: '10–13', q: 'Mikiki', label: { zh: 'Mikiki', en: 'Mikiki', ko: 'Mikiki', ja: 'Mikiki' } },
-  chinglong: { exit: 'A', walk: '5', q: '晴朗商場', label: { zh: '晴朗商場', en: 'Ching Long', ko: '칭롱 쇼핑센터', ja: '晴朗商場' } },
+  twins: { exit: 'B1', walk: '1–3', q: '雙子匯', label: { zh: '雙子匯', en: 'The Twins', ko: '더 트윈스', ja: 'The Twins（雙子匯）' } },
   ktsp: { exit: 'D', walk: '8–10', q: '啟德零售館', label: { zh: '啟德體育園區', en: 'Kai Tak Sports Park', ko: '카이탁 스포츠파크', ja: '啓徳スポーツパーク' } },
+  cullinan: { exit: 'B2', walk: '1–3', q: '天璽天', label: { zh: '天璽天Mall', en: 'Cullinan Sky Mall', ko: 'Cullinan Sky Mall', ja: '天璽天Mall' } },
+  kat: { exit: 'KAT', walk: '', q: '啟德站', label: { zh: '啟德站大堂', en: 'Kai Tak Station', ko: '카이탁역 대합실', ja: '啓徳駅構内' } },
   other: { exit: 'A', walk: '', q: '', label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
 };
 const CUISINES = {
+  fastfood: { zh: '連鎖快餐', en: 'Fast food', ko: '패스트푸드', ja: 'ファストフード' },
+  hkcafe: { zh: '港式茶餐廳／粉麵', en: 'HK café & noodles', ko: '홍콩식 차찬텡·국수', ja: '香港式喫茶・麺' },
   japanese: { zh: '日式料理', en: 'Japanese', ko: '일식', ja: '和食' },
   ramen: { zh: '拉麵／烏冬', en: 'Ramen & udon', ko: '라멘·우동', ja: 'ラーメン・うどん' },
   bbq: { zh: '燒肉', en: 'Yakiniku / BBQ', ko: '야키니쿠·고기구이', ja: '焼肉' },
-  hotpot: { zh: '火鍋', en: 'Hotpot', ko: '훠궈·샤부샤부', ja: '鍋料理' },
   korean: { zh: '韓式', en: 'Korean', ko: '한식', ja: '韓国料理' },
+  hotpot: { zh: '火鍋', en: 'Hotpot', ko: '훠궈·샤부샤부', ja: '鍋料理' },
   chinese: { zh: '中菜／台菜', en: 'Chinese & Taiwanese', ko: '중식·대만식', ja: '中華・台湾料理' },
   sea: { zh: '泰國／東南亞', en: 'Thai & SE Asian', ko: '태국·동남아', ja: 'タイ・東南アジア' },
   western: { zh: '西式／意式', en: 'Western & Italian', ko: '양식·이탈리안', ja: '洋食・イタリアン' },
   fusion: { zh: '創意 Fusion', en: 'Fusion', ko: '퓨전', ja: '創作料理' },
-  cafe: { zh: '咖啡室／烘焙', en: 'Café & bakery', ko: '카페·베이커리', ja: 'カフェ・ベーカリー' },
-  dessert: { zh: '甜品／飲品', en: 'Desserts & drinks', ko: '디저트·음료', ja: 'スイーツ・ドリンク' },
+  cafe: { zh: '咖啡室', en: 'Café', ko: '카페', ja: 'カフェ' },
+  dessert: { zh: '甜品', en: 'Desserts', ko: '디저트', ja: 'スイーツ' },
+  drinks: { zh: '茶飲', en: 'Tea & drinks', ko: '차·음료', ja: 'ドリンク' },
+  bakery: { zh: '餅店／麵包', en: 'Bakery', ko: '베이커리', ja: 'ベーカリー' },
   foodcourt: { zh: '美食廣場', en: 'Food court', ko: '푸드코트', ja: 'フードコート' },
   area: { zh: '美食區', en: 'Dining area', ko: '식당가', ja: '飲食エリア' },
 };
 const walkText = (exit, walk, lang) => {
+  if (exit === 'KAT') return { zh: '位於啟德站大堂閘外，毋須出站', en: 'In the station concourse outside the gates', ko: '역 대합실 개찰구 밖', ja: '駅構内の改札外' }[lang] || '';
   if (!walk) return '';
   return { zh: `${exit} 出口步行約 ${walk} 分鐘`, en: `About ${walk} min walk from Exit ${exit}`, ko: `${exit} 출구에서 도보 약 ${walk}분`, ja: `${exit}出口から徒歩約${walk}分` }[lang] || '';
 };
 
-// mkR(id, 商場, 菜式, 中文名, 英文名, 樓層舖號, 中文簡介, 英文簡介, 出口?)
 function mkR(id, mall, cuisine, zh, en, floor, dZh, dEn, exitOverride) {
   const m = MALLS[mall];
   const exit = exitOverride || m.exit;
@@ -583,43 +593,40 @@ const SEED = [
   mk('e74-baptist-rainbow', 'education', 'A', '浸信會孔憲紹天虹小學', 'Baptist Hung Hin Shiu Rainbow Primary School', '位於九龍啟德沐安街2號的新校舍，前身為黃大仙的浸信會天虹小學，2025 年 9 月起改用現名並改屬九龍城 34 校網。', 'New campus at 2 Muk On Street, Kai Tak. Formerly Baptist Rainbow Primary School in Wong Tai Sin, renamed in September 2025.',
     ['經 A 出口沿車站廣場／沐安街步行約 3 至 5 分鐘。', 'From Exit A, walk via Kai Tak Station Square and Muk On Street, about 3 to 5 min.'], '浸信會孔憲紹天虹小學'),
 
-  /* ---------- 美食餐飲：具體餐廳（2026 年 10 月按 2025–2026 年飲食媒體報道整理；食肆經常轉換，出發前請以 Google 地圖或商場公布為準） ---------- */
+  /* ---------- 美食餐飲（2026 年 10 月整理：主要依據中電「九龍城區食肆」商戶名單（2026 年 9 月 18 日更新）及 2025–2026 年飲食媒體報道；食肆經常轉換，出發前請以 Google 地圖為準） ---------- */
   // 步行時間為由建議出口出發的估算
+
+  /* 晴朗商場（A 出口） */
+  mkR('r-cl-mcd', 'chinglong', 'fastfood', '麥當勞', "McDonald's", 'G/F B001', '漢堡及快餐。', 'Burgers and fast food.'),
+  mkR('r-cl-cdc', 'chinglong', 'fastfood', '大家樂', 'Café de Coral', '1/F A101', '港式連鎖快餐，供應早午晚餐及下午茶。', 'Hong Kong fast-food chain serving all-day meals and afternoon tea.'),
+  mkR('r-cl-jasmine', 'chinglong', 'chinese', '茶皇殿', 'Jasmine Cuisine', '1/F A102', '粵菜酒家，供應點心。', 'Cantonese restaurant with dim sum.'),
+  mkR('r-cl-chiukee', 'chinglong', 'hkcafe', '潮記粉麵', 'Chiu Kee Noodles', 'G/F A030', '地道粉麵店。', 'Local noodle shop.'),
+  mkR('r-cl-hungs', 'chinglong', 'hkcafe', '鴻仔記車仔麵', "Hung's Cart Noodles", 'G/F A029', '車仔麵，自選配料。', 'Cart noodles with toppings of your choice.'),
+  mkR('r-cl-kongnam', 'chinglong', 'chinese', '港南湘蜀食堂', 'Kong Nam Canteen', 'B 區 G/F B19', '湘菜及川菜小館。', 'Hunan and Sichuan eatery.'),
+  mkR('r-cl-hft', 'chinglong', 'drinks', '鴻福堂', 'Hung Fook Tong', 'G/F A018', '涼茶、湯水及小食。', 'Herbal teas, soups and snacks.'),
+
+  /* AIRSIDE（C 出口） */
+  mkR('r-ai-mcd', 'airside', 'fastfood', '麥當勞', "McDonald's", 'B1 B117', '漢堡及快餐，設 McCafé（07:00–23:00）。', "Burgers and fast food, with a McCafé (07:00–23:00)."),
+  mkR('r-ai-starbucks', 'airside', 'cafe', '星巴克', 'Starbucks', 'B1 B130', '連鎖咖啡店。', 'Coffee chain.'),
   mkR('r-ai-uogashi', 'airside', 'japanese', '魚がし日本一', 'Uogashi Nihon-Ichi', 'G/F G001', '立食壽司店，主打日本直送時令壽司。', 'Stand-up sushi bar with seasonal fish from Japan.'),
   mkR('r-ai-machida', 'airside', 'ramen', '橫濱家系 町田商店', 'Machida Shoten', 'G/F G011', '日本橫濱家系拉麵連鎖店。', 'Yokohama iekei-style ramen chain from Japan.'),
-  mkR('r-ai-nanas', 'airside', 'dessert', "nana's green tea", "nana's green tea", 'B1 B128', '日本抹茶茶室，供應各式茶飲及抹茶甜品。', 'Japanese matcha café with tea drinks and matcha desserts.'),
+  mkR('r-ai-chatterbox', 'airside', 'sea', 'Chatterbox Café', 'Chatterbox Café', 'B1 B114', '星洲菜，招牌文華海南雞飯。', 'Singaporean dishes, famous for Hainanese chicken rice.'),
+  mkR('r-ai-nanas', 'airside', 'dessert', "nana's green tea", "nana's green tea", 'B1 B128–B129', '日本抹茶茶室，供應茶飲及抹茶甜品。', 'Japanese matcha café with tea drinks and matcha desserts.'),
   mkR('r-ai-katsugyu', 'airside', 'japanese', '京都勝牛', 'Gyukatsu Kyoto Katsugyu', 'B1 B129', '京都炸牛排專門店。', 'Kyoto-style deep-fried beef cutlet specialist.'),
-  mkR('r-ai-homebake', 'airside', 'cafe', 'Homebake', 'Homebake', 'B1 B132A–B132B', '烘焙店，主打飯團包及低溫熟成吐司。', 'Bakery known for rice-ball buns and slow-proofed toast.'),
+  mkR('r-ai-homebake', 'airside', 'bakery', 'Homebake', 'Homebake', 'B1 B132A–B132B', '烘焙店，主打飯團包及低溫熟成吐司。', 'Bakery known for rice-ball buns and slow-proofed toast.'),
+  mkR('r-ai-chefscuts', 'airside', 'western', "Chef's Cuts", "Chef's Cuts", '2/F 201', '扒房及烘焙，主打乾式熟成牛扒。', 'Steakhouse and bakery known for dry-aged steaks.'),
   mkR('r-ai-thaijam', 'airside', 'sea', '泰沾麵', '泰沾麵', '2/F L205', '泰式粉麵店。', 'Thai noodle shop.'),
   mkR('r-ai-kagura', 'airside', 'bbq', '燒肉火蔵 KAGURA', 'Yakiniku KAGURA', '2/F L206', '日式燒肉店。', 'Japanese yakiniku grill.'),
+  mkR('r-ai-senryo', 'airside', 'japanese', '千両', 'SEN-RYO', '2/F L207', '日式壽司及料理。', 'Japanese sushi and dishes.'),
   mkR('r-ai-cafe', 'airside', 'cafe', 'AIRSIDE Café', 'AIRSIDE Café', '3/F 322–323', '玻璃屋頂咖啡室，供應新派料理及海鮮菜式。', 'Glass-roofed café serving modern dishes and seafood.'),
-  mkR('r-ai-lemon', 'airside', 'dessert', '林香檸', 'Lam Heung Ning', '5/F L501', '手打檸檬茶專門店。', 'Hand-pounded lemon tea specialist.'),
-  mkR('r-ai-foodmuse', 'airside', 'foodcourt', 'FOODMUSE 美食廣場', 'FOODMUSE Food Court', '5/F L504–L505', '過萬呎美食廣場，集合多國菜式。', 'Food court of over 10,000 sq ft with dishes from many cuisines.'),
+  mkR('r-ai-paradise', 'airside', 'chinese', '樂天皇朝薈萃', 'Paradise Dynasty', '4/F 418', '小籠包及中式料理。', 'Xiao long bao and Chinese dishes.'),
+  mkR('r-ai-lemon', 'airside', 'drinks', '林香檸', 'Lam Heung Ning', '5/F L501', '手打檸檬茶專門店。', 'Hand-pounded lemon tea specialist.'),
+  mkR('r-ai-foodmuse', 'airside', 'foodcourt', 'FOODMUSE 美食廣場', 'FOODMUSE Food Court', '5/F L504–L505', '過萬呎美食廣場，集合多個餐飲品牌，包括幸福巷子（5 號檔）及 JMT（6 號檔）。', 'Food court of over 10,000 sq ft with many brands, incl. Blessed Alley (stall 5) and JMT (stall 6).'),
   mkR('r-ai-dongbaek', 'airside', 'korean', '冬柏 Yuk Mi Jeong Dam', 'Yuk Mi Jeong Dam', '5/F L506', '來自釜山的韓式燒肉店。', 'Korean barbecue from Busan.'),
   mkR('r-ai-coucou', 'airside', 'hotpot', '湊湊火鍋．茶憩', 'Coucou Hotpot & Tea Break', '6/F L603', '台式火鍋連茶飲。', 'Taiwanese-style hotpot with tea drinks.'),
   mkR('r-ai-terrace', 'airside', 'korean', 'Terrace in seaside', 'Terrace in seaside', '6/F 604', '韓式輕食及柑橘甜品，設戶外寵物友善座位。', 'Korean light meals and citrus desserts, with pet-friendly outdoor seats.'),
 
-  mkR('r-tw-washabu', 'twins', 'hotpot', 'Washabu', 'Washabu', '雙子匯1期 12/F 1202', '日式和牛涮涮鍋，設一人前火鍋。', 'Japanese wagyu shabu-shabu, with single-person sets.', 'B1'),
-  mkR('r-tw-sunakku', 'twins', 'japanese', 'Sunakku Mama', 'Sunakku Mama', '雙子匯1期 12/F 1203', '日式小酒館，供應清酒及佐酒小食。', 'Japanese izakaya with sake and bar snacks.', 'B1'),
-  mkR('r-tw-okosta', 'twins', 'japanese', 'OKOSTA 御將燒', 'OKOSTA', '雙子匯1期 12/F 1201', '日式料理餐廳。', 'Japanese restaurant.', 'B1'),
-  mkR('r-tw-unme', 'twins', 'fusion', 'UnME', 'UnME', '雙子匯1期 14/F 1401', '日、韓、西式新派 Fusion 菜。', 'Modern fusion of Japanese, Korean and Western dishes.', 'B1'),
-  mkR('r-tw-nisugu', 'twins', 'fusion', 'Nisugu', 'Nisugu', '雙子匯1期 14/F 1402', '日式居酒屋結合西班牙 Tapas 風格。', 'Japanese izakaya meets Spanish tapas.', 'B1'),
-  mkR('r-tw-wowdon', 'twins', 'ramen', 'WOWDON 手工烏冬', 'WOWDON Udon', '雙子匯1期 14/F 1403', '手工烏冬店。', 'Handmade udon shop.', 'B1'),
-  mkR('r-tw-santhai', 'twins', 'sea', '新泰東南亞餐廳', '新泰東南亞餐廳', '雙子匯1期 14/F 1404–1405', '東南亞菜餐廳。', 'Southeast Asian restaurant.', 'B1'),
-  mkR('r-tw-sogocafe', 'twins', 'cafe', 'SOGO Cafe', 'SOGO Cafe', '雙子匯1期 崇光 1/F 106', '崇光百貨內的咖啡室。', 'Café inside SOGO.', 'B1'),
-  mkR('r-tw-yonna', 'twins', 'dessert', 'YONNA YONNA Gelato', 'YONNA YONNA Gelato', '雙子匯2期 G/F G16', '意式手工雪糕店。', 'Italian-style gelato shop.', 'A'),
-
-  mkR('r-mk-gyukakuj', 'ktsp', 'bbq', '牛角J', 'Gyu-Kaku J', '啟德零售館2 3/F M2-301', '牛角平價副線，主打一人燒肉定食。', "Gyu-Kaku's budget line with single-person yakiniku sets."),
-  mkR('r-mk-mingyuen', 'ktsp', 'chinese', '名苑酒家．八珍玉食', 'Ming Yuen Restaurant', '啟德零售館2 3/F M2-310', '約 4,700 呎粵菜酒家。', 'Cantonese restaurant of about 4,700 sq ft.'),
-  mkR('r-mk-ironcow', 'ktsp', 'chinese', '鐵牛台灣牛肉麵', '鐵牛台灣牛肉麵', '啟德零售館2 1/F M2-103', '台灣牛肉麵店。', 'Taiwanese beef noodle shop.'),
-  mkR('r-mk-greyhound', 'ktsp', 'sea', 'Greyhound Café', 'Greyhound Café', '啟德零售館2 1/F M2-112', '泰國菜餐廳。', 'Thai restaurant.'),
-  mkR('r-mk-nburger', 'ktsp', 'western', 'N+ Burger', 'N+ Burger', '啟德零售館2 1/F M2-102', '航空主題漢堡店。', 'Aviation-themed burger restaurant.'),
-  mkR('r-mk-dayvi', 'ktsp', 'dessert', 'Dayvi Gelateria', 'Dayvi Gelateria', '啟德零售館2 1/F M2-115', '意大利手工 Gelato。', 'Italian handmade gelato.'),
-  mkR('r-mk-gonuts', 'ktsp', 'cafe', 'GoNuts', 'GoNuts', '啟德零售館2 G/F M2-016', '咖啡室。', 'Café.'),
-  mkR('r-mk-pizzamaru', 'ktsp', 'western', 'Pizza Maru', 'Pizza Maru', '啟德零售館2 G/F M2-010', '薄餅店。', 'Pizza restaurant.'),
-  mkR('r-mk-shabudays', 'ktsp', 'hotpot', '好鍋日子', 'Shabu Days', '啟德零售館1 2/F M1-206', '牛角集團一人火鍋品牌。', 'Single-person hotpot brand by the Gyu-Kaku group.'),
-  mkR('r-mk-ankimdo', 'ktsp', 'korean', '安金稻朝鮮拌飯', '安金稻朝鮮拌飯', '啟德零售館1 2/F M1-215', '傳統朝鮮拌飯。', 'Traditional Korean bibimbap.'),
-
+  /* Mikiki（C 出口） */
   mkR('r-mi-sushiro', 'mikiki', 'japanese', '壽司郎', 'Sushiro', '1/F 110', '迴轉壽司連鎖店。', 'Conveyor-belt sushi chain.'),
   mkR('r-mi-ichigen', 'mikiki', 'ramen', '一幻拉麵', 'Ebisoba Ichigen', '1/F 118A', '蝦湯拉麵專門店。', 'Shrimp-broth ramen specialist.'),
   mkR('r-mi-genki', 'mikiki', 'japanese', '元気寿司', 'Genki Sushi', '1/F 105–105A', '壽司及刺身連鎖店。', 'Sushi and sashimi chain.'),
@@ -629,12 +636,65 @@ const SEED = [
   mkR('r-mi-meetfresh', 'mikiki', 'dessert', '鮮芋仙', 'Meet Fresh', 'G/F G03C', '台灣甜品店。', 'Taiwanese dessert shop.'),
   mkR('r-mi-tapasbrew', 'mikiki', 'western', 'Tapas Brew', 'Tapas Brew', 'G/F G02A', '西班牙餐廳。', 'Spanish restaurant.'),
   mkR('r-mi-dasbier', 'mikiki', 'western', '德國餐廳 Das Bier', 'Das Bier', 'G/F G03B', '德國菜餐廳。', 'German restaurant.'),
-  mkR('r-mi-tamjai', 'mikiki', 'chinese', '譚仔雲南米線', 'TamJai Yunnan Mixian', 'LG LG8', '雲南米線。', 'Yunnan rice noodles.'),
+  mkR('r-mi-tamjai', 'mikiki', 'fastfood', '譚仔雲南米線', 'TamJai Yunnan Mixian', 'LG LG8', '連鎖雲南米線。', 'Yunnan rice-noodle chain.'),
 
-  /* ---------- 未能核實個別食肆的美食區（撳導航可在 Google 地圖查看） ---------- */
-  mkR('dn-ching-long', 'chinglong', 'area', '晴朗商場美食', 'Ching Long Shopping Centre food', '', '屋邨商場內的快餐店及街坊食肆。', 'Fast food and neighbourhood eateries in the estate mall.'),
-  mkR('dn-cullinan', 'other', 'area', '天璽天Mall 餐飲', 'Cullinan Sky Mall dining', '', '住宅基座商場內的餐飲選擇。', 'Dining at the podium mall of Cullinan Sky.', 'B2'),
+  /* 雙子匯（1 期 B1 出口；2 期 A 出口） */
+  mkR('r-tw-washabu', 'twins', 'hotpot', 'Washabu', 'Washabu', '雙子匯1期 12/F 1202', '日式和牛涮涮鍋，設一人前火鍋。', 'Japanese wagyu shabu-shabu, with single-person sets.', 'B1'),
+  mkR('r-tw-sunakku', 'twins', 'japanese', 'Sunakku Mama', 'Sunakku Mama', '雙子匯1期 12/F 1203', '日式小酒館，供應清酒及佐酒小食。', 'Japanese izakaya with sake and bar snacks.', 'B1'),
+  mkR('r-tw-okosta', 'twins', 'japanese', 'OKOSTA 御將燒', 'OKOSTA', '雙子匯1期 12/F 1201', '日式料理餐廳。', 'Japanese restaurant.', 'B1'),
+  mkR('r-tw-unme', 'twins', 'fusion', 'UnME', 'UnME', '雙子匯1期 14/F 1401', '日、韓、西式新派 Fusion 菜。', 'Modern fusion of Japanese, Korean and Western dishes.', 'B1'),
+  mkR('r-tw-nisugu', 'twins', 'fusion', 'Nisugu', 'Nisugu', '雙子匯1期 14/F 1402', '日式居酒屋結合西班牙 Tapas 風格。', 'Japanese izakaya meets Spanish tapas.', 'B1'),
+  mkR('r-tw-wowdon', 'twins', 'ramen', 'WOWDON 手工烏冬', 'WOWDON Udon', '雙子匯1期 14/F 1403', '手工烏冬店。', 'Handmade udon shop.', 'B1'),
+  mkR('r-tw-santhai', 'twins', 'sea', '新泰東南亞餐廳', '新泰東南亞餐廳', '雙子匯1期 14/F 1404–1405', '東南亞菜餐廳。', 'Southeast Asian restaurant.', 'B1'),
+  mkR('r-tw-heya', 'twins', 'chinese', '囍雲軒．HEYA', 'HEYA', '雙子匯1期 15/F 1501–1504', '粵菜酒家，供應點心下午茶。', 'Cantonese restaurant with dim sum.', 'B1'),
+  mkR('r-tw-sogocafe', 'twins', 'cafe', 'SOGO Cafe', 'SOGO Cafe', '雙子匯1期 崇光 1/F 106', '崇光百貨內的咖啡室。', 'Café inside SOGO.', 'B1'),
+  mkR('r-tw-yonna', 'twins', 'dessert', 'YONNA YONNA Gelato', 'YONNA YONNA Gelato', '雙子匯2期 G/F G16', '意式手工雪糕店。', 'Italian-style gelato shop.', 'A'),
+
+  /* 啟德體育園區：啟德零售館 1／2／3（D 出口） */
+  mkR('r-kt-kfc', 'ktsp', 'fastfood', '肯德基', 'KFC', '啟德零售館3 1/F M3-104', '炸雞快餐。', 'Fried chicken fast food.'),
+  mkR('r-kt-cdc', 'ktsp', 'fastfood', '大家樂', 'Café de Coral', '啟德零售館3 1/F M3-106', '港式連鎖快餐。', 'Hong Kong fast-food chain.'),
+  mkR('r-kt-tamjai3', 'ktsp', 'fastfood', '譚仔三哥米線', 'TamJai SamGor Mixian', '啟德零售館3', '連鎖米線店。', 'Rice-noodle chain.'),
+  mkR('r-kt-pizzahut', 'ktsp', 'western', '必勝客', 'Pizza Hut', '啟德零售館3 2/F M3-204', '連鎖薄餅店。', 'Pizza chain.'),
+  mkR('r-kt-chaology', 'ktsp', 'hkcafe', '茶東西', 'Chaology', '啟德零售館3 G/F M3-003', '港式茶餐廳。', 'Hong Kong-style café.'),
+  mkR('r-kt-wingwah', 'ktsp', 'bakery', '明尚', 'Wing Wah Prestige', '啟德零售館3 1/F M3-102', '榮華餅家旗下餅食店。', 'Pastry shop by Wing Wah.'),
+  mkR('r-kt-menwah', 'ktsp', 'hkcafe', '敏華冰廳', 'Men Wah Bing Teng', '啟德零售館1 2/F M1-215', '港式冰室。', 'Hong Kong-style bing sutt café.'),
+  mkR('r-kt-ankimdo', 'ktsp', 'korean', '安金稻朝鮮拌飯', 'On Kim Pot Rice', '啟德零售館1 2/F M1-215', '傳統朝鮮拌飯。', 'Traditional Korean bibimbap.'),
+  mkR('r-kt-shabudays', 'ktsp', 'hotpot', '好鍋日子', 'Shabu Days', '啟德零售館1 2/F M1-206', '牛角集團一人火鍋品牌。', 'Single-person hotpot brand by the Gyu-Kaku group.'),
+  mkR('r-kt-liangpi', 'ktsp', 'chinese', '兩姊妹涼皮 x 株式会社', 'Twins Liangpi x Kabushikigaisha', '啟德零售館1 2/F M1-206', '川式涼皮。', 'Sichuan-style cold noodles.'),
+  mkR('r-kt-dumpling', 'ktsp', 'chinese', '餃子鎮', 'Dumpling City', '啟德零售館1 2/F M1-208', '餃子專門店。', 'Dumpling specialist.'),
+  mkR('r-kt-bashi', 'ktsp', 'ramen', '一橋拉麵', 'Bashi Ramen', '啟德零售館1 2/F M1-208', '日式拉麵。', 'Japanese ramen.'),
+  mkR('r-kt-asam', 'ktsp', 'sea', '亞參雞飯', 'Asam Chicken Rice', '啟德零售館1 2/F M1-208', '馬來西亞海南雞飯。', 'Malaysian chicken rice.'),
+  mkR('r-kt-foodgala', 'ktsp', 'foodcourt', 'Food Gala 美食廣場', 'Food Gala', '啟德零售館1 2/F M1-209–214', '美食廣場，集合多個餐飲品牌，包括幸福巷子及 JMT。', 'Food court with many brands, incl. Blessed Alley and JMT.'),
+  mkR('r-kt-watami', 'ktsp', 'japanese', '居食屋「和民」', 'Watami Japanese Dining', '啟德零售館2 G/F M2-017', '日式居酒屋連鎖店。', 'Japanese izakaya chain.'),
+  mkR('r-kt-komeda', 'ktsp', 'cafe', "KOMEDA'S Coffee", "KOMEDA'S Coffee", '啟德零售館2 B1 M2-B101（AEON STYLE 內）', '名古屋過江龍日式咖啡店。', 'Nagoya-style Japanese coffee house.'),
+  mkR('r-kt-gonuts', 'ktsp', 'cafe', 'GoNuts', 'GoNuts', '啟德零售館2 G/F M2-016', '咖啡室。', 'Café.'),
+  mkR('r-kt-pizzamaru', 'ktsp', 'western', 'Pizza Maru', 'Pizza Maru', '啟德零售館2 G/F M2-010', '薄餅店。', 'Pizza restaurant.'),
+  mkR('r-kt-nburger', 'ktsp', 'western', 'N+ Burger', 'N+ Burger', '啟德零售館2 1/F M2-102', '航空主題漢堡店。', 'Aviation-themed burger restaurant.'),
+  mkR('r-kt-ironcow', 'ktsp', 'chinese', '鐵牛台灣牛肉麵', '鐵牛台灣牛肉麵', '啟德零售館2 1/F M2-103', '台灣牛肉麵店。', 'Taiwanese beef noodle shop.'),
+  mkR('r-kt-greyhound', 'ktsp', 'sea', 'Greyhound Café', 'Greyhound Café', '啟德零售館2 1/F M2-112', '泰國菜餐廳。', 'Thai restaurant.'),
+  mkR('r-kt-dayvi', 'ktsp', 'dessert', 'Dayvi Gelateria', 'Dayvi Gelateria', '啟德零售館2 1/F M2-115', '意大利手工 Gelato。', 'Italian handmade gelato.'),
+  mkR('r-kt-sharetea', 'ktsp', 'drinks', 'Sharetea 歇腳亭', 'Sharetea', '啟德零售館2 2/F', '台式手搖茶飲。', 'Taiwanese bubble tea.'),
+  mkR('r-kt-wangjiasha', 'ktsp', 'chinese', '王家沙．花樣年華', 'Wang Jia Sha', '啟德零售館2 2/F', '上海菜及點心。', 'Shanghainese dishes and dim sum.'),
+  mkR('r-kt-gyukakuj', 'ktsp', 'bbq', '牛角J', 'Gyu-Kaku J', '啟德零售館2 3/F M2-301', '牛角平價副線，主打一人燒肉定食。', "Gyu-Kaku's budget line with single-person yakiniku sets."),
+  mkR('r-kt-mingyuen', 'ktsp', 'chinese', '名苑酒家．八珍玉食', 'Ming Yuen Restaurant', '啟德零售館2 3/F M2-310', '約 4,700 呎粵菜酒家。', 'Cantonese restaurant of about 4,700 sq ft.'),
+  mkR('r-kt-sushiro', 'ktsp', 'japanese', '壽司郎', 'Sushiro', '啟德零售館2 3/F', '迴轉壽司連鎖店。', 'Conveyor-belt sushi chain.'),
+  mkR('r-kt-chowyuet', 'ktsp', 'ramen', '麵鮮醬油房周月', 'Chow Yuet', '啟德零售館2 3/F', '醬油拉麵專門店。', 'Shoyu ramen specialist.'),
+  mkR('r-kt-phi', 'ktsp', 'cafe', 'PHI Coffee & Pancake', 'PHI Coffee & Pancake', '啟德體育園 北斗園 G/F NG-001', '咖啡及班戟。', 'Coffee and pancakes.'),
   mkR('dn-dining-cove', 'ktsp', 'area', '美食海灣（Dining Cove）', 'Dining Cove', '', '啟德體育園一帶的餐飲區，活動日人流較多。', 'Dining zone at Kai Tak Sports Park; busy on event days.'),
+
+  /* 天璽天Mall（B2 出口） */
+  mkR('r-cs-genki', 'cullinan', 'japanese', '元氣壽司高速線', 'Kousoku Genki', 'B1 B149', '高速線迴轉壽司。', 'Express-lane conveyor sushi.'),
+  mkR('r-cs-xiao', 'cullinan', 'chinese', '遇見小麵', 'Xiao Noodles', 'LG LG27', '重慶小麵。', 'Chongqing-style noodles.'),
+
+  /* 啟德站大堂（閘外） */
+  mkR('r-kat-arome', 'kat', 'bakery', '東海堂', 'Arome Bakery', 'KAT 4', '麵包西餅店。', 'Bakery and cakes.'),
+  mkR('r-kat-hana', 'kat', 'japanese', '華御結', 'Hana-Musubi', 'KAT 5（近 D 出口）', '日式飯糰外賣店。', 'Japanese rice-ball takeaway.'),
+  mkR('r-kat-hft', 'kat', 'drinks', '鴻福堂', 'Hung Fook Tong', 'KAT 8', '涼茶、湯水及小食。', 'Herbal teas, soups and snacks.'),
+
+  /* 其他 */
+  mkR('r-ot-fairwood', 'other', 'fastfood', '大快活', 'Fairwood', '啟德1號(II) 1/F A舖（沐寧街8號）', '港式連鎖快餐。', 'Hong Kong fast-food chain.', 'D'),
+  mkR('r-ot-lstbakery', 'other', 'bakery', '啟德社區廚房（樂善堂）', 'Lok Sin Tong Kai Tak Community Kitchen', '世運道簡約公屋第6座 G/F', '社企餅店及咖啡室。', 'Social-enterprise bakery and café.', 'D'),
+  mkR('r-ot-charsiu', 'other', 'hkcafe', '叉燒丼家', 'The Master of Char Siu', '景福街99–101號啟德工廠大廈二期 G/F', '叉燒飯專門店。', 'Char siu rice specialist.', 'B1/B2'),
   mkR('dn-uplace', 'other', 'area', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', 'D'),
   mkR('dn-spk', 'other', 'area', '新蒲崗地道小店', 'San Po Kong local eateries', '', '工廈區內有不少平民食肆及地道小店。', 'Many affordable local eateries around the industrial buildings.', 'B1/B2'),
 
@@ -893,7 +953,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 5 版：餐廳導航）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 6 版：全類型食肆）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -1166,20 +1226,23 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
 }
 
 /* ---------- 美食搜尋：菜式大類及關鍵字 ---------- */
-// 篩選標籤用的菜式大類（按乘客常用的找食方式分組）
+// 篩選標籤用的食肆種類（按乘客常用的找食方式分組）
 const CUISINE_GROUPS = [
-  { id: 'jp', cuisines: ['japanese', 'ramen'], label: { zh: '日式料理', en: 'Japanese', ko: '일식', ja: '和食' } },
-  { id: 'kr', cuisines: ['korean', 'bbq'], label: { zh: '韓式／燒肉', en: 'Korean & BBQ', ko: '한식·고기구이', ja: '韓国料理・焼肉' } },
-  { id: 'cn', cuisines: ['chinese'], label: { zh: '中菜／港台', en: 'Chinese & Taiwanese', ko: '중식·대만식', ja: '中華・台湾' } },
+  { id: 'fast', cuisines: ['fastfood'], label: { zh: '連鎖快餐', en: 'Fast food', ko: '패스트푸드', ja: 'ファストフード' } },
+  { id: 'hk', cuisines: ['hkcafe'], label: { zh: '港式／茶餐廳', en: 'HK café', ko: '홍콩식 식당', ja: '香港式喫茶' } },
+  { id: 'jpkr', cuisines: ['japanese', 'ramen', 'bbq', 'korean'], label: { zh: '日式／韓式', en: 'Japanese & Korean', ko: '일식·한식', ja: '和食・韓国料理' } },
   { id: 'west', cuisines: ['western', 'fusion', 'cafe'], label: { zh: '西式／CAFE', en: 'Western & café', ko: '양식·카페', ja: '洋食・カフェ' } },
-  { id: 'sweet', cuisines: ['dessert'], label: { zh: '甜品輕食', en: 'Desserts & snacks', ko: '디저트·간식', ja: 'スイーツ・軽食' } },
+  { id: 'sweet', cuisines: ['drinks', 'dessert', 'bakery'], label: { zh: '茶飲／甜品', en: 'Drinks & desserts', ko: '음료·디저트', ja: 'ドリンク・スイーツ' } },
+  { id: 'cn', cuisines: ['chinese', 'sea'], label: { zh: '中菜／亞洲', en: 'Chinese & Asian', ko: '중식·아시아', ja: '中華・アジア' } },
   { id: 'hotpot', cuisines: ['hotpot'], label: { zh: '火鍋', en: 'Hotpot', ko: '훠궈', ja: '鍋料理' } },
-  { id: 'sea', cuisines: ['sea'], label: { zh: '泰國／東南亞', en: 'Thai & SE Asian', ko: '태국·동남아', ja: 'タイ・東南アジア' } },
   { id: 'court', cuisines: ['foodcourt', 'area'], label: { zh: '美食廣場／美食區', en: 'Food courts & areas', ko: '푸드코트·식당가', ja: 'フードコート・飲食エリア' } },
 ];
-const POPULAR_MALLS = ['airside', 'twins', 'mikiki'];
-// 菜式關鍵字：令「拉麵」「CAFE」「壽司」等常用字都搜尋得到
+const groupOf = (cuisine) => CUISINE_GROUPS.find((g) => g.cuisines.includes(cuisine));
+const POPULAR_MALLS = ['chinglong', 'airside', 'mikiki', 'twins'];
+// 菜式關鍵字：令「快餐」「茶餐廳」「CAFE」「拉麵」等常用字都搜尋得到
 const CUISINE_TAGS = {
+  fastfood: ['快餐', 'fast food', 'fastfood', '連鎖', 'chain'],
+  hkcafe: ['茶餐廳', '冰室', '冰廳', '港式', 'hong kong style', 'cha chaan teng', '粉麵', '車仔麵', '粥'],
   japanese: ['日本菜', '日式', 'japanese', '和食'],
   ramen: ['拉麵', 'ラーメン', 'ramen', '烏冬', 'udon', 'noodle'],
   bbq: ['燒肉', '焼肉', 'yakiniku', 'bbq', '燒烤'],
@@ -1189,12 +1252,13 @@ const CUISINE_TAGS = {
   sea: ['泰國', '泰菜', 'thai', '東南亞', 'southeast asian'],
   western: ['西餐', '西式', 'western'],
   fusion: ['fusion', '創意', '新派'],
-  cafe: ['cafe', 'café', 'coffee', '咖啡', 'bakery', '烘焙'],
-  dessert: ['甜品', 'dessert', '飲品', 'drinks', '輕食', 'snack'],
+  cafe: ['cafe', 'café', 'coffee', '咖啡'],
+  dessert: ['甜品', 'dessert', '輕食', 'snack'],
+  drinks: ['茶飲', '飲品', 'drinks', '手搖', '奶茶', 'bubble tea', '涼茶'],
+  bakery: ['餅店', '麵包', '西餅', 'bakery', '蛋糕', 'cake', '烘焙'],
   foodcourt: ['美食廣場', 'food court', 'foodcourt'],
   area: ['美食區', '食肆', 'eateries'],
 };
-// 統一大小寫、去除重音符號（café → cafe），並將日文「寿」視作「壽」
 const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/寿/g, '壽');
 // 美食搜尋評分：餐廳名稱 > 菜式／關鍵字 > 特色介紹 > 商場；出口號碼不作搜尋依據
 function diningScore(it, k) {
@@ -1232,15 +1296,25 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       <div className={isAdmin ? 'pr-16' : ''}>
         <h3 className="text-lg font-bold leading-snug">{title}</h3>
         {sub && <p className="text-sm text-[var(--muted)]">{sub}</p>}
-        <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
-          <UtensilsCrossed size={12} />{tx(cuisine, lang)}
-        </span>
+        {(() => {
+          const g = groupOf(meta.cuisine);
+          const gl = g ? tx(g.label, lang) : tx(cuisine, lang);
+          const cl = tx(cuisine, lang);
+          return (
+            <span className="mt-2 inline-flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>
+                <UtensilsCrossed size={12} />{gl}
+              </span>
+              {cl !== gl && <span className="text-xs font-medium text-[var(--muted)]">{cl}</span>}
+            </span>
+          );
+        })()}
       </div>
       <p className="mt-2.5 text-sm leading-relaxed">{tx(item.desc, lang)}</p>
       {/* 輔助資料：出口、商場及樓層 */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-3 text-[11px] text-[var(--muted)]">
         <span className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] py-0.5 pl-0.5 pr-2 font-semibold text-[var(--ink)]">
-          <ExitPlate exit={item.exit} />{t.exit} {item.exit}
+          <ExitPlate exit={item.exit} />{item.exit === 'KAT' ? t.concourse : `${t.exit} ${item.exit}`}
         </span>
         <span className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 font-semibold text-[var(--ink)]">
           <MapPin size={11} />{tx(mall.label, lang)}{floor ? ` · ${floor}` : ''}
