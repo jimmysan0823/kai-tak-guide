@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.3（美食餐飲及住宅：新增啟德跑道區／承豐道）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.4（轉乘巴士／小巴卡片：實時到站班次倒數）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  */
@@ -381,6 +381,13 @@ const UI_V11 = {
   ja: { searchDining: '🔍 店名・ジャンルで検索（例：マクドナルド、ラーメン、カフェ、寿司）...', dArea: 'エリア', dAllArea: 'すべてのエリア' },
 };
 Object.keys(UI_V11).forEach((l) => Object.assign(UI[l], UI_V11[l]));
+const UI_V12 = {
+  zh: { etaTitle: '實時到站（由啟德站附近上車）', etaCtb: '城巴 {r}', etaGmb: '{r}小巴', etaFallback: '暫未能取得實時班次，請以站牌班次表為準', etaNone: '附近暫無相關路線資料' },
+  en: { etaTitle: 'Live arrivals (boarding near Kai Tak Station)', etaCtb: 'Citybus {r}', etaGmb: 'Minibus {r}', etaFallback: 'Live times unavailable; check the timetable at the stop', etaNone: 'No matching routes nearby' },
+  ko: { etaTitle: '실시간 도착 (카이탁역 근처 승차)', etaCtb: '시티버스 {r}', etaGmb: '미니버스 {r}', etaFallback: '실시간 정보를 불러올 수 없습니다. 정류장 시간표를 확인하세요', etaNone: '주변에 해당 노선 정보가 없습니다' },
+  ja: { etaTitle: 'リアルタイム到着（啓徳駅付近で乗車）', etaCtb: 'シティバス {r}', etaGmb: 'ミニバス {r}', etaFallback: 'リアルタイム情報を取得できません。停留所の時刻表をご確認ください', etaNone: '周辺に該当する路線情報がありません' },
+};
+Object.keys(UI_V12).forEach((l) => Object.assign(UI[l], UI_V12[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -1290,6 +1297,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
         </div>
       )}
       {HOSPITAL_IDS.has(item.id) && <HospitalGuide t={t} lang={lang} />}
+      {!HOSPITAL_IDS.has(item.id) && etaTargetOf(item) && <TransitEtaBadges targetKey={etaTargetOf(item)} t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || item.name.zh)} target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--ink)]">
@@ -1414,6 +1422,7 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
           </span>
         )}
       </div>
+      {etaTargetOf(item) && <TransitEtaBadges targetKey={etaTargetOf(item)} t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || `${item.name.zh} 啟德`)} target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
@@ -2384,14 +2393,30 @@ const HOSP_OTHER = {
   en: 'Citybus 20A, 20X, 22; KMB 5R, X6C, 15A, plus KMB 11A and 17A special trips to Kai Tak Hospital; green minibus 86 (Kowloon Bay Station Exit A, about 10 min), 22A, 68, 90A, 90B.',
 };
 
-/* ---------- 醫院接駁路線實時到站（城巴／專線小巴開放數據） ---------- */
-const HOSP_POS = { lat: 22.3163, lng: 114.2088 }; // 香港兒童醫院／啟德醫院（承昌道1號）一帶
+/* ============================ 實時到站（城巴／專線小巴開放數據）：通用引擎 ============================ */
+// 每個「目的地」定義：位置座標 + 要顯示的接駁路線
+// 系統會自動找出「啟德站附近、之後最少站數就到目的地」的上車站及方向，毋須人手輸入站牌 ID；
+// 路線改道或新增車站時，下次重新計算（每 24 小時）便會自動更新。
+const TRANSIT_TARGETS = {
+  hosp: {
+    pos: { lat: 22.3163, lng: 114.2088 }, // 香港兒童醫院／啟德醫院（承昌道1號）一帶
+    routes: [{ op: 'CTB', route: '22S' }, { op: 'CTB', route: '22M' }, { op: 'GMB', route: '88A' }],
+  },
+  cruise: {
+    pos: { lat: 22.3068, lng: 114.2135 }, // 啟德郵輪碼頭（承豐道33號）
+    routes: [{ op: 'CTB', route: '22M' }, { op: 'CTB', route: '22' }, { op: 'GMB', route: '86' }],
+  },
+  runway: {
+    pos: { lat: 22.3135, lng: 114.2125 }, // 跑道區屋苑（維港1號／天瀧一帶，承豐道21–22號）
+    routes: [{ op: 'CTB', route: '22X' }, { op: 'CTB', route: '22D' }, { op: 'CTB', route: '22M' }, { op: 'CTB', route: '22' }, { op: 'GMB', route: '86' }],
+  },
+};
 const GMB_BASES = ['/api/gmb', 'https://data.etagmb.gov.hk'];
 const BOARD_RADIUS_M = 450; // 啟德站上車站範圍
-const HOSP_RADIUS_M = 350;  // 醫院下車站範圍
+const DEST_RADIUS_M = 450;  // 目的地下車站範圍
 
-// 由車站序列中，揀出「啟德站附近、之後最少站數即到醫院」的上車站
-function pickBoardingStop(stops, posOf) {
+// 由車站序列中，揀出「啟德站附近、之後最少站數即到目的地」的上車站
+function pickBoardingStop(stops, posOf, destPos) {
   let best = null;
   stops.forEach((s, idx) => {
     const p = posOf(s);
@@ -2400,7 +2425,7 @@ function pickBoardingStop(stops, posOf) {
     if (d > BOARD_RADIUS_M) return;
     for (let k = idx + 1; k < stops.length; k++) {
       const q = posOf(stops[k]);
-      if (q && distM(HOSP_POS, q) <= HOSP_RADIUS_M) {
+      if (q && distM(destPos, q) <= DEST_RADIUS_M) {
         const hops = k - idx;
         if (!best || hops < best.hops || (hops === best.hops && d < best.d)) best = { s, d, hops };
         break;
@@ -2410,7 +2435,7 @@ function pickBoardingStop(stops, posOf) {
   return best;
 }
 
-async function findCtbHospStop(route) {
+async function findCtbStop(route, destPos) {
   let best = null;
   const info = lsGet('kat-ctb-stopinfo-v1') || {};
   for (const dir of ['outbound', 'inbound']) {
@@ -2423,7 +2448,7 @@ async function findCtbHospStop(route) {
       const s = j && j.data;
       if (s && s.lat) info[id] = { zh: s.name_tc, en: s.name_en, lat: +s.lat, lng: +s.long };
     });
-    const pick = pickBoardingStop(seq, (s) => info[s.id]);
+    const pick = pickBoardingStop(seq, (s) => info[s.id], destPos);
     if (pick && (!best || pick.hops < best.hops)) {
       const p = info[pick.s.id];
       best = { co: 'CTB', route, dir, seq: pick.s.seq, id: pick.s.id, zh: p.zh, en: p.en, d: pick.d, hops: pick.hops };
@@ -2433,7 +2458,7 @@ async function findCtbHospStop(route) {
   return best;
 }
 
-async function findGmbHospStop(code) {
+async function findGmbStop(code, destPos) {
   const j = await apiGet(GMB_BASES, `/route/KLN/${code}`);
   const routes = (j && j.data) || [];
   const info = lsGet('kat-gmb-stopinfo-v1') || {};
@@ -2447,7 +2472,7 @@ async function findGmbHospStop(code) {
         const c = st && st.data && st.data.coordinates && st.data.coordinates.wgs84;
         if (c) info[s.stop_id] = { lat: +c.latitude, lng: +c.longitude };
       });
-      const pick = pickBoardingStop(stops, (s) => info[s.stop_id]);
+      const pick = pickBoardingStop(stops, (s) => info[s.stop_id], destPos);
       if (pick && (!best || pick.hops < best.hops)) {
         best = { co: 'GMB', route: code, routeId: r.route_id, routeSeq: dirn.route_seq, stopSeq: pick.s.stop_seq, zh: pick.s.name_tc, en: pick.s.name_en, d: pick.d, hops: pick.hops };
       }
@@ -2457,78 +2482,142 @@ async function findGmbHospStop(code) {
   return best;
 }
 
-// 上車站配置每 24 小時重新計算一次（路線改道或新增車站會自動更新）
-async function getHospPlan() {
-  const cache = lsGet('kat-hosp-plan-v1');
+// 每個目的地的上車站配置，每 24 小時重新計算一次
+async function getTransitPlan(key) {
+  const target = TRANSIT_TARGETS[key];
+  const cacheKey = `kat-transit-plan-v1-${key}`;
+  const cache = lsGet(cacheKey);
   if (cache && Date.now() - cache.t < 864e5) return cache.plan;
-  const [s22S, s22M, s88A] = await Promise.all([findCtbHospStop('22S'), findCtbHospStop('22M'), findGmbHospStop('88A')]);
-  const plan = { '22S': s22S, '22M': s22M, '88A': s88A };
-  if (!s22S && !s22M && !s88A) return cache ? cache.plan : null;
-  lsSet('kat-hosp-plan-v1', { t: Date.now(), plan });
+  const found = await Promise.all(target.routes.map((r) => (r.op === 'CTB' ? findCtbStop(r.route, target.pos) : findGmbStop(r.route, target.pos))));
+  const plan = {};
+  target.routes.forEach((r, i) => { plan[`${r.op}|${r.route}`] = found[i]; });
+  if (found.every((x) => !x)) return cache ? cache.plan : null;
+  lsSet(cacheKey, { t: Date.now(), plan });
   return plan;
 }
 
-async function loadHospEtas() {
-  const plan = await getHospPlan();
+// 取得某目的地所有路線的到站時間：{ 'CTB|22M': { stop, etas: [...] | null } | null }
+async function loadTransitEtas(key) {
+  const plan = await getTransitPlan(key);
   if (!plan) return null;
   const out = {};
-  await Promise.all(Object.entries(plan).map(async ([route, s]) => {
-    if (!s) { out[route] = null; return; }
+  await Promise.all(Object.entries(plan).map(async ([k, s]) => {
+    if (!s) { out[k] = null; return; }
+    let etas = null;
     if (s.co === 'CTB') {
-      const j = await apiGet(CTB_BASES, `/eta/CTB/${s.id}/${route}`);
-      if (!j) { out[route] = { stop: s, etas: null }; return; }
-      const rows = (j.data || []).filter((e) => (s.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O') && (e.seq == null || +e.seq === s.seq) && e.eta);
-      out[route] = { stop: s, etas: rows.map((e) => ({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en })) };
+      const j = await apiGet(CTB_BASES, `/eta/CTB/${s.id}/${s.route}`);
+      if (j) etas = (j.data || [])
+        .filter((e) => (s.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O') && (e.seq == null || +e.seq === s.seq) && e.eta)
+        .map((e) => ({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en }));
     } else {
       const j = await apiGet(GMB_BASES, `/eta/route-stop/${s.routeId}/${s.routeSeq}/${s.stopSeq}`);
-      if (!j) { out[route] = { stop: s, etas: null }; return; }
-      const list = (j.data && j.data.eta) || [];
-      out[route] = { stop: s, etas: list.map((e) => ({ at: e.timestamp ? Date.parse(e.timestamp) : Date.now() + (e.diff || 0) * 60000, rmkZh: e.remarks_tc, rmkEn: e.remarks_en })) };
+      if (j) etas = ((j.data && j.data.eta) || []).map((e) => ({ at: e.timestamp ? Date.parse(e.timestamp) : Date.now() + (e.diff || 0) * 60000, rmkZh: e.remarks_tc, rmkEn: e.remarks_en }));
     }
-    if (out[route].etas) out[route].etas = out[route].etas.filter((e) => !Number.isNaN(e.at)).sort((a, b) => a.at - b.at).slice(0, 3);
+    if (etas) etas = etas.filter((e) => !Number.isNaN(e.at)).sort((a, b) => a.at - b.at).slice(0, 3);
+    out[k] = { stop: s, etas };
   }));
   return out;
 }
 
-// 兩張醫院卡片共用同一份數據，25 秒內不重複下載
-let HOSP_ETA = { t: 0, p: null };
-function getHospEtas(force) {
-  if (!force && HOSP_ETA.p && Date.now() - HOSP_ETA.t < 25000) return HOSP_ETA.p;
-  HOSP_ETA = { t: Date.now(), p: loadHospEtas().catch(() => null) };
-  return HOSP_ETA.p;
+// 同一目的地的多張卡片共用同一份數據，25 秒內不重複下載
+const TRANSIT_CACHE = {};
+function getTransitEtas(key, force) {
+  const c = TRANSIT_CACHE[key];
+  if (!force && c && Date.now() - c.t < 25000) return c.p;
+  const p = loadTransitEtas(key).catch(() => null);
+  TRANSIT_CACHE[key] = { t: Date.now(), p };
+  return p;
+}
+
+// React Hook：每 30 秒自動更新到站時間，每 15 秒更新倒數
+function useTransitEta(key) {
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState(key ? 'loading' : 'idle');
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!key) return undefined;
+    let alive = true;
+    const load = (force) => getTransitEtas(key, force).then((d) => {
+      if (!alive) return;
+      if (d) { setData(d); setStatus('live'); } else setStatus((s) => (s === 'live' ? 'live' : 'offline'));
+    });
+    load(false);
+    const i = setInterval(() => { if (!document.hidden) load(true); }, 30000);
+    const k = setInterval(() => setNow(Date.now()), 15000);
+    return () => { alive = false; clearInterval(i); clearInterval(k); };
+  }, [key]);
+  return { data, status, now };
+}
+
+const etaMinLabel = (at, now, t) => {
+  const m = Math.round((at - now) / 60000);
+  return m <= 0 ? t.busArriving : fmt(t.busMin, { n: m });
+};
+
+// 卡片上的「實時到站班次倒數 Badge」
+function TransitEtaBadges({ targetKey, t, lang }) {
+  const { data, status, now } = useTransitEta(targetKey);
+  const target = TRANSIT_TARGETS[targetKey];
+  if (!target) return null;
+  const zh = lang === 'zh' || lang === 'ja';
+  const rows = target.routes.map((r) => ({ ...r, key: `${r.op}|${r.route}`, live: data && data[`${r.op}|${r.route}`] }));
+  // 已確認不經啟德站附近的路線，不在卡片顯示
+  const shown = status === 'live' ? rows.filter((r) => r.live) : rows;
+  return (
+    <div className="mt-3 space-y-1.5 rounded-lg border border-[var(--border)] p-2.5">
+      <p className="flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]">
+        <span>{t.etaTitle}</span>
+        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.hospLive}</span>}
+      </p>
+      {status === 'loading' && (
+        <div className="space-y-1.5" aria-label={t.hospLoading}>
+          {[0, 1].map((i) => <div key={i} className="h-6 animate-pulse rounded-md bg-[var(--surface-2)]" />)}
+        </div>
+      )}
+      {status !== 'loading' && shown.length === 0 && <p className="text-xs text-[var(--muted)]">{t.etaNone}</p>}
+      {status !== 'loading' && shown.map((r) => {
+        const icon = r.op === 'GMB' ? '🚐' : '🚌';
+        const name = r.op === 'GMB' ? fmt(t.etaGmb, { r: r.route }) : fmt(t.etaCtb, { r: r.route });
+        let body;
+        if (status === 'offline' || !r.live || r.live.etas === null) body = <span className="text-[var(--muted)]">{t.etaFallback}</span>;
+        else if (!r.live.etas.length) body = <span className="text-[var(--muted)]">{t.busNoEta}</span>;
+        else body = <b className="num" style={{ color: 'var(--tml)' }}>{r.live.etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>;
+        return (
+          <div key={r.key} className="rounded-md bg-[var(--surface-2)] px-2 py-1.5 text-xs">
+            <p className="flex flex-wrap items-baseline gap-x-1.5"><span>{icon} {name}:</span>{body}</p>
+            {r.live && r.live.stop && <p className="mt-0.5 text-[10px] text-[var(--muted)]">{fmt(t.hospAtStop, { stop: zh ? r.live.stop.zh : r.live.stop.en })}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// 判斷卡片應顯示哪個目的地的實時班次
+const ETA_TARGET_BY_ID = {
+  'p23-hkch': 'hosp', 'p30-kt-hosp': 'hosp', 't-22s-hosp': 'hosp',
+  't-22m-cruise': 'cruise', 'bk-ice-cruise': 'cruise',
+  't-22d-runway': 'runway', 't-22x-one-victoria': 'runway',
+};
+function etaTargetOf(item) {
+  if (!item) return null;
+  if (ETA_TARGET_BY_ID[item.id]) return ETA_TARGET_BY_ID[item.id];
+  if (String(item.id).startsWith('rw-')) return 'runway';
+  const m = item.meta || {};
+  if (m.mall === 'runway') return m.transfer && String(m.transfer.zh || '').includes('22M') ? 'cruise' : 'runway';
+  return null;
 }
 
 function HospitalGuide({ t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
-  const [live, setLive] = useState(null);
-  const [status, setStatus] = useState('loading');
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    let alive = true;
-    const load = (force) => getHospEtas(force).then((d) => {
-      if (!alive) return;
-      if (d) { setLive(d); setStatus('live'); } else setStatus((s) => (s === 'live' ? 'live' : 'offline'));
-    });
-    load(false);
-    const i = setInterval(() => load(true), 30000);
-    const k = setInterval(() => setNow(Date.now()), 15000);
-    return () => { alive = false; clearInterval(i); clearInterval(k); };
-  }, []);
-  const etaLabel = (at) => {
-    const m = Math.round((at - now) / 60000);
-    return m <= 0 ? t.busArriving : fmt(t.busMin, { n: m });
-  };
+  const { data: live, status, now } = useTransitEta('hosp');
   const liveLine = (route) => {
-    if (status === 'loading') return <span className="text-[var(--muted)]">{t.hospLoading}</span>;
-    const r = live && live[route];
-    if (status === 'offline' || !r || r.etas === null) return <span className="text-[var(--muted)]">{t.hospNoLive}</span>;
+    if (status === 'loading') return <span className="inline-block h-4 w-24 animate-pulse rounded bg-[var(--border)]" aria-label={t.hospLoading} />;
+    const op = route === '88A' ? 'GMB' : 'CTB';
+    const r = live && live[`${op}|${route}`];
+    if (status === 'offline' || !r || r.etas === null) return <span className="text-[var(--muted)]">{t.etaFallback}</span>;
     if (!r.etas.length) return <span className="text-[var(--muted)]">{t.busNoEta}</span>;
-    return (
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="num text-sm font-bold" style={{ color: 'var(--tml)' }}>{etaLabel(r.etas[0].at)}</span>
-        {r.etas.slice(1).map((e, i) => <span key={i} className="num text-[11px] text-[var(--muted)]">{etaLabel(e.at)}</span>)}
-      </span>
-    );
+    return <b className="num" style={{ color: 'var(--tml)' }}>{r.etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>;
   };
 
   return (
@@ -2542,7 +2631,8 @@ function HospitalGuide({ t, lang }) {
       </p>
       <ul className="space-y-1.5">
         {HOSP_FROM_KAT.map((r) => {
-          const stop = live && live[r.route] && live[r.route].stop;
+          const op = r.route === '88A' ? 'GMB' : 'CTB';
+          const stop = live && live[`${op}|${r.route}`] && live[`${op}|${r.route}`].stop;
           return (
             <li key={r.op + r.route} className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-2">
               <span className="num shrink-0 rounded px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
@@ -2551,7 +2641,7 @@ function HospitalGuide({ t, lang }) {
                 <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
                   {r.exit ? <><ExitPlate exit={r.exit} />{fmt(t.hospBoard, { exit: r.exit })}</> : (stop ? fmt(t.hospAtStop, { stop: zh ? stop.zh : stop.en }) : t.hospSign)}
                 </span>
-                {r.op !== 'REHAB' && <span className="mt-1 block">{liveLine(r.route)}</span>}
+                {r.op !== 'REHAB' && <span className="mt-1 block">{r.op === 'GMB' ? '🚐' : '🚌'} {liveLine(r.route)}</span>}
               </span>
             </li>
           );
