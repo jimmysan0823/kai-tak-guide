@@ -1,6 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.2（美食餐飲：聚焦啟德站周邊住宅區及商場）
- * （新校舍、銀行/找換店、官方指南差異同步、背景輪詢、巴士實時到站）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.3（美食餐飲及住宅：新增啟德跑道區／承豐道）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  */
@@ -457,6 +456,9 @@ const MALLS = {
   kaiying: { exit: 'D', walk: '8–10', q: '啟盈苑', label: { zh: '啟盈苑', en: 'Kai Ying Court', ko: '카이잉 코트', ja: '啓盈苑' } },
   lph: { exit: 'D', walk: '', q: '世運道', label: { zh: '世運道簡約公屋', en: 'Olympic Avenue Light Public Housing', ko: '올림픽 애비뉴 간이 공공주택', ja: '世運道簡易公営住宅' } },
   // 沐泰街／沐寧街私人屋苑地舖
+  // 啟德跑道區（承豐道沿線）：距離車站較遠，以港鐵官方指南的接駁巴士為準（A 出口上車）
+  runway: { exit: 'A', walk: '', mq: '啟德承豐道', label: { zh: '跑道區／承豐道', en: 'Runway area / Shing Fung Road', ko: '활주로 지구·싱펑 로드', ja: 'ランウェイ地区・承豊道' },
+    transfer: { zh: '啟德站 A 出口轉乘城巴 22X（往維港1號）或 22D（往跑道區，只限繁忙時間）', en: 'From Kai Tak Station Exit A, take Citybus 22X (to One Victoria) or 22D (to the runway area, peak hours only)', ko: '카이탁역 A 출구에서 시티버스 22X(원 빅토리아행) 또는 22D(활주로 지구행, 혼잡 시간대만) 환승', ja: '啓徳駅A出口からシティバス22X（維港1号行き）または22D（ランウェイ地区行き・ラッシュ時のみ）に乗り換え' } },
   muktai: { exit: 'D', walk: '5–10', label: { zh: '沐泰街屋苑地舖', en: 'Muk Tai Street shops', ko: '묵타이 스트리트 상점가', ja: '沐泰街の店舗' } },
   cullinan: { exit: 'B2', walk: '1–3', q: '天璽天', label: { zh: '天璽天Mall', en: 'Cullinan Sky Mall', ko: 'Cullinan Sky Mall', ja: '天璽天Mall' } },
   kat: { exit: 'KAT', walk: '', q: '啟德站', label: { zh: '啟德站大堂', en: 'Kai Tak Station', ko: '카이탁역 대합실', ja: '啓徳駅構内' } },
@@ -483,6 +485,8 @@ const CUISINES = {
   foodcourt: { zh: '美食廣場', en: 'Food court', ko: '푸드코트', ja: 'フードコート' },
   area: { zh: '美食區', en: 'Dining area', ko: '식당가', ja: '飲食エリア' },
 };
+const TRANSFER_CRUISE = { zh: '啟德站 A 出口轉乘城巴 22M 往啟德郵輪碼頭', en: 'From Kai Tak Station Exit A, take Citybus 22M to Kai Tak Cruise Terminal', ko: '카이탁역 A 출구에서 시티버스 22M으로 카이탁 크루즈 터미널까지', ja: '啓徳駅A出口からシティバス22Mで啓徳クルーズターミナルへ' };
+const TRANSFER_RUNWAY = { zh: '啟德站 A 出口轉乘城巴 22X（往維港1號）或 22D（往跑道區，只限繁忙時間）', en: 'From Kai Tak Station Exit A, take Citybus 22X (to One Victoria) or 22D (to the runway area, peak hours only)', ko: '카이탁역 A 출구에서 시티버스 22X(원 빅토리아행) 또는 22D(활주로 지구행, 혼잡 시간대만) 환승', ja: '啓徳駅A出口からシティバス22X（維港1号行き）または22D（ランウェイ地区行き・ラッシュ時のみ）に乗り換え' };
 const walkText = (exit, walk, lang, note) => {
   if (exit === 'KAT') return { zh: '位於啟德站大堂閘外，毋須出站', en: 'In the station concourse outside the gates', ko: '역 대합실 개찰구 밖', ja: '駅構内の改札外' }[lang] || '';
   if (!walk) return '';
@@ -501,7 +505,9 @@ function mkR(id, mall, cuisine, zh, en, floor, dZh, dEn, opt) {
   const meta = { mall, cuisine, floor: { zh: floor, en: floor }, walk };
   const note = mall === 'ktsp' ? m.note : null;
   if (note) meta.note = note;
-  const tipOf = (l) => walkText(exit, walk, l, note);
+  const transfer = o.transfer || m.transfer || null; // 跑道區：改為顯示巴士接駁提示
+  if (transfer) meta.transfer = transfer;
+  const tipOf = (l) => (transfer ? (transfer[l] || transfer.en) : walkText(exit, walk, l, note));
   // Google 地圖搜尋字眼：體育園區用「餐廳名稱 啟德體育園」；啟欣苑用「餐廳名稱 啟欣苑」；其他用「餐廳名稱 啟德 商場」
   const mapQuery = o.q ? `${zh} 啟德 ${o.q}` : m.mq ? `${zh} ${m.mq}` : `${zh} 啟德${m.q ? ` ${m.q}` : ''}`;
   return {
@@ -588,6 +594,14 @@ const SEED = [
   mk('r61-upper-riverbank', 'residential', 'D', '尚珒溋', 'Upper RiverBank', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Upper RiverBank Kai Tak'),
   mk('r62-vibe-centro', 'residential', 'D', '龍譽', 'Vibe Centro', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Vibe Centro Kai Tak'),
   mk('r63-victoria-skye', 'residential', 'A', '天寰', 'Victoria Skye', '啟德私人住宅項目。', 'Private residential development in Kai Tak.', null, 'Victoria Skye Kai Tak'),
+
+  /* 啟德跑道區住宅（承豐道沿線；距離車站較遠，請轉乘巴士） */
+  mk('rw-one-victoria', 'residential', 'A', '維港1號', 'One Victoria', '承豐道21號的私人屋苑，2022 年落成，共 1,059 伙。', 'Private estate at 21 Shing Fung Road, completed in 2022 with 1,059 flats.', ['啟德站 A 出口轉乘城巴 22X 直達維港1號。', 'From Kai Tak Station Exit A, take Citybus 22X straight to One Victoria.'], '維港1號 啟德承豐道'),
+  mk('rw-knightsbridge', 'residential', 'A', '天瀧', 'The Knightsbridge', '承豐道22號的私人屋苑，共 566 伙。', 'Private estate at 22 Shing Fung Road with 566 flats.', ['啟德站 A 出口轉乘城巴 22X（維港1號站下車，步行約 1 分鐘）。', 'From Kai Tak Station Exit A, take Citybus 22X to the One Victoria stop, then walk about 1 min.'], '天瀧 啟德承豐道'),
+  mk('rw-double-coast', 'residential', 'A', '維港．雙鑽', 'Double Coast', '承豐里2號一帶的跑道區私人屋苑。', 'Runway-area private estate around 2 Shing Fung Lane.', [TRANSFER_RUNWAY.zh, TRANSFER_RUNWAY.en], '維港雙鑽 啟德承豐道'),
+  mk('rw-miami-quay', 'residential', 'A', 'Miami Quay', 'Miami Quay', '啟德跑道區私人屋苑。', 'Private estate in the Kai Tak runway area.', [TRANSFER_RUNWAY.zh, TRANSFER_RUNWAY.en], 'Miami Quay 啟德承豐道'),
+  mk('rw-kt-marina', 'residential', 'A', '啟德海灣', 'KT Marina', '啟德跑道區私人屋苑。', 'Private estate in the Kai Tak runway area.', [TRANSFER_RUNWAY.zh, TRANSFER_RUNWAY.en], '啟德海灣 啟德承豐道'),
+  mk('rw-pavo-crest', 'residential', 'A', '澐璟', 'Pavo Crest', '啟德跑道區私人屋苑。', 'Private estate in the Kai Tak runway area.', [TRANSFER_RUNWAY.zh, TRANSFER_RUNWAY.en], '澐璟 啟德承豐道'),
 
   /* ---------- 學校 Schools（64–73） ---------- */
   mk('e64-canossa', 'education', 'B1', '嘉諾撒小學(新蒲崗)', 'Canossa Primary School (San Po Kong)', '新蒲崗的天主教小學。', 'Catholic primary school in San Po Kong.'),
@@ -751,6 +765,11 @@ const SEED = [
   mkR('r-ot-lstbakery', 'lph', 'bakery', '啟德社區廚房（樂善堂）', 'Lok Sin Tong Kai Tak Community Kitchen', '世運道簡約公屋第6座 G/F', '社企餅店及咖啡室。', 'Social-enterprise bakery and café.'),
   mkR('r-ot-charsiu', 'other', 'hkcafe', '叉燒丼家', 'The Master of Char Siu', '景福街99–101號啟德工廠大廈二期 G/F', '叉燒飯專門店。', 'Char siu rice specialist.', 'B1/B2'),
   mkR('dn-uplace', 'muktai', 'area', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', { q: 'U PLACE Riverside' }),
+  /* 🌊 啟德跑道區／承豐道（由啟德站 A 出口轉乘巴士） */
+  mkR('r-rw-origami', 'runway', 'chinese', '紙飛機親子空間', 'Origami Kids Cafe', '啟德郵輪碼頭 B 區北面頂層平台（承豐道33號）', '全港首間主打中菜（江浙菜）的親子餐廳，設近 20 萬呎戶外平台公園；10:00–20:00，小童遊樂區另收入場費。', 'Hong Kong\'s first Chinese (Jiangzhe) family restaurant, next to a huge rooftop park; 10:00–20:00, kids\' play area charged separately.', { transfer: TRANSFER_CRUISE }),
+  mkR('r-rw-oldhangar', 'runway', 'western', 'The Old Hangar', 'The Old Hangar', '啟德郵輪碼頭 B 區 2/F N205（承豐道33號）', '樓底 5 米高的森林系玻璃屋餐廳，主打歐陸及 Fusion 菜，日間為 Café 時段；只接受 WhatsApp 預約。', 'Five-metre-high greenhouse-style restaurant with European and fusion dishes; café hours by day. WhatsApp bookings only.', { transfer: TRANSFER_CRUISE }),
+  mkR('r-rw-myharbour', 'runway', 'bar', '海薈', 'My Harbour', '啟德郵輪碼頭 頂層花園 S302（承豐道33號）', '多國菜及酒吧，位於郵輪碼頭頂層花園。', 'International dishes and bar on the cruise terminal rooftop garden.', { transfer: TRANSFER_CRUISE }),
+  mkR('dn-runway-res', 'runway', 'area', '跑道區屋苑地舖（維港1號／天瀧一帶）', 'Runway area estate shops (One Victoria / The Knightsbridge)', '承豐道沿線', '跑道區屋苑基座商舖的食肆暫未能核實；撳導航可在 Google 地圖查看最新食肆及便利店。', 'Eateries in the runway-area estate podiums are not yet verified; use the map to check the latest restaurants and convenience stores.'),
   mkR('dn-spk', 'other', 'area', '新蒲崗地道小店', 'San Po Kong local eateries', '', '工廈區內有不少平民食肆及地道小店。', 'Many affordable local eateries around the industrial buildings.', 'B1/B2'),
 
   /* ---------- 新增：銀行／自動櫃員機／外幣服務（2026 年 10 月網上搜尋核實，出發前請再向銀行確認） ---------- */
@@ -777,6 +796,7 @@ const SEED = [
     },
     mapQuery: '南洋商業銀行 啟德分行',
   },
+  mk('bk-ice-cruise', 'bank', 'A', 'ICE 貨幣兌換（啟德郵輪碼頭 G/F 出口大堂）', 'ICE Currency Exchange (G/F Exit Hall, Kai Tak Cruise Terminal)', '只於郵輪靠岸日子開放，營業時間請參閱櫃面（資料截至 2024 年，出發前請核實）。', 'Open only on cruise-ship days; check the counter for hours (as of 2024, please verify).', [TRANSFER_CRUISE.zh, TRANSFER_CRUISE.en], '啟德郵輪碼頭'),
   mk('bk-boc-atm-kat', 'bank', 'KAT', '中國銀行(香港) 自動櫃員機（啟德站閘外 KAT 6號舖）', 'Bank of China (Hong Kong) ATM (Shop KAT 6, Kai Tak Station, unpaid area)', '位於車站大堂閘外的自動櫃員機。', 'ATM in the station concourse, outside the gates.', null, '啟德站 中國銀行 自動櫃員機'),
   mk('bk-hangseng-kat', 'bank', 'KAT', '恒生銀行（啟德站大堂 KAT 7號舖）', 'Hang Seng Bank (Shop KAT 7, Kai Tak Station concourse)', '位於車站大堂。此項資料來自第三方網站，實際服務類型請向銀行核實。', 'In the station concourse. Listed by third-party sites; please check the service type with the bank.', null, '恒生銀行 啟德站'),
   mk('bk-boc-atm-chinglong', 'bank', 'A', '中國銀行(香港) 自動櫃員機（晴朗商場 A區 1樓）', 'Bank of China (Hong Kong) ATM (Zone A, 1/F, Ching Long Shopping Centre)', '晴朗商場內的自動櫃員機。', 'ATM inside Ching Long Shopping Centre.', null, '晴朗商場'),
@@ -1008,7 +1028,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 8 版：住宅區食肆）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 9 版：跑道區）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -1299,6 +1319,7 @@ const AREA_TABS = [
   { id: 'core', malls: ['airside', 'twins', 'cullinan', 'kat'], label: { zh: '🛒 AIRSIDE / 雙子匯', en: '🛒 AIRSIDE / The Twins', ko: '🛒 AIRSIDE / 더 트윈스', ja: '🛒 AIRSIDE / The Twins' } },
   { id: 'ktsp', malls: ['ktsp'], label: { zh: '🏟️ 體育園 / 啟德零售館', en: '🏟️ Sports Park / Kai Tak Mall', ko: '🏟️ 스포츠파크 / 카이탁 몰', ja: '🏟️ スポーツパーク／啓徳モール' } },
   { id: 'estates', malls: ['kaiyuet', 'kaiying', 'kaiyan', 'chinglong', 'lph'], label: { zh: '🏠 啟悅/啟陽/啟欣/晴朗', en: '🏠 Public housing & HOS courts', ko: '🏠 공공주택 단지', ja: '🏠 公営住宅エリア' } },
+  { id: 'runway', malls: ['runway'], label: { zh: '🌊 跑道區/承豐道海景餐飲', en: '🌊 Runway area / waterfront', ko: '🌊 활주로 지구·해변', ja: '🌊 ランウェイ地区・海辺' } },
   { id: 'muktai', malls: ['muktai'], label: { zh: '☕ 沐泰街屋苑地舖', en: '☕ Muk Tai Street shops', ko: '☕ 묵타이 스트리트', ja: '☕ 沐泰街の店舗' } },
   { id: 'mikiki', malls: ['mikiki'], label: { zh: '🏬 Mikiki', en: '🏬 Mikiki', ko: '🏬 Mikiki', ja: '🏬 Mikiki' } },
   { id: 'other', malls: ['other'], label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
@@ -1346,7 +1367,8 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   const mall = MALLS[meta.mall] || MALLS.other;
   const cuisine = CUISINES[meta.cuisine] || CUISINES.area;
   const floor = meta.floor ? tx(meta.floor, lang) : '';
-  const walk = walkText(item.exit, meta.walk, lang, meta.note);
+  const walk = meta.transfer ? '' : walkText(item.exit, meta.walk, lang, meta.note);
+  const transfer = meta.transfer ? tx(meta.transfer, lang) : '';
   const title = tx(item.name, lang);
   const sub = [item.name.zh, item.name.en].filter((n) => n && n !== title)[0];
   return (
@@ -1386,6 +1408,11 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
           <MapPin size={11} />{tx(mall.label, lang)}{floor ? ` · ${floor}` : ''}
         </span>
         {walk && <span className="inline-flex items-center gap-1 px-1"><Footprints size={11} />{walk}</span>}
+        {transfer && (
+          <span className="flex w-full items-start gap-1.5 rounded-md px-2 py-1.5 font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+            <Bus size={12} className="mt-0.5 shrink-0" />{transfer}
+          </span>
+        )}
       </div>
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || `${item.name.zh} 啟德`)} target="_blank" rel="noopener noreferrer"
