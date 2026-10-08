@@ -14,6 +14,10 @@
       "destination": "https://opendata.mtr.com.hk/data/light_rail_routes_and_stops.csv"
     },
     {
+      "source": "/api/mtr-map/:lang/:file",
+      "destination": "https://www.mtr.com.hk/archive/:lang/services/:file"
+    },
+    {
       "source": "/api/kmb/:path*",
       "destination": "https://data.etabus.gov.hk/v1/transport/kmb/:path*"
     },

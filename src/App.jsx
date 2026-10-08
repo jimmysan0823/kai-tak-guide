@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v13（香港熱門景點、電車及渡輪指南、港鐵＋輕鐵路綫圖）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v14（實時班次修正、景點實時列車倒數、港鐵／輕鐵官方原圖路綫圖）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -1594,18 +1594,59 @@ function simTrains(now, headwayMin, offsetSec, dest) {
   return [0, 1, 2, 3].map((k) => ({ dest, plat: dest === 'WKS' ? '1' : '2', at: first + k * h }));
 }
 
+// ---------- 港鐵下一班列車（共用）：同一車站 25 秒內只請求一次；以伺服器時間校正裝置時鐘 ----------
+const NT_CACHE = {};
+const NT_INFLIGHT = {};
+const hkParse = (s) => Date.parse(`${String(s || '').trim().replace(' ', 'T')}+08:00`);
+async function nextTrains(line, sta, force) {
+  const key = `${line}-${sta}`;
+  const c = NT_CACHE[key];
+  if (!force && c && Date.now() - c.t < 25000) return c.v;
+  if (NT_INFLIGHT[key]) return NT_INFLIGHT[key];
+  const qs = `?line=${line}&sta=${sta}`;
+  NT_INFLIGHT[key] = (async () => {
+    const j = await fetchFirst([`/api/mtr-schedule${qs}`, `https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php${qs}`], (r) => r.json(), 6000);
+    let v = null;
+    if (j && typeof j === 'object') {
+      const s = j.data && j.data[key];
+      const sys = hkParse(j.curr_time || j.sys_time || (s && (s.curr_time || s.sys_time)));
+      const skew = Number.isFinite(sys) ? Date.now() - sys : 0; // 裝置時鐘與港鐵伺服器的差距
+      const conv = (arr) => (Array.isArray(arr) ? arr : []).map((x) => {
+        let at = hkParse(x.time);
+        if (Number.isFinite(at)) at += skew;
+        else if (x.ttnt != null && x.ttnt !== '') at = Date.now() + Number(x.ttnt) * 60000;
+        return { dest: x.dest, plat: x.plat, at };
+      }).filter((x) => Number.isFinite(x.at)).sort((a, b) => a.at - b.at);
+      v = {
+        ok: !!s, up: s ? conv(s.UP) : [], down: s ? conv(s.DOWN) : [],
+        message: String(j.message || '').trim(), delay: j.isdelay === 'Y', updated: Date.now(),
+      };
+    }
+    NT_CACHE[key] = { t: Date.now(), v };
+    delete NT_INFLIGHT[key];
+    return v;
+  })();
+  return NT_INFLIGHT[key];
+}
+const destName = (code, lang) => (STATION_NAME[code] ? tx(STATION_NAME[code], lang) : stName(code, lang));
+const hhmmHK = (ms) => { try { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Hong_Kong' }); } catch { return ''; } };
+const countdown = (at, now) => {
+  const d = Math.round((at - now) / 1000);
+  if (d <= 30) return null;
+  const m = Math.floor(d / 60), s = d % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
 function Arrivals({ t, lang }) {
-  const [live, setLive] = useState(null); // {up, down, updated} | null
-  const [status, setStatus] = useState('loading');
+  const [res, setRes] = useState(null); // nextTrains() 結果
+  const [status, setStatus] = useState('loading'); // loading | live | empty | sim
   const [now, setNow] = useState(Date.now());
 
-  const load = useCallback(async () => {
-    const j = await fetchFirst(MTR_SCHEDULE_URLS, (r) => r.json(), 5000);
-    const s = j && j.data && j.data['TML-KAT'];
-    if (!s) { setStatus('sim'); return; }
-    const conv = (arr) => (arr || []).map((x) => ({ dest: x.dest, plat: x.plat, at: new Date(String(x.time).replace(' ', 'T') + '+08:00').getTime() }));
-    setLive({ up: conv(s.UP), down: conv(s.DOWN), updated: Date.now() });
-    setStatus('live');
+  const load = useCallback(async (force) => {
+    const v = await nextTrains('TML', 'KAT', force === true);
+    if (!v || !v.ok) { setRes(v); setStatus(v && v.message ? 'empty' : 'sim'); return; }
+    setRes(v);
+    setStatus(v.up.length || v.down.length ? 'live' : 'empty');
   }, []);
 
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
@@ -1614,44 +1655,45 @@ function Arrivals({ t, lang }) {
   const hour = new Date(now).getHours();
   const peak = (hour >= 7 && hour < 10) || (hour >= 17 && hour < 20);
   const hw = peak ? 3 : 5;
-  const up = status === 'live' && live ? live.up.filter((x) => x.at > now - 20000).slice(0, 4) : simTrains(now, hw, 40, 'WKS');
-  const down = status === 'live' && live ? live.down.filter((x) => x.at > now - 20000).slice(0, 4) : simTrains(now, hw, 150, 'TUM');
+  const fresh = (arr) => arr.filter((x) => x.at > now - 20000).slice(0, 4);
+  const up = status === 'sim' ? simTrains(now, hw, 40, 'WKS') : res && res.ok ? fresh(res.up) : [];
+  const down = status === 'sim' ? simTrains(now, hw, 150, 'TUM') : res && res.ok ? fresh(res.down) : [];
 
-  const fmtLeft = (at) => {
-    const d = Math.round((at - now) / 1000);
-    if (d <= 30) return null;
-    const m = Math.floor(d / 60), s = d % 60;
-    return `${m}:${String(s).padStart(2, '0')}`;
-  };
-
-  const Col = ({ title, list }) => (
+  const renderCol = (title, list) => (
     <div className="rounded-xl bg-[#16202B] p-4 text-white">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-bold">{title}</span>
         <ArrowRight size={16} className="text-white/50" />
       </div>
-      <ul className="space-y-2">
-        {list.map((tr, i) => {
-          const left = fmtLeft(tr.at);
-          return (
-            <li key={`${tr.at}-${i}`} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${i === 0 ? 'bg-white/10' : ''}`}>
-              <span className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: LINES.TML.color }} />
-                <span className="text-sm">{tx(STATION_NAME[tr.dest] || { zh: tr.dest }, lang)}</span>
-                <span className="text-[11px] text-white/50">{t.plat} {tr.plat}</span>
-              </span>
-              {left ? (
-                <span className={`num tabular-nums ${i === 0 ? 'text-2xl font-bold text-[var(--sign)]' : 'text-lg text-white/80'}`}>{left}</span>
-              ) : (
-                <motion.span animate={{ opacity: [1, 0.35, 1] }} transition={{ repeat: Infinity, duration: 1.2 }} className="text-sm font-bold text-[var(--sign)]">{t.arriving}</motion.span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {list.length === 0 ? (
+        <p className="rounded-lg bg-white/5 px-3 py-3 text-sm text-white/75">
+          {status === 'loading' ? '…' : t.ntNone}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {list.map((tr, i) => {
+            const left = countdown(tr.at, now);
+            return (
+              <li key={`${tr.at}-${i}`} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${i === 0 ? 'bg-white/10' : ''}`}>
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: LINES.TML.color }} />
+                  <span className="text-sm">{destName(tr.dest, lang)}</span>
+                  <span className="text-[11px] text-white/50">{t.plat} {tr.plat}</span>
+                </span>
+                {left ? (
+                  <span className={`num tabular-nums ${i === 0 ? 'text-2xl font-bold text-[var(--sign)]' : 'text-lg text-white/80'}`}>{left}</span>
+                ) : (
+                  <motion.span animate={{ opacity: [1, 0.35, 1] }} transition={{ repeat: Infinity, duration: 1.2 }} className="text-sm font-bold text-[var(--sign)]">{t.arriving}</motion.span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 
+  const badge = status === 'live' ? t.live : status === 'empty' ? t.ntEmptyBadge : status === 'sim' ? t.sim : '…';
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -1659,15 +1701,21 @@ function Arrivals({ t, lang }) {
         <div className="flex items-center gap-2 text-xs">
           <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${status === 'live' ? 'bg-emerald-100 text-emerald-800' : 'bg-[var(--warn-bg)] text-[var(--warn-ink)]'}`}>
             <span className={`h-2 w-2 rounded-full ${status === 'live' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-            {status === 'loading' ? '…' : status === 'live' ? t.live : t.sim}
+            {badge}
           </span>
-          <button onClick={load} aria-label="Refresh" className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><RefreshCw size={14} /></button>
+          <button onClick={() => load(true)} aria-label="Refresh" className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><RefreshCw size={14} /></button>
         </div>
       </div>
+      {(status === 'empty' || (res && res.delay)) && (
+        <p className="mb-3 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+          ⚠️ {res && res.delay ? t.ntDelay : t.ntEmptyHint}{res && res.message ? `（${res.message}）` : ''}
+        </p>
+      )}
       <div className="grid gap-3 md:grid-cols-2">
-        <Col title={t.toWKS} list={up} />
-        <Col title={t.toTUM} list={down} />
+        {renderCol(t.toWKS, up)}
+        {renderCol(t.toTUM, down)}
       </div>
+      {res && res.updated && <p className="mt-2 text-right text-[11px] text-[var(--muted)]">{t.updated} {hhmmHK(res.updated)}</p>}
     </section>
   );
 }
@@ -3737,6 +3785,107 @@ function RouteChain({ code, lang, t }) {
   );
 }
 
+// ---------- 景點卡：沿途每段列車的實時班次及預計到達時間 ----------
+// 判斷列車方向：選出「目的地在前方」的一邊（UP 或 DOWN）
+function aheadSet(leg) {
+  const seg = SEGMENTS[leg.si][1].split(' ');
+  const i = seg.indexOf(leg.from);
+  const fwd = leg.toward === seg[seg.length - 1];
+  const set = new Set(fwd ? seg.slice(i + 1) : seg.slice(0, i));
+  // 同一路綫的支綫（例如上水 → 落馬洲、將軍澳 → 康城）
+  SEGMENTS.forEach(([ln, str], k) => {
+    if (ln !== leg.line || k === leg.si) return;
+    const cs = str.split(' ');
+    if (set.has(cs[0])) cs.forEach((c) => set.add(c));
+  });
+  return set;
+}
+function pickDir(v, leg) {
+  if (!v || !v.ok) return null;
+  const ahead = aheadSet(leg);
+  const score = (arr) => arr.filter((x) => ahead.has(x.dest)).length;
+  const su = score(v.up), sd = score(v.down);
+  if (!su && !sd) return null;
+  return (su >= sd ? v.up : v.down).filter((x) => ahead.has(x.dest));
+}
+function useInView(ref) {
+  const [vis, setVis] = useState(typeof IntersectionObserver === 'undefined');
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined' || !ref.current) return undefined;
+    const io = new IntersectionObserver(([e]) => setVis(e.isIntersecting), { rootMargin: '120px' });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [ref]);
+  return vis;
+}
+
+function TripLive({ code, lastMile, t, lang }) {
+  const route = code && code !== 'KAT' ? routeTo(code) : null;
+  const rides = route ? route.legs.filter((l) => l.kind === 'ride') : [];
+  const box = useRef(null);
+  const vis = useInView(box);
+  const [data, setData] = useState({});
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!vis || !rides.length) return undefined;
+    let alive = true;
+    const load = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      const out = {};
+      await Promise.all(rides.map(async (l) => { out[`${l.line}-${l.from}`] = await nextTrains(l.line, l.from); }));
+      if (alive) setData(out);
+    };
+    load();
+    const a = setInterval(load, 30000);
+    const b = setInterval(() => setNow(Date.now()), 1000);
+    return () => { alive = false; clearInterval(a); clearInterval(b); };
+  }, [vis, code]);
+  if (!route || !rides.length) return null;
+
+  // 逐段推算：上一段到站時間 + 轉車時間 → 下一段最早可乘的列車
+  let ready = now + 60000; // 預留 1 分鐘行到月台
+  let broken = false;
+  const rows = route.legs.map((l, i) => {
+    if (l.kind !== 'ride') { ready += l.mins * 60000; return { l, walk: true }; }
+    const list = pickDir(data[`${l.line}-${l.from}`], l);
+    if (i > 0) ready += TRANSFER_MIN * 60000;
+    const catchT = list ? list.find((x) => x.at >= (i === 0 ? now + 30000 : ready)) : null;
+    const row = { l, list, catchT, need: i === 0 ? now : ready, loading: data[`${l.line}-${l.from}`] === undefined };
+    if (catchT && !broken) ready = catchT.at + l.mins * 60000; else { broken = true; ready += l.mins * 60000; }
+    return row;
+  });
+  const eta = !broken ? ready + (Number(lastMile) || 0) * 60000 : null;
+
+  return (
+    <div ref={box} className="mt-2 rounded-lg border border-[var(--border)] px-3 py-2">
+      <p className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-[var(--muted)]">
+        <span>🕐 {t.tlTitle}</span>
+        {Object.keys(data).length > 0 && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.live}</span>}
+      </p>
+      <ul className="space-y-1.5">
+        {rows.filter((r) => !r.walk).map((r, i) => {
+          const first = i === 0;
+          const next = r.list ? r.list.filter((x) => x.at > now - 20000).slice(0, 2) : [];
+          return (
+            <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: LINES[r.l.line].color }}>{tx(LINES[r.l.line].name, lang)}</span>
+              <span className="font-semibold">{fmt(t.tlAt, { sta: stName(r.l.from, lang), to: stName(r.l.toward, lang) })}</span>
+              <span className="ml-auto num tabular-nums">
+                {r.loading && !vis ? '—' : r.loading ? <span className="inline-block h-3 w-16 animate-pulse rounded bg-[var(--surface-2)]" />
+                  : !r.list ? <span className="text-[var(--muted)]">{t.tlNoData}</span>
+                  : first ? (next.length ? next.map((x, k) => <b key={k} className={k === 0 ? 'text-sm' : 'ml-2 font-normal text-[var(--muted)]'} style={k === 0 ? { color: 'var(--tml)' } : undefined}>{countdown(x.at, now) || t.arriving}</b>) : <span className="text-[var(--muted)]">{t.ntNone}</span>)
+                  : r.catchT ? <span>{fmt(t.tlCatch, { time: hhmmHK(r.catchT.at), wait: Math.max(0, Math.round((r.catchT.at - r.need) / 60000)) })}</span>
+                  : <span className="text-[var(--muted)]">{next.length ? fmt(t.tlNow, { cd: countdown(next[0].at, now) || t.arriving }) : t.ntNone}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {eta && <p className="mt-1.5 text-xs font-bold">🏁 {fmt(t.tlEta, { time: hhmmHK(eta) })}</p>}
+    </div>
+  );
+}
+
 function AttractionCard({ a, t, lang, onRoute }) {
   const r = a.station && a.station !== 'KAT' ? routeTo(a.station) : null;
   const total = (r ? r.mins : 0) + (Number(a.last_mile_minutes) || 0);
@@ -3761,6 +3910,7 @@ function AttractionCard({ a, t, lang, onRoute }) {
         <p className="mb-1 text-[10px] font-bold text-[var(--muted)]">{fmt(t.attMtrPart, { n: r ? r.mins : 0 })}</p>
         <RouteChain code={a.station} lang={lang} t={t} />
       </div>
+      <TripLive code={a.station} lastMile={a.last_mile_minutes} t={t} lang={lang} />
 
       <div className="mt-2 flex items-start gap-2 text-sm">
         {a.exit ? <ExitPlate exit={a.exit} /> : <span className="mt-0.5 text-base" aria-hidden>📍</span>}
@@ -3983,11 +4133,94 @@ function ExplorePanel({ t, lang, onRoute }) {
   );
 }
 /* ============================ 🗺️ 港鐵全綫路綫圖（包括輕鐵） ============================ */
-// 官方路綫圖：Wikimedia Commons 公有領域 SVG（按語言切換）；載入失敗時改用港鐵官網縮圖
-const MTR_MAP_SRC = (lang) => `https://commons.wikimedia.org/wiki/Special:FilePath/Hong_Kong_Railway_Route_Map_${lang === 'zh' ? 'zh' : lang === 'ja' ? 'ja' : 'en'}.svg`;
-const MTR_MAP_FALLBACK = 'https://www.mtr.com.hk/en/customer/images/services/MTR_routemap_510.jpg';
-const MTR_MAP_PDF = 'https://www.mtr.com.hk/archive/en/services/routemap.pdf';
+// 官方原圖：港鐵官網「港鐵路綫圖」及「輕鐵路綫圖」PDF（經 Vercel 轉發後以 pdf.js 轉為高解像度圖片）
+// 未能載入 PDF 時，改用港鐵官網的官方預覽圖（JPG）
+const MTR_OFFICIAL = (kind, lang) => {
+  const l = lang === 'zh' || lang === 'ja' ? 'ch' : 'en';
+  const file = kind === 'lr' ? 'LR_routemap.pdf' : 'routemap.pdf';
+  return {
+    pdf: `https://www.mtr.com.hk/archive/${l}/services/${file}`,
+    proxy: `/api/mtr-map/${l}/${file}`,
+    jpg: `https://www.mtr.com.hk/${l}/customer/images/services/${kind === 'lr' ? 'LR_routemap_s.jpg' : 'MTR_routemap_510.jpg'}`,
+  };
+};
 const KAT_LOCATION_PDF = 'https://www.mtr.com.hk/archive/ch/services/maps/kat.pdf';
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let PDFJS_P = null;
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!PDFJS_P) {
+    PDFJS_P = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = `${PDFJS}pdf.min.js`;
+      s.onload = () => {
+        const L = window.pdfjsLib;
+        if (!L) { reject(new Error('pdfjs')); return; }
+        L.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.js`;
+        resolve(L);
+      };
+      s.onerror = () => { PDFJS_P = null; reject(new Error('pdfjs')); };
+      document.head.appendChild(s);
+    });
+  }
+  return PDFJS_P;
+}
+const PDF_IMG = {};
+// 把官方 PDF 第一頁轉成約 3600px 闊的圖片（快取於記憶體）
+async function officialPdfImage(urls) {
+  const key = urls[0];
+  if (PDF_IMG[key]) return PDF_IMG[key];
+  let L;
+  try { L = await loadPdfJs(); } catch { return null; }
+  for (const url of urls) {
+    try {
+      const doc = await L.getDocument({ url }).promise;
+      const page = await doc.getPage(1);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: Math.min(6, 3600 / base.width) });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.92));
+      if (!blob) continue;
+      PDF_IMG[key] = URL.createObjectURL(blob);
+      return PDF_IMG[key];
+    } catch { /* 試下一個網址 */ }
+  }
+  return null;
+}
+
+function OfficialMap({ kind, lang, t }) {
+  const o = MTR_OFFICIAL(kind, lang);
+  const [hi, setHi] = useState(PDF_IMG[o.proxy] || null);
+  const [state, setState] = useState(PDF_IMG[o.proxy] ? 'hi' : 'loading'); // loading | hi | jpg | fail
+  const [jpgOk, setJpgOk] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    if (PDF_IMG[o.proxy]) { setHi(PDF_IMG[o.proxy]); setState('hi'); return undefined; }
+    setHi(null); setState('loading');
+    officialPdfImage([o.proxy, o.pdf]).then((u) => { if (!alive) return; if (u) { setHi(u); setState('hi'); } else setState('jpg'); });
+    return () => { alive = false; };
+  }, [o.proxy]);
+  if (hi) return <img src={hi} alt={kind === 'lr' ? t.mapLr : t.mapMtr} draggable={false} className="block w-full select-none" />;
+  if (!jpgOk) {
+    return (
+      <div className="p-6 text-center text-sm text-neutral-800">
+        <p>{t.mapImgFail}</p>
+        <a href={o.pdf} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold underline"><ExternalLink size={13} />{kind === 'lr' ? t.lrPdf : t.mapPdf}</a>
+      </div>
+    );
+  }
+  return (
+    <div className="relative">
+      <img src={o.jpg} alt={kind === 'lr' ? t.mapLr : t.mapMtr} draggable={false} className="block w-full select-none" onError={() => setJpgOk(false)} />
+      {state === 'loading' && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white">{t.mapHiLoading}</span>}
+    </div>
+  );
+}
+
 const LR_URLS = ['/api/lr-stops', 'https://opendata.mtr.com.hk/data/light_rail_routes_and_stops.csv'];
 const LR_DATA_PAGE = 'https://data.gov.hk/tc-data/dataset/mtr-data-routes-fares-barrier-free-facilities';
 // 輕鐵與屯馬綫的轉乘站（按中文站名對應）
@@ -4124,8 +4357,7 @@ function LrStrips({ lang, t }) {
 function RailMapLightbox({ open, onClose, t, lang, initial }) {
   const [tab, setTab] = useState(initial || 'mtr');
   const [mode, setMode] = useState('official');
-  const [src, setSrc] = useState(MTR_MAP_SRC(lang));
-  useEffect(() => { if (open) { setTab(initial || 'mtr'); setSrc(MTR_MAP_SRC(lang)); } }, [open, initial, lang]);
+  useEffect(() => { if (open) { setTab(initial || 'mtr'); setMode('official'); } }, [open, initial]);
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -4143,7 +4375,7 @@ function RailMapLightbox({ open, onClose, t, lang, initial }) {
             <button key={id} onClick={() => setTab(id)} className={`rounded-lg px-3 py-1.5 text-sm font-bold ${tab === id ? 'bg-white text-neutral-900' : 'text-white/80'}`}>{label}</button>
           ))}
         </div>
-        {tab === 'mtr' && (
+        {(
           <div className="flex gap-1 rounded-xl bg-white/10 p-1">
             {[['official', t.mapOfficial], ['lines', t.mapLines]].map(([id, label]) => (
               <button key={id} onClick={() => setMode(id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${mode === id ? 'bg-white/90 text-neutral-900' : 'text-white/80'}`}>{label}</button>
@@ -4152,47 +4384,42 @@ function RailMapLightbox({ open, onClose, t, lang, initial }) {
         )}
         <button onClick={onClose} aria-label={t.close || 'Close'} className="ml-auto rounded-full bg-white/15 p-2 hover:bg-white/25"><X size={20} /></button>
       </div>
-      <ZoomPane key={`${tab}-${mode}`} t={t} minWidth={tab === 'mtr' && mode === 'official' ? 320 : undefined}>
-        {tab === 'lr' ? <LrStrips lang={lang} t={t} />
-          : mode === 'lines' ? <MtrStrips lang={lang} />
-          : <img src={src} alt={t.mapMtr} draggable={false} className="block w-full select-none"
-              onError={() => { if (src !== MTR_MAP_FALLBACK) setSrc(MTR_MAP_FALLBACK); }} />}
+      <ZoomPane key={`${tab}-${mode}-${lang}`} t={t} minWidth={mode === 'official' ? 320 : undefined}>
+        {mode === 'official' ? <OfficialMap kind={tab} lang={lang} t={t} />
+          : tab === 'lr' ? <LrStrips lang={lang} t={t} /> : <MtrStrips lang={lang} />}
       </ZoomPane>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/70">
         <span>{t.mapHint}</span>
-        {tab === 'mtr' && <a href={MTR_MAP_PDF} target="_blank" rel="noopener noreferrer" className="underline">{t.mapPdf}</a>}
+        <a href={MTR_OFFICIAL(tab, lang).pdf} target="_blank" rel="noopener noreferrer" className="underline">{tab === 'lr' ? t.lrPdf : t.mapPdf}</a>
         {tab === 'mtr' && <a href={KAT_LOCATION_PDF} target="_blank" rel="noopener noreferrer" className="underline">{t.mapKatPdf}</a>}
-        <span>{tab === 'lr' ? t.lrSrcNote : mode === 'official' ? t.mapSrcNote : t.mapLinesNote}</span>
+        <span>{mode === 'official' ? t.mapSrcNote : tab === 'lr' ? t.lrSrcNote : t.mapLinesNote}</span>
       </div>
     </div>
   );
 }
 
-// 放在「車站搜尋」上方的路綫圖卡
+function MapThumb({ kind, label, lang, onOpen }) {
+  const [ok, setOk] = useState(true);
+  return (
+    <button onClick={() => onOpen(kind)} className="group overflow-hidden rounded-lg border border-[var(--border)] bg-white text-left">
+      <div className="flex h-24 items-center justify-center overflow-hidden sm:h-32">
+        {ok ? <img src={MTR_OFFICIAL(kind, lang).jpg} alt="" loading="lazy" className="h-full w-full object-cover object-center transition-transform group-hover:scale-105" onError={() => setOk(false)} />
+          : <span className="text-3xl" aria-hidden>{kind === 'lr' ? '🚈' : '🚇'}</span>}
+      </div>
+      <p className="flex items-center justify-between bg-[var(--surface)] px-2 py-1.5 text-xs font-bold"><span>{kind === 'lr' ? '🚈' : '🚇'} {label}</span><Maximize2 size={13} /></p>
+    </button>
+  );
+}
+
+// 放在「車站搜尋」上方的路綫圖卡（港鐵官方原圖）
 function RailMapCard({ t, lang }) {
   const [open, setOpen] = useState(null);
-  const [thumb, setThumb] = useState(`${MTR_MAP_SRC(lang)}?width=640`);
-  useEffect(() => setThumb(`${MTR_MAP_SRC(lang)}?width=640`), [lang]);
   return (
     <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <p className="flex items-center gap-2 text-sm font-bold">🗺️ {t.mapCardTitle}</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <button onClick={() => setOpen('mtr')} className="group overflow-hidden rounded-lg border border-[var(--border)] bg-white text-left">
-          <div className="h-24 overflow-hidden sm:h-32">
-            <img src={thumb} alt="" loading="lazy" className="h-full w-full object-cover object-center transition-transform group-hover:scale-105"
-              onError={() => { if (thumb !== MTR_MAP_FALLBACK) setThumb(MTR_MAP_FALLBACK); }} />
-          </div>
-          <p className="flex items-center justify-between bg-[var(--surface)] px-2 py-1.5 text-xs font-bold"><span>🚇 {t.mapMtr}</span><Maximize2 size={13} /></p>
-        </button>
-        <button onClick={() => setOpen('lr')} className="group overflow-hidden rounded-lg border border-[var(--border)] bg-white text-left">
-          <svg viewBox="0 0 160 80" className="h-24 w-full sm:h-32" aria-hidden>
-            {[['#D9480F', 18], ['#2B8A3E', 34], ['#1971C2', 50], ['#AE3EC9', 66]].map(([c, y], i) => (
-              <g key={i}><line x1="12" y1={y} x2="148" y2={y} stroke={c} strokeWidth="5" strokeLinecap="round" />
-                {[30, 62, 94, 126].map((x) => <circle key={x} cx={x + (i % 2) * 8} cy={y} r="3.5" fill="#fff" stroke={c} strokeWidth="2" />)}</g>
-            ))}
-          </svg>
-          <p className="flex items-center justify-between bg-[var(--surface)] px-2 py-1.5 text-xs font-bold"><span>🚈 {t.mapLr}</span><Maximize2 size={13} /></p>
-        </button>
+        <MapThumb kind="mtr" label={t.mapMtr} lang={lang} onOpen={setOpen} />
+        <MapThumb kind="lr" label={t.mapLr} lang={lang} onOpen={setOpen} />
       </div>
       <p className="mt-1.5 text-[11px] text-[var(--muted)]">{t.mapCardHint}</p>
       <RailMapLightbox open={!!open} initial={open} onClose={() => setOpen(null)} t={t} lang={lang} />
@@ -4306,6 +4533,49 @@ const UI_V16 = {
   },
 };
 Object.keys(UI_V16).forEach((l) => Object.assign(UI[l], UI_V16[l]));
+const UI_V17 = {
+  zh: {
+    ntNone: '暫時沒有班次資料', ntEmptyBadge: '港鐵數據：暫無班次', ntEmptyHint: '港鐵開放數據暫時未有班次，可能已過尾班車、未到頭班車或服務有調整。',
+    ntDelay: '港鐵顯示列車服務延誤，班次時間僅供參考。',
+    tlTitle: '實時班次及預計到達', tlAt: '{sta} 往 {to}', tlNoData: '未有實時資料',
+    tlCatch: '可接 {time} 班次（等約 {wait} 分鐘）', tlNow: '而家：{cd}', tlEta: '預計 {time} 到達目的地（實時估算）',
+    mapCardTitle: '港鐵全綫路綫圖（包括輕鐵網絡）｜港鐵官方原圖',
+    mapOfficial: '官方路綫圖', mapImgFail: '暫時未能顯示官方路綫圖，請直接打開港鐵官方 PDF。', lrPdf: '港鐵官方輕鐵路綫圖（PDF）',
+    mapHiLoading: '正在載入官方高解像度版本…',
+    mapSrcNote: '路綫圖版權屬港鐵公司，直接取自港鐵官網原檔；如有更新以港鐵官網為準。',
+  },
+  en: {
+    ntNone: 'No train data right now', ntEmptyBadge: 'MTR data: no trains', ntEmptyHint: 'MTR open data has no trains listed — possibly after the last train, before the first train, or a service change.',
+    ntDelay: 'MTR reports a service delay; times are for reference only.',
+    tlTitle: 'Live trains & estimated arrival', tlAt: '{sta} towards {to}', tlNoData: 'No live data',
+    tlCatch: 'Catch the {time} train (wait ~{wait} min)', tlNow: 'Now: {cd}', tlEta: 'Estimated arrival {time} (live estimate)',
+    mapCardTitle: 'MTR system map (incl. Light Rail) · official MTR maps',
+    mapOfficial: 'Official map', mapImgFail: 'Could not show the official map. Open the MTR PDF instead.', lrPdf: 'Official Light Rail map (PDF)',
+    mapHiLoading: 'Loading the official high-resolution map…',
+    mapSrcNote: 'Maps © MTR Corporation, loaded from the original files on mtr.com.hk.',
+  },
+  ko: {
+    ntNone: '현재 열차 정보 없음', ntEmptyBadge: 'MTR 데이터: 열차 없음', ntEmptyHint: 'MTR 오픈 데이터에 열차가 없습니다. 막차 이후·첫차 전 또는 운행 조정일 수 있습니다.',
+    ntDelay: 'MTR 운행 지연 중. 시간은 참고용입니다.',
+    tlTitle: '실시간 열차 및 도착 예상', tlAt: '{sta} → {to} 방면', tlNoData: '실시간 정보 없음',
+    tlCatch: '{time} 열차 탑승 가능 (약 {wait}분 대기)', tlNow: '지금: {cd}', tlEta: '{time} 도착 예상 (실시간 추정)',
+    mapCardTitle: 'MTR 전체 노선도 (경전철 포함) · MTR 공식 원본',
+    mapOfficial: '공식 노선도', mapImgFail: '공식 노선도를 표시할 수 없습니다. MTR PDF를 열어 주세요.', lrPdf: '경전철 공식 노선도 (PDF)',
+    mapHiLoading: '공식 고해상도 노선도 불러오는 중…',
+    mapSrcNote: '노선도 저작권은 MTR에 있으며 mtr.com.hk 원본 파일을 불러옵니다.',
+  },
+  ja: {
+    ntNone: '現在、列車情報はありません', ntEmptyBadge: 'MTRデータ：列車なし', ntEmptyHint: 'MTRオープンデータに列車情報がありません。終電後・始発前、または運行調整の可能性があります。',
+    ntDelay: 'MTRが遅延を発表中。時刻は目安です。',
+    tlTitle: 'リアルタイム発車と到着予想', tlAt: '{sta} {to}方面', tlNoData: 'リアルタイム情報なし',
+    tlCatch: '{time}発に接続（約{wait}分待ち）', tlNow: '現在：{cd}', tlEta: '{time}頃に到着予定（リアルタイム推定）',
+    mapCardTitle: '港鐵全線路線図（輕鐵含む）｜MTR公式原図',
+    mapOfficial: '公式路線図', mapImgFail: '公式路線図を表示できません。MTRのPDFを開いてください。', lrPdf: 'MTR公式 輕鐵路線図（PDF）',
+    mapHiLoading: '公式高解像度版を読み込み中…',
+    mapSrcNote: '路線図の著作権はMTRに帰属し、mtr.com.hk の原本ファイルを表示しています。',
+  },
+};
+Object.keys(UI_V17).forEach((l) => Object.assign(UI[l], UI_V17[l]));
 
 /* ============================ App ============================ */
 function App() {
