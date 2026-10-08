@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10.3（巴士：點樣行去巴士站導航）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10.4（22S／AIRSIDE 公共運輸交匯處：經 C 或 D 出口）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -392,10 +392,10 @@ const UI_V12 = {
 };
 Object.keys(UI_V12).forEach((l) => Object.assign(UI[l], UI_V12[l]));
 const UI_V14 = {
-  zh: { bgTitle: '點樣行去巴士站', bgExit: '由 {exit} 出口出站', bgWalk: '步行約 {m} 分鐘到「{stop}」巴士站', bgWalkNoTime: '步行到「{stop}」巴士站', bgWait: '喺站牌等候 {route} 號', bgNav: '步行導航去巴士站', bgNote: '出口及步行時間按巴士站座標估算；地圖紅點即係上車位置。到站時間以本頁實時數據為準。' },
-  en: { bgTitle: 'How to get to the bus stop', bgExit: 'Leave by Exit {exit}', bgWalk: 'Walk about {m} min to the "{stop}" stop', bgWalkNoTime: 'Walk to the "{stop}" stop', bgWait: 'Wait at the stop sign for route {route}', bgNav: 'Walking directions to the stop', bgNote: 'Exit and walking time are estimated from the stop location; the red pin on the map is where to board. Arrival times above are live.' },
-  ko: { bgTitle: '버스 정류장 가는 길', bgExit: '{exit} 출구로 나가기', bgWalk: '"{stop}" 정류장까지 도보 약 {m}분', bgWalkNoTime: '"{stop}" 정류장까지 도보', bgWait: '정류장 표지판 앞에서 {route}번 대기', bgNav: '정류장까지 도보 길찾기', bgNote: '출구와 도보 시간은 정류장 위치로 추정한 값입니다. 지도의 빨간 핀이 승차 위치입니다.' },
-  ja: { bgTitle: 'バス停への行き方', bgExit: '{exit}出口から出る', bgWalk: '「{stop}」バス停まで徒歩約{m}分', bgWalkNoTime: '「{stop}」バス停まで徒歩', bgWait: '停留所の標識で{route}番を待つ', bgNav: 'バス停まで徒歩ナビ', bgNote: '出口と徒歩時間はバス停の位置から推定しています。地図の赤いピンが乗車位置です。' },
+  zh: { bgAirside: '前往 AIRSIDE 公共運輸交匯處', bgTitle: '點樣行去巴士站', bgExit: '由 {exit} 出口出站', bgWalk: '步行約 {m} 分鐘到「{stop}」巴士站', bgWalkNoTime: '步行到「{stop}」巴士站', bgWait: '喺站牌等候 {route} 號', bgNav: '步行導航去巴士站', bgNote: '出口及步行時間按巴士站座標估算；地圖紅點即係上車位置。到站時間以本頁實時數據為準。' },
+  en: { bgAirside: 'to the AIRSIDE public transport interchange', bgTitle: 'How to get to the bus stop', bgExit: 'Leave by Exit {exit}', bgWalk: 'Walk about {m} min to the "{stop}" stop', bgWalkNoTime: 'Walk to the "{stop}" stop', bgWait: 'Wait at the stop sign for route {route}', bgNav: 'Walking directions to the stop', bgNote: 'Exit and walking time are estimated from the stop location; the red pin on the map is where to board. Arrival times above are live.' },
+  ko: { bgAirside: 'AIRSIDE 대중교통 환승센터 방면', bgTitle: '버스 정류장 가는 길', bgExit: '{exit} 출구로 나가기', bgWalk: '"{stop}" 정류장까지 도보 약 {m}분', bgWalkNoTime: '"{stop}" 정류장까지 도보', bgWait: '정류장 표지판 앞에서 {route}번 대기', bgNav: '정류장까지 도보 길찾기', bgNote: '출구와 도보 시간은 정류장 위치로 추정한 값입니다. 지도의 빨간 핀이 승차 위치입니다.' },
+  ja: { bgAirside: 'AIRSIDE公共交通ターミナルへ', bgTitle: 'バス停への行き方', bgExit: '{exit}出口から出る', bgWalk: '「{stop}」バス停まで徒歩約{m}分', bgWalkNoTime: '「{stop}」バス停まで徒歩', bgWait: '停留所の標識で{route}番を待つ', bgNav: 'バス停まで徒歩ナビ', bgNote: '出口と徒歩時間はバス停の位置から推定しています。地図の赤いピンが乗車位置です。' },
 };
 Object.keys(UI_V14).forEach((l) => Object.assign(UI[l], UI_V14[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
@@ -417,7 +417,7 @@ const CATS = [
   { id: 'transport', Icon: Bus, emoji: '🚌', label: { zh: '接駁交通', en: 'Transport', ko: '환승 교통', ja: '交通乗換' } },
 ];
 const catById = (id) => CATS.find((c) => c.id === id) || CATS[0];
-const EXITS = ['A', 'B1', 'B2', 'C', 'D', 'B1/B2', 'KAT']; // KAT = 車站大堂（毋須出站）
+const EXITS = ['A', 'B1', 'B2', 'C', 'D', 'B1/B2', 'C/D', 'KAT']; // KAT = 車站大堂（毋須出站）
 
 /* ============================ 地標資料（港鐵啟德站官方指南 09/2026 逐項核對） ============================ */
 // 韓文／日文簡介按分類自動生成，可於 CMS 後台逐項改寫
@@ -440,6 +440,7 @@ const EXIT_TIP = {
   C: { zh: 'C 出口往 AIRSIDE 一帶及新蒲崗東面（太子道東沿線）。', en: 'Exit C leads towards AIRSIDE and the eastern side of San Po Kong along Prince Edward Road East.', ko: 'C 출구는 AIRSIDE 및 산포콩 동쪽(프린스 에드워드 로드 이스트) 방면입니다.', ja: 'C出口はAIRSIDE方面と新蒲崗東側（太子道東沿い）へ。' },
   D: { zh: 'D 出口往啟德體育園、跑道區方向及 D 出口公共運輸交匯處。', en: 'Exit D leads to Kai Tak Sports Park, the runway area and the Exit D transport interchange.', ko: 'D 출구는 카이탁 스포츠파크, 활주로 지구 및 D 출구 환승센터 방면입니다.', ja: 'D出口は啓徳スポーツパーク、ランウェイ地区、D出口交通ターミナル方面へ。' },
   KAT: { zh: '位於啟德站大堂閘外，毋須出站。', en: 'In the station concourse outside the gates; no need to exit.', ko: '역 대합실 개찰구 밖에 있어 출구로 나갈 필요가 없습니다.', ja: '駅コンコースの改札外にあり、出口を出る必要はありません。' },
+  'C/D': { zh: '可經 C 或 D 出口前往。', en: 'Reach it via Exit C or D.', ko: 'C 또는 D 출구를 이용하세요.', ja: 'C出口またはD出口から。' },
   'B1/B2': { zh: '可經 B1 或 B2 出口的行人天橋前往。', en: 'Reach it via the footbridge from Exit B1 or B2.', ko: 'B1 또는 B2 출구의 보행 육교를 이용하세요.', ja: 'B1またはB2出口の歩道橋を利用。' },
 };
 
@@ -571,7 +572,7 @@ const SEED = [
   mk('p21-green-tl', 'government', 'A', '綠在德朗', 'GREEN@TAK LONG', '社區回收環保站，收集多類回收物。', 'Community recycling store for various recyclables.'),
   mk('p22-skh-youth', 'government', 'A', '香港聖公會九龍城青少年綜合服務中心', 'H.K.S.K.H. Kowloon City Children and Youth Integrated Service Centre', '為兒童及青少年提供輔導及活動的社會服務中心。', 'Social services centre offering counselling and activities for young people.'),
   mk('p23-hkch', 'medical', 'C', '香港兒童醫院', "Hong Kong Children's Hospital", '全港首間專科兒童醫院，位於啟德承昌道1號。', "Hong Kong's dedicated children's hospital at 1 Shing Cheong Road, Kai Tak.",
-    ['請勿由 D 出口步行前往。建議於 C 出口乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk from Exit D. Take Citybus 22S from Exit C or Citybus 22M from Exit A.']),
+    ['請勿由 D 出口步行前往醫院。建議經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk to the hospitals from Exit D. Go via Exit C or D to the AIRSIDE public transport interchange for Citybus 22S, or take Citybus 22M from Exit A.']),
   mk('p24-irc', 'government', 'C', '稅務中心', 'Inland Revenue Centre', '稅務局總部所在地。', 'Headquarters of the Inland Revenue Department.'),
   mk('p25-kt-arena', 'sports', 'D', '啟德體藝館', 'Kai Tak Arena', '室內體育及文娛表演場館。', 'Indoor arena for sports and performances.'),
   mk('p26-avenue-park', 'sports', 'A', '啟德大道公園', 'Kai Tak Avenue Park', '沿啟德大道而建的休憩公園。', 'Landscaped park along Kai Tak Avenue.'),
@@ -579,7 +580,7 @@ const SEED = [
   mk('p28-ekt-playground', 'sports', 'B1', '東啟德遊樂場', 'Kai Tak East Playground', '設球場及兒童遊樂設施的遊樂場。', "Playground with sports courts and children's play facilities."),
   mk('p29-ekt-sports', 'sports', 'B1', '東啟德體育館', 'Kai Tak East Sports Centre', '康文署室內體育館。', 'LCSD indoor sports centre.'),
   mk('p30-kt-hosp', 'medical', 'C', '啟德醫院', 'Kai Tak Hospital', '位於啟德承昌道1號，毗鄰香港兒童醫院。2026 年 10 月 5 日起分階段投入服務，首階段為專科門診大樓及腫瘤科大樓，逐步承接伊利沙伯醫院的臨床服務。', "At 1 Shing Cheong Road, Kai Tak, next to Hong Kong Children's Hospital. Phased opening from 5 October 2026, starting with the Specialist Outpatient Block and the Oncology Block, gradually taking over services from Queen Elizabeth Hospital.",
-    ['請勿由 D 出口步行前往。建議於 C 出口乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk from Exit D. Take Citybus 22S from Exit C or Citybus 22M from Exit A.']),
+    ['請勿由 D 出口步行前往醫院。建議經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk to the hospitals from Exit D. Go via Exit C or D to the AIRSIDE public transport interchange for Citybus 22S, or take Citybus 22M from Exit A.']),
   mk('p31-ktsp', 'sports', 'D', '啟德體育園', 'Kai Tak Sports Park', '全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.",
     ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。', 'Covered walkway from Exit D. Allow extra time after big events.'], '啟德體育園'),
   mk('p32-kt-stadium', 'sports', 'D', '啟德主場館', 'Kai Tak Stadium', '可容納約五萬人、設開合式上蓋的主場館。', 'About 50,000-seat stadium with a retractable roof.'),
@@ -638,8 +639,8 @@ const SEED = [
   mk('e73-ymca-kg', 'education', 'A', '港青基信幼稚園(啟晴)', 'YMCA of HK Christian Kindergarten', '位於啟晴邨的幼稚園。', 'Kindergarten at Kai Ching Estate.'),
 
   /* ---------- 公共交通 Public transport ---------- */
-  mk('t-22s-hosp', 'transport', 'C', '往啟德醫院／香港兒童醫院（22S）', "To Kai Tak Hospital / Hong Kong Children's Hospital (22S)", '於 C 出口附近巴士站乘搭 22S 路線。', 'Take route 22S from the bus stop near Exit C.',
-    ['C 出口巴士站上車；星期一至五 10:30–19:30 設短途班次直達兩間醫院。上車前請核對車頭路線號碼。', 'Board at the bus stop by Exit C. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the route number before boarding.'], '啟德站 C出口 巴士站'),
+  mk('t-22s-hosp', 'transport', 'C/D', '往啟德醫院／香港兒童醫院（22S）', "To Kai Tak Hospital / Hong Kong Children's Hospital (22S)", '於 AIRSIDE 公共運輸交匯處乘搭 22S 路線。', 'Take route 22S at the AIRSIDE public transport interchange.',
+    ['經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處上車；星期一至五 10:30–19:30 設短途班次直達兩間醫院。上車前請核對車頭路線號碼。', 'Go via Exit C or D to the AIRSIDE public transport interchange. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the route number before boarding.'], 'AIRSIDE 公共運輸交匯處 啟德'),
   mk('t-rehabus-hosp', 'transport', 'A', '復康穿梭巴士站（往啟德醫院／香港兒童醫院）', "Rehabus Feeder Bus Stop (to Kai Tak Hospital / Hong Kong Children's Hospital)", '為有需要人士提供的復康穿梭巴士站。', 'Rehabus feeder stop for passengers with mobility needs.',
     ['位於 A 出口，輪椅使用者可經升降機往返街面。', 'At Exit A. Wheelchair users can use the lift between street and concourse.'], '啟德站 A出口'),
   mk('t-22m-cruise', 'transport', 'A', '往啟德郵輪碼頭（22M）', 'To Kai Tak Cruise Terminal (22M)', '於 A 出口附近巴士站乘搭 22M 路線。', 'Take route 22M from the bus stop near Exit A.',
@@ -1050,7 +1051,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 9 版：跑道區）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 10 版：22S 經 C／D 出口）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -2273,15 +2274,32 @@ const OFFICIAL_ETA = {
 function nearestExitTo(p) {
   return Object.entries(EXIT_LATLNG).map(([code, pos]) => ({ code, d: distM(p, pos) })).sort((a, b) => a.d - b.d)[0];
 }
+// 多個出口的寫法，例如「C 或 D」
+const exitJoin = (exit, lang) => {
+  const xs = String(exit).split('/');
+  if (xs.length < 2) return exit;
+  return xs.join({ zh: ' 或 ', en: ' or ', ko: ' 또는 ', ja: 'または' }[lang] || ' / ');
+};
+// AIRSIDE 公共運輸交匯處（包括 22S）的巴士及小巴：經 C 或 D 出口前往
+const AIRSIDE_PTI_RE = /AIRSIDE|啟德站公共運輸交匯處|KAI TAK STATION PUBLIC TRANSPORT/i;
+function boardingExits(r) {
+  const s = r.stop || {};
+  if (r.route === '22S' || AIRSIDE_PTI_RE.test(`${s.zh || ''} ${s.en || ''}`)) return ['C', 'D'];
+  return null;
+}
 function BusStopGuide({ r, t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
   const s = r.stop || {};
   const has = Number.isFinite(s.lat) && Number.isFinite(s.lng);
-  const ex = has ? nearestExitTo(s) : null;
-  const mins = ex ? Math.max(1, Math.round((ex.d * 1.3) / 75)) : null;
+  const fixed = boardingExits(r);
+  // 指定出口（例如 22S：C 或 D）時，步行導航由較近的一個出口出發
+  const ex = fixed
+    ? (has ? fixed.map((code) => ({ code, d: distM(s, EXIT_LATLNG[code]) })).sort((a, b) => a.d - b.d)[0] : { code: fixed[0], d: null })
+    : (has ? nearestExitTo(s) : null);
+  const mins = ex && ex.d != null ? Math.max(1, Math.round((ex.d * 1.3) / 75)) : null;
   const stopName = zh ? s.zh : s.en;
   const dest = zh ? r.destZh : r.destEn;
-  const walkUrl = has && ex
+  const walkUrl = has && ex && EXIT_LATLNG[ex.code]
     ? `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[ex.code].lat},${EXIT_LATLNG[ex.code].lng}&destination=${s.lat},${s.lng}&travelmode=walking`
     : mapsUrl(`${s.zh || ''} 巴士站 啟德`);
   const official = OFFICIAL_ETA[r.co];
@@ -2289,7 +2307,7 @@ function BusStopGuide({ r, t, lang }) {
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 overflow-hidden border-t border-[var(--border)] pt-3">
       <h4 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} />{t.bgTitle}</h4>
       <ol className="mt-2 space-y-1.5 text-sm">
-        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span><ExitPlate exit={ex.code} /><span>{fmt(t.bgExit, { exit: ex.code })}</span></li>}
+        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{fixed ? `（${t.bgAirside}）` : ''}</span></li>}
         <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 2 : 1}</span>
           <span>{mins ? fmt(t.bgWalk, { m: mins, stop: stopName }) : fmt(t.bgWalkNoTime, { stop: stopName })}</span></li>
         <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 3 : 2}</span>
@@ -2465,7 +2483,7 @@ const HOSPITAL_IDS = new Set(['p23-hkch', 'p30-kt-hosp']);
 const OP_STYLE = { CTB: { bg: '#F2B705', fg: '#111' }, KMB: { bg: '#C8102E', fg: '#fff' }, GMB: { bg: '#0F7B4F', fg: '#fff' }, REHAB: { bg: '#5A6573', fg: '#fff' } };
 // 由啟德站往返香港兒童醫院／啟德醫院（資料：醫管局、運輸署及 2026 年 10 月報道，出發前請以營辦商公布為準）
 const HOSP_FROM_KAT = [
-  { op: 'CTB', route: '22S', exit: 'C', zh: '啟德站 ↔ 啟德郵輪碼頭（循環線）；星期一至五 10:30–19:30 設短途班次，由啟德站直達啟德醫院及香港兒童醫院。', en: 'Kai Tak Station ↔ Kai Tak Cruise Terminal (circular). Mon–Fri 10:30–19:30 short trips run from Kai Tak Station to both hospitals.' },
+  { op: 'CTB', route: '22S', exit: 'C/D', zh: '於 AIRSIDE 公共運輸交匯處上車（經 C 或 D 出口）。啟德站 ↔ 啟德郵輪碼頭（循環線）；星期一至五 10:30–19:30 設短途班次，由啟德站直達啟德醫院及香港兒童醫院。', en: 'Board at the AIRSIDE public transport interchange (via Exit C or D). Kai Tak Station ↔ Kai Tak Cruise Terminal (circular). Mon–Fri 10:30–19:30 short trips run from Kai Tak Station to both hospitals.' },
   { op: 'CTB', route: '22M', exit: 'A', zh: '啟德郵輪碼頭 ↔ 土瓜灣（循環線），途經啟德站及兩間醫院。', en: 'Kai Tak Cruise Terminal ↔ To Kwa Wan (circular), via Kai Tak Station and both hospitals.' },
   { op: 'GMB', route: '88A', exit: null, zh: '黃大仙站 ↔ 啟德醫院（循環線），途經啟德站一帶。', en: 'Wong Tai Sin Station ↔ Kai Tak Hospital (circular), via the Kai Tak Station area.' },
   { op: 'REHAB', route: '♿', exit: 'A', zh: '復康穿梭巴士站，供有需要人士往返兩間醫院。', en: 'Rehabus feeder stop to both hospitals for passengers who need it.' },
@@ -2722,7 +2740,7 @@ function HospitalGuide({ t, lang }) {
               <span className="min-w-0 flex-1 text-xs leading-relaxed">
                 <b>{t['op' + r.op]}</b>　{zh ? r.zh : r.en}
                 <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
-                  {r.exit ? <><ExitPlate exit={r.exit} />{fmt(t.hospBoard, { exit: r.exit })}</> : (stop ? fmt(t.hospAtStop, { stop: zh ? stop.zh : stop.en }) : t.hospSign)}
+                  {r.exit ? <>{r.exit.split('/').map((e) => <ExitPlate key={e} exit={e} />)}{fmt(t.hospBoard, { exit: exitJoin(r.exit, lang) })}</> : (stop ? fmt(t.hospAtStop, { stop: zh ? stop.zh : stop.en }) : t.hospSign)}
                 </span>
                 {r.op !== 'REHAB' && <span className="mt-1 block">{r.op === 'GMB' ? '🚐' : '🚌'} {liveLine(r.route)}</span>}
               </span>
@@ -2944,9 +2962,9 @@ function YouTubeModal({ video, onClose, t }) {
 /* ============================ 🏥 去啟德醫院／香港兒童醫院：實景導航 ============================ */
 const HOSP_VIDEO_ROUTES = [
   { key: 'hosp_exit_c', exit: 'C', btn: 'vidBtnC',
-    steps: { zh: ['經 C 出口出站', '前往 C 出口巴士站', '乘搭城巴 22S', '直達啟德醫院／香港兒童醫院'], en: ['Leave by Exit C', 'Go to the bus stop at Exit C', 'Take Citybus 22S', 'Straight to Kai Tak Hospital / HK Children\'s Hospital'] } },
+    steps: { zh: ['經 C 出口出站', '前往 AIRSIDE 公共運輸交匯處', '乘搭城巴 22S', '直達啟德醫院／香港兒童醫院'], en: ['Leave by Exit C', 'Go to the AIRSIDE public transport interchange', 'Take Citybus 22S', 'Straight to Kai Tak Hospital / HK Children\'s Hospital'] } },
   { key: 'hosp_exit_d', exit: 'D', btn: 'vidBtnD',
-    steps: { zh: ['經 D 出口出站', '穿過啟德車站廣場', '前往 22S 巴士站', '乘搭城巴 22S 直達醫院'], en: ['Leave by Exit D', 'Walk through Kai Tak Station Square', 'Go to the 22S bus stop', 'Take Citybus 22S to the hospitals'] } },
+    steps: { zh: ['經 D 出口出站', '前往 AIRSIDE 公共運輸交匯處', '乘搭城巴 22S', '直達啟德醫院／香港兒童醫院'], en: ['Leave by Exit D', 'Go to the AIRSIDE public transport interchange', 'Take Citybus 22S', 'Straight to Kai Tak Hospital / HK Children\'s Hospital'] } },
 ];
 function HospitalVideoRoutes({ t, lang, compact }) {
   const { data } = useRouteVideos();
@@ -3101,7 +3119,7 @@ function SpkModule({ t, lang, q }) {
 const UI_V13 = {
   zh: {
     vidTitle: '去啟德醫院／香港兒童醫院：實景導航', vidRoute: '經 {exit} 出口 ➡️ 轉乘 22S 巴士', vidBtnC: '觀看 Exit C 實景導航影片', vidBtnD: '觀看 Exit D 實景導航影片',
-    vidSoon: '導航影片即將推出', vidOpenYt: '在 YouTube 開啟', vidNote: '22S 由啟德站開出，星期一至五 10:30–19:30 設短途班次直達兩間醫院；上車位置以站牌為準。',
+    vidSoon: '導航影片即將推出', vidOpenYt: '在 YouTube 開啟', vidNote: '22S 喺 AIRSIDE 公共運輸交匯處上車，可經 C 或 D 出口前往；星期一至五 10:30–19:30 設短途班次直達兩間醫院。AIRSIDE 公共運輸交匯處嘅巴士及小巴，均可經 C 或 D 出口前往。',
     spkCat: '新蒲崗工廈區', spkSearchPh: '🔍 搜尋工廈名稱、地址、食堂、CAFE、開倉店…', spkFrom: '啟德站', spkBridge: '經太子道東行人天橋', spkWalk: '步行約 3–6 分鐘到達工廈區',
     spkNote: '3–6 分鐘為到達新蒲崗工廈區南面（太子道東一帶）的時間；北面大廈（如旺景、萬廸廣場）路程較遠，由鑽石山站前往更近。港鐵官方指南亦列明可經 B1／B2 出口行人天橋前往新蒲崗。',
     spkIndustrial: '工業大廈', spkCommercial: '商業大廈', spkAddrTbc: '地址待核實', spkWalkFrom: 'C 出口步行約 {m} 分鐘（估算）',
@@ -3111,7 +3129,7 @@ const UI_V13 = {
   },
   en: {
     vidTitle: "To Kai Tak Hospital / HK Children's Hospital: video guide", vidRoute: 'Exit {exit} ➡️ Citybus 22S', vidBtnC: 'Watch the Exit C video guide', vidBtnD: 'Watch the Exit D video guide',
-    vidSoon: 'Video coming soon', vidOpenYt: 'Open on YouTube', vidNote: '22S starts at Kai Tak Station; Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the stop sign for the boarding point.',
+    vidSoon: 'Video coming soon', vidOpenYt: 'Open on YouTube', vidNote: 'Board 22S at the AIRSIDE public transport interchange, reached via Exit C or D. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. All buses and minibuses at the AIRSIDE interchange can be reached via Exit C or D.',
     spkCat: 'San Po Kong industrial area', spkSearchPh: '🔍 Search buildings, addresses, canteens, cafés, warehouse sales…', spkFrom: 'Kai Tak Station', spkBridge: 'Prince Edward Road East footbridge', spkWalk: 'about 3–6 min to the industrial area',
     spkNote: '3–6 min reaches the southern edge of the industrial area (Prince Edward Road East). Northern buildings (e.g. Wong King, Maxgrand Plaza) are farther and closer to Diamond Hill Station. The MTR leaflet also lists the footbridge from Exits B1/B2.',
     spkIndustrial: 'Industrial building', spkCommercial: 'Commercial building', spkAddrTbc: 'Address to be confirmed', spkWalkFrom: 'About {m} min walk from Exit C (estimate)',
@@ -3121,7 +3139,7 @@ const UI_V13 = {
   },
   ko: {
     vidTitle: '카이탁 병원·홍콩 아동병원 가는 길: 영상 안내', vidRoute: '{exit} 출구 ➡️ 시티버스 22S', vidBtnC: 'C 출구 영상 안내 보기', vidBtnD: 'D 출구 영상 안내 보기',
-    vidSoon: '영상 준비 중', vidOpenYt: 'YouTube에서 열기', vidNote: '22S는 카이탁역에서 출발하며, 월–금 10:30–19:30 두 병원 직행 단거리 운행이 있습니다. 승차 위치는 정류장 표지판을 확인하세요.',
+    vidSoon: '영상 준비 중', vidOpenYt: 'YouTube에서 열기', vidNote: '22S는 AIRSIDE 대중교통 환승센터에서 승차하며 C 또는 D 출구로 갈 수 있습니다. 월–금 10:30–19:30 두 병원 직행 단거리 운행이 있습니다.',
     spkCat: '산포콩 공업빌딩 지구', spkSearchPh: '🔍 빌딩 이름, 주소, 구내식당, 카페 검색…', spkFrom: '카이탁역', spkBridge: '프린스 에드워드 로드 이스트 육교', spkWalk: '도보 약 3–6분',
     spkNote: '3–6분은 공업지구 남쪽 끝까지의 시간입니다. 북쪽 빌딩은 더 멀며 다이아몬드힐역에서 더 가깝습니다. MTR 안내에는 B1/B2 출구 육교 경로도 있습니다.',
     spkIndustrial: '공업빌딩', spkCommercial: '상업빌딩', spkAddrTbc: '주소 확인 필요', spkWalkFrom: 'C 출구에서 도보 약 {m}분 (추정)',
@@ -3131,7 +3149,7 @@ const UI_V13 = {
   },
   ja: {
     vidTitle: '啓徳病院・香港小児病院への行き方：動画ガイド', vidRoute: '{exit}出口 ➡️ シティバス22S', vidBtnC: 'C出口の動画ガイドを見る', vidBtnD: 'D出口の動画ガイドを見る',
-    vidSoon: '動画は近日公開', vidOpenYt: 'YouTube で開く', vidNote: '22Sは啓徳駅発。月–金10:30–19:30は両病院へ直行する区間便あり。乗車位置は停留所の標識でご確認ください。',
+    vidSoon: '動画は近日公開', vidOpenYt: 'YouTube で開く', vidNote: '22SはAIRSIDE公共交通ターミナルで乗車（C出口またはD出口から）。月–金10:30–19:30は両病院へ直行する区間便あり。',
     spkCat: '新蒲崗工業ビル地区', spkSearchPh: '🔍 ビル名・住所・食堂・カフェで検索…', spkFrom: '啓徳駅', spkBridge: '太子道東の歩道橋経由', spkWalk: '徒歩約3–6分',
     spkNote: '3–6分は工業地区南端までの目安です。北側のビルは遠く、鑽石山駅からの方が近いです。MTR公式案内ではB1/B2出口の歩道橋ルートも記載されています。',
     spkIndustrial: '工業ビル', spkCommercial: '商業ビル', spkAddrTbc: '住所未確認', spkWalkFrom: 'C出口から徒歩約{m}分（目安）',
