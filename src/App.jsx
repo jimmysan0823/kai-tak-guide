@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10.2（開放數據版：連鎖店分店顯示修正）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10.3（巴士：點樣行去巴士站導航）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -391,6 +391,13 @@ const UI_V12 = {
   ja: { etaTitle: 'リアルタイム到着（啓徳駅付近で乗車）', etaCtb: 'シティバス {r}', etaGmb: 'ミニバス {r}', etaFallback: 'リアルタイム情報を取得できません。停留所の時刻表をご確認ください', etaNone: '周辺に該当する路線情報がありません' },
 };
 Object.keys(UI_V12).forEach((l) => Object.assign(UI[l], UI_V12[l]));
+const UI_V14 = {
+  zh: { bgTitle: '點樣行去巴士站', bgExit: '由 {exit} 出口出站', bgWalk: '步行約 {m} 分鐘到「{stop}」巴士站', bgWalkNoTime: '步行到「{stop}」巴士站', bgWait: '喺站牌等候 {route} 號', bgNav: '步行導航去巴士站', bgNote: '出口及步行時間按巴士站座標估算；地圖紅點即係上車位置。到站時間以本頁實時數據為準。' },
+  en: { bgTitle: 'How to get to the bus stop', bgExit: 'Leave by Exit {exit}', bgWalk: 'Walk about {m} min to the "{stop}" stop', bgWalkNoTime: 'Walk to the "{stop}" stop', bgWait: 'Wait at the stop sign for route {route}', bgNav: 'Walking directions to the stop', bgNote: 'Exit and walking time are estimated from the stop location; the red pin on the map is where to board. Arrival times above are live.' },
+  ko: { bgTitle: '버스 정류장 가는 길', bgExit: '{exit} 출구로 나가기', bgWalk: '"{stop}" 정류장까지 도보 약 {m}분', bgWalkNoTime: '"{stop}" 정류장까지 도보', bgWait: '정류장 표지판 앞에서 {route}번 대기', bgNav: '정류장까지 도보 길찾기', bgNote: '출구와 도보 시간은 정류장 위치로 추정한 값입니다. 지도의 빨간 핀이 승차 위치입니다.' },
+  ja: { bgTitle: 'バス停への行き方', bgExit: '{exit}出口から出る', bgWalk: '「{stop}」バス停まで徒歩約{m}分', bgWalkNoTime: '「{stop}」バス停まで徒歩', bgWait: '停留所の標識で{route}番を待つ', bgNav: 'バス停まで徒歩ナビ', bgNote: '出口と徒歩時間はバス停の位置から推定しています。地図の赤いピンが乗車位置です。' },
+};
+Object.keys(UI_V14).forEach((l) => Object.assign(UI[l], UI_V14[l]));
 const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.en : obj.en || obj.zh))) || '';
 
@@ -2178,7 +2185,7 @@ async function inBatches(list, size, fn) {
 async function nearbyCtbStops() {
   if (!CTB_ROUTES.length) return [];
   const cacheKey = CTB_ROUTES.join(',');
-  const cache = lsGet('kat-ctb-stops-v2');
+  const cache = lsGet('kat-ctb-stops-v3');
   if (cache && Date.now() - cache.t < 864e5 && cache.key === cacheKey) return cache.list;
   // 1. 取得每條路線兩個方向的車站序列（循環線只有 outbound）
   const combos = CTB_ROUTES.flatMap((route) => ['inbound', 'outbound'].map((dir) => ({ route, dir })));
@@ -2204,11 +2211,11 @@ async function nearbyCtbStops() {
       const p = info[id];
       if (!p) continue;
       const d = distM(KAT_POS, p);
-      if (d <= BUS_RADIUS_M && (!best || d < best.d)) best = { id, zh: p.zh, en: p.en, d };
+      if (d <= BUS_RADIUS_M && (!best || d < best.d)) best = { id, zh: p.zh, en: p.en, d, lat: p.lat, lng: p.lng };
     }
     if (best) list.push({ route: s.route, dir: s.dir, stop: best });
   }
-  lsSet('kat-ctb-stops-v2', { t: Date.now(), key: cacheKey, list });
+  lsSet('kat-ctb-stops-v3', { t: Date.now(), key: cacheKey, list });
   return list;
 }
 
@@ -2253,10 +2260,65 @@ async function loadBusEtas() {
   return { routes, updated: now };
 }
 
+/* ---------- 🚏 點樣行去巴士站：最近出口、地圖、步行導航 ---------- */
+// 啟德站各出口位置（估算，可按實地情況微調）
+const EXIT_LATLNG = {
+  A: { lat: 22.3316, lng: 114.2006 }, B1: { lat: 22.3315, lng: 114.1982 }, B2: { lat: 22.3311, lng: 114.1976 },
+  C: { lat: 22.3298, lng: 114.1979 }, D: { lat: 22.3292, lng: 114.2002 },
+};
+const OFFICIAL_ETA = {
+  KMB: { url: 'https://www.kmb.hk/', name: { zh: '九巴官方網站', en: 'KMB website', ko: 'KMB 공식 웹사이트', ja: 'KMB 公式サイト' } },
+  CTB: { url: 'https://www.citybus.com.hk/', name: { zh: '城巴官方網站', en: 'Citybus website', ko: '시티버스 공식 웹사이트', ja: 'シティバス公式サイト' } },
+};
+function nearestExitTo(p) {
+  return Object.entries(EXIT_LATLNG).map(([code, pos]) => ({ code, d: distM(p, pos) })).sort((a, b) => a.d - b.d)[0];
+}
+function BusStopGuide({ r, t, lang }) {
+  const zh = lang === 'zh' || lang === 'ja';
+  const s = r.stop || {};
+  const has = Number.isFinite(s.lat) && Number.isFinite(s.lng);
+  const ex = has ? nearestExitTo(s) : null;
+  const mins = ex ? Math.max(1, Math.round((ex.d * 1.3) / 75)) : null;
+  const stopName = zh ? s.zh : s.en;
+  const dest = zh ? r.destZh : r.destEn;
+  const walkUrl = has && ex
+    ? `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[ex.code].lat},${EXIT_LATLNG[ex.code].lng}&destination=${s.lat},${s.lng}&travelmode=walking`
+    : mapsUrl(`${s.zh || ''} 巴士站 啟德`);
+  const official = OFFICIAL_ETA[r.co];
+  return (
+    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 overflow-hidden border-t border-[var(--border)] pt-3">
+      <h4 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} />{t.bgTitle}</h4>
+      <ol className="mt-2 space-y-1.5 text-sm">
+        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span><ExitPlate exit={ex.code} /><span>{fmt(t.bgExit, { exit: ex.code })}</span></li>}
+        <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 2 : 1}</span>
+          <span>{mins ? fmt(t.bgWalk, { m: mins, stop: stopName }) : fmt(t.bgWalkNoTime, { stop: stopName })}</span></li>
+        <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 3 : 2}</span>
+          <span>{fmt(t.bgWait, { route: r.route })}{dest ? `（${fmt(t.busTo, { dest })}）` : ''}</span></li>
+      </ol>
+      {has && (
+        <div className="relative mt-3 w-full overflow-hidden rounded-lg border border-[var(--border)]" style={{ paddingTop: '56%' }}>
+          <iframe title={stopName} loading="lazy" className="absolute inset-0 h-full w-full" referrerPolicy="no-referrer-when-downgrade"
+            src={`https://maps.google.com/maps?q=${s.lat},${s.lng}&z=18&hl=${lang === 'zh' ? 'zh-TW' : lang}&output=embed`} />
+        </div>
+      )}
+      <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
+        <a href={walkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>
+          <Footprints size={15} />{t.bgNav}
+        </a>
+        <a href={official.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-bold hover:border-[var(--ink)]">
+          {tx(official.name, lang)}<ExternalLink size={14} />
+        </a>
+      </div>
+      <p className="mt-2 text-[11px] text-[var(--muted)]">{t.bgNote}</p>
+    </motion.div>
+  );
+}
+
 function BusPanel({ t, lang, items }) {
   const [data, setData] = useState(null);
   const [status, setStatus] = useState('loading');
   const [filter, setFilter] = useState('key');
+  const [open, setOpen] = useState(null); // 展開「點樣行去巴士站」的路線
   const [now, setNow] = useState(Date.now());
 
   const load = useCallback(async () => {
@@ -2308,7 +2370,9 @@ function BusPanel({ t, lang, items }) {
               <AnimatePresence mode="popLayout">
                 {routes.map((r) => (
                   <motion.article key={r.key} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-3">
+                    className={`rounded-xl border p-3 ${open === r.key ? 'border-[var(--ink)] sm:col-span-2' : 'border-[var(--border)]'}`}>
+                    <button onClick={() => setOpen(open === r.key ? null : r.key)} aria-expanded={open === r.key}
+                      className="flex w-full items-center gap-3 text-left">
                     <div className="flex w-16 shrink-0 flex-col items-center">
                       <span className="num rounded-md px-2 py-1 text-xl font-bold leading-none text-white" style={{ background: r.co === 'KMB' ? '#C8102E' : '#F2B705', color: r.co === 'KMB' ? '#fff' : '#111' }}>{r.route}</span>
                       <span className="mt-1 text-[10px] text-[var(--muted)]">{r.co === 'KMB' ? t.busKmb : t.busCtb}</span>
@@ -2331,6 +2395,9 @@ function BusPanel({ t, lang, items }) {
                         </>
                       )}
                     </div>
+                      <ChevronDown size={16} className={`shrink-0 text-[var(--muted)] transition-transform ${open === r.key ? 'rotate-180' : ''}`} />
+                    </button>
+                    {open === r.key && <BusStopGuide r={r} t={t} lang={lang} />}
                   </motion.article>
                 ))}
               </AnimatePresence>
