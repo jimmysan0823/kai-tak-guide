@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v12.1（綠色專線小巴：啟德一帶全部 8 條路線（新增 82）、新分類篩選、官方車費）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v12.2（綠色專線小巴：82 號線啟德總站改為啟德公共運輸交匯處／AIRSIDE）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -3175,16 +3175,16 @@ const SEED_MINIBUSES = [
     headway: "15–30 分鐘", operating_hours: "06:00 – 20:00", is_circular: true,
     category: "AIRSIDE/協調道", tags: ["AIRSIDE/協調道", "啟德體育園", "新蒲崗工廈區", "區內接駁"],
     note: "總站在承啟道（近保良局何壽南小學）。星期六、日及公眾假期約 20–30 分鐘一班。", sort: 10 },
-  { id: 'gmb-82', route_number: '82', region: 'KLN', origin: "明愛樂恩學校（彩興苑）", destination: "啟德（協調道小巴總站）",
-    via_locations: ["明愛樂恩學校", "彩興苑", "坪石邨（彩虹站）", "太子道東（采頤花園）", "協調道小巴站", "啟德", "七寶街（新蒲崗）", "彩虹邨"],
-    exit_code: "B2/C", walk_minutes: 2, boarding_location: "啟德小巴總站（協調道，近 AIRSIDE）",
+  { id: 'gmb-82', route_number: '82', region: 'KLN', origin: "明愛樂恩學校（彩興苑）", destination: "啟德（啟德公共運輸交匯處／AIRSIDE）",
+    via_locations: ["明愛樂恩學校", "彩興苑", "坪石公共運輸交匯處（彩虹站）", "太子道東（采頤花園）", "協調道（天璽·天，只限落客）", "啟德公共運輸交匯處（AIRSIDE）", "七寶街（新蒲崗）", "四美街", "彩虹邨"],
+    exit_code: "C/D", walk_minutes: 3, boarding_location: "啟德公共運輸交匯處（AIRSIDE，協調道）",
     fare: "$4.9", section_fares: [{"section": "明愛樂恩學校 ↔ 坪石公共運輸交匯處", "fare": "$4.5"}],
     last_fare_updated: '2026-10', fare_effective_date: "2026-08-16", fare_status: 'verified',
-    fare_source_url: "https://www.td.gov.hk/filemanager/en/content_13/WCO/82_tc.pdf",
-    interchange_note: "運輸署通告指現有專線小巴與港鐵的轉乘優惠維持不變。",
+    fare_source_url: "https://h2-app-rr.hkemobility.gov.hk/ris_page/get_gmb_detail.php?lang=TC&route_id=2001558",
+    interchange_note: "同一張八達通於 90 分鐘內由專線小巴轉乘港鐵，或由港鐵轉乘專線小巴，可享 $0.5 優惠。",
     headway: "15–30 分鐘", operating_hours: "06:45 – 23:00", is_circular: false,
     category: "AIRSIDE/協調道", tags: ["AIRSIDE/協調道", "新蒲崗工廈區", "區內接駁"],
-    note: "往返彩虹／坪石一帶最快捷。穿著校服學生優惠 $4.5。另有輔助班次（07:00–09:00）由彩興苑開往坪石公共運輸交匯處。", sort: 15 },
+    note: "啟德總站設於啟德公共運輸交匯處（AIRSIDE），與城巴 22S 同一交匯處，經 C 或 D 出口前往。往啟德方向亦可於協調道西行（稅務中心對面）落車。穿著校服學生優惠 $4.5。另有輔助班次（每日 07:00–09:00，約 15 分鐘一班）由彩興苑開往坪石公共運輸交匯處一樓。", sort: 15 },
   { id: 'gmb-88a', route_number: "88A", region: 'KLN', origin: "黃大仙站", destination: "啟德醫院／香港兒童醫院",
     via_locations: ["黃大仙巴士總站", "新蒲崗（彩虹道／四美街）", "協調道（AIRSIDE）", "沐虹街", "晴朗商場", "德朗邨", "啟華街", "零碳天地", "香港兒童醫院", "啟德醫院", "啟晴邨"],
     exit_code: "C/D", walk_minutes: null, boarding_location: "協調道東行（近稅務大樓）或沐虹街南行停車灣",
