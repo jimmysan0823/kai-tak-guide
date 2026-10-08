@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10（開放數據版）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10.2（開放數據版：連鎖店分店顯示修正）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -2759,9 +2759,15 @@ function liveStore(table, query, seed) {
   const emit = () => store.subs.forEach((fn) => fn({ data: store.data, status: store.status }));
   const load = async () => {
     try {
-      const { data, error } = await query(supabase.from(table));
-      if (error) throw error;
-      store.data = data; store.status = 'live';
+      // Supabase 每次最多回傳 1,000 行，所以分頁讀取直至讀完
+      const all = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await query(supabase.from(table)).range(from, from + 999);
+        if (error) throw error;
+        all.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      store.data = all; store.status = 'live';
     } catch (e) {
       console.warn(`[${table}]`, e && e.message);
       if (store.status === 'loading') store.status = 'seed';
@@ -2789,7 +2795,7 @@ function useLiveTable(table, query, seed) {
   }, [store]);
   return state;
 }
-const useRestaurants = () => useLiveTable('restaurants', (q) => q.select('*').eq('is_active', true).order('name'), SEED_RESTAURANTS);
+const useRestaurants = () => useLiveTable('restaurants', (q) => q.select('*').eq('is_active', true).order('id'), SEED_RESTAURANTS);
 const useBuildings = () => useLiveTable('industrial_buildings', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_BUILDINGS);
 const useRouteVideos = () => useLiveTable('route_videos', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_VIDEOS);
 
@@ -2824,11 +2830,15 @@ function rowToDiningItem(r) {
 // 合併人手整理的食肆與自動收錄的食肆：同名而且同出口（或同一大廈）的視為同一間，以人手資料為準
 function mergeDining(items, rows) {
   const curated = items.filter((x) => x.category === 'dining');
+  // 只有「同名」而且「同一商場／大廈」才算重複（連鎖店如麥當勞在不同商場的分店會分開顯示）
   const dup = (r) => curated.some((c) => {
-    const sameName = [c.name.zh, c.name.en].some((n) => n && fold(n) === fold(r.name));
+    const sameName = [c.name.zh, c.name.en].some((n) => n && [r.name, r.name_en].some((rn) => rn && fold(n) === fold(rn)));
     if (!sameName) return false;
-    const where = JSON.stringify([c.meta && c.meta.floor, c.mapQuery]);
-    return c.exit === r.exit_code || (r.building_name && where.includes(r.building_name));
+    const addr = fold(`${r.address || ''} ${r.address_en || ''} ${r.building_name || ''}`);
+    const m = (c.meta && MALLS[c.meta.mall]) || {};
+    const places = [m.q, m.mq, ...Object.values(m.label || {}), c.meta && c.meta.floor && c.meta.floor.zh]
+      .filter((p) => p && String(p).length >= 2).map(fold);
+    return places.some((p) => addr.includes(p));
   });
   return [...items, ...(rows || []).filter((r) => !dup(r)).map(rowToDiningItem)];
 }
