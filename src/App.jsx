@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v11（綠色專線小巴模組：88／88A／86）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v11.1（綠色專線小巴：網上核實車費、分段車費、八達通轉乘）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -3162,20 +3162,37 @@ Object.keys(UI_V13).forEach((l) => Object.assign(UI[l], UI_V13[l]));
 
 /* ============================ 🚐 綠色專線小巴 ============================ */
 // Supabase 連線失敗或未設定時使用的備用資料（與 02_minibuses.sql 初始資料一致）
+const TD_FARE_88 = 'https://www.td.gov.hk/filemanager/en/content_13/WCO/fare%20adjustments%20for%20kowloon%20green%20minbus%20route%20no.88_chi.pdf';
+const TD_FARE_88A = 'https://www.td.gov.hk/filemanager/sc/content_13/TOK/KK/2025/ta_plb_88a_20250331_tc.pdf';
+const TD_FARE_86 = 'https://www.td.gov.hk/filemanager/tc/content_13/WCO/ta_GMB_86_20250622_tc.pdf';
+const GMB_KEEP_IC = '運輸署通告指現有專線小巴與港鐵的轉乘優惠維持不變。';
+// 車費於 2026-10-08 經網上搜尋運輸署交通通告核實
 const SEED_MINIBUSES = [
   { id: 'gmb-88', route_number: '88', region: 'KLN', origin: '啟德(啟晴邨)', destination: '黃大仙站',
     via_locations: ['天璽·天', '世運道', '九龍城街市', '東頭邨', '新蒲崗彩虹道', '黃大仙下邨', '采頤花園', '啟陽苑'],
-    exit_code: 'C', walk_minutes: 2, boarding_location: '協調道（天璽·天外，經啟新道天橋）', fare: null, headway: null, operating_hours: null,
-    is_circular: true, category: '新蒲崗工廈區', tags: ['區內接駁', '新蒲崗工廈區'], note: null, sort: 10 },
-  { id: 'gmb-88a', route_number: '88A', region: 'KLN', origin: '黃大仙', destination: '啟德醫院／香港兒童醫院',
-    via_locations: ['黃大仙', '新蒲崗', '啟德站周邊', '九龍灣', '啟德醫院'],
-    exit_code: 'C/D', walk_minutes: null, boarding_location: null, fare: null, headway: null, operating_hours: null,
-    is_circular: true, category: '醫院專線', tags: ['醫院專線', '新蒲崗工廈區'], note: null, sort: 20 },
-  { id: 'gmb-86', route_number: '86', region: 'KLN', origin: '德福花園／九龍灣', destination: '啟德郵輪碼頭',
-    via_locations: ['九龍灣商貿區', '香港兒童醫院', '啟德醫院', '跑道區公園', '啟德郵輪碼頭'],
-    exit_code: 'D', walk_minutes: null, boarding_location: null, fare: null, headway: null, operating_hours: null,
-    is_circular: false, category: '郵輪碼頭/跑道區', tags: ['郵輪碼頭/跑道區', '醫院專線'], note: '前往跑道區可於 D 出口一帶轉乘', sort: 30 },
+    exit_code: 'C', walk_minutes: 2, boarding_location: '協調道（天璽·天外，經啟新道天橋）',
+    fare: '$5.5', section_fares: [], last_fare_updated: '2026-10', fare_effective_date: '2025-05-25', fare_status: 'verified',
+    fare_source_url: TD_FARE_88, interchange_note: GMB_KEEP_IC,
+    headway: null, operating_hours: null, is_circular: true, category: '新蒲崗工廈區', tags: ['區內接駁', '新蒲崗工廈區'], note: null, sort: 10 },
+  { id: 'gmb-88a', route_number: '88A', region: 'KLN', origin: '黃大仙站', destination: '啟德醫院／香港兒童醫院',
+    via_locations: ['黃大仙', '新蒲崗', '啟晴邨（啟德站周邊）', '九龍灣', '香港兒童醫院', '啟德醫院'],
+    exit_code: 'C/D', walk_minutes: null, boarding_location: null,
+    fare: '$8.8', section_fares: [{ section: '黃大仙 ↔ 啟晴邨', fare: '$4.9' }, { section: '啟晴邨 ↔ 香港兒童醫院', fare: '$6.1' }],
+    last_fare_updated: '2026-10', fare_effective_date: '2025-03-31', fare_status: 'partial', fare_source_url: TD_FARE_88A,
+    interchange_note: '同一張八達通於 90 分鐘內由專線小巴轉乘港鐵，或由港鐵轉乘專線小巴，可享 $0.5 優惠。',
+    headway: null, operating_hours: null, is_circular: true, category: '醫院專線', tags: ['醫院專線', '新蒲崗工廈區'],
+    note: '輔助路線，只限星期一至五（公眾假期除外）。2026-10-05 起延至啟德醫院，車費以車廂公布為準。', sort: 20 },
+  { id: 'gmb-86', route_number: '86', region: 'KLN', origin: '啟德郵輪碼頭', destination: '九龍灣（德福花園）',
+    via_locations: ['啟德郵輪碼頭', '跑道區公園', '啟德醫院', '香港兒童醫院', '九龍灣商貿區', '德福花園'],
+    exit_code: 'D', walk_minutes: null, boarding_location: null,
+    fare: '$7.1', section_fares: [{ section: '香港兒童醫院 → 九龍灣（德福花園）', fare: '$6.0' }],
+    last_fare_updated: '2026-10', fare_effective_date: '2025-06-22', fare_status: 'verified', fare_source_url: TD_FARE_86,
+    interchange_note: GMB_KEEP_IC,
+    headway: null, operating_hours: null, is_circular: true, category: '郵輪碼頭/跑道區', tags: ['郵輪碼頭/跑道區', '醫院專線'],
+    note: '前往跑道區可於 D 出口一帶轉乘；九龍灣站一帶亦有上車點。', sort: 30 },
 ];
+const gmbSections = (m) => (Array.isArray(m.section_fares) ? m.section_fares : (() => { try { return JSON.parse(m.section_fares || '[]'); } catch { return []; } })())
+  .filter((x) => x && (x.section || x.label) && x.fare);
 const useMinibuses = () => useLiveTable('minibuses', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_MINIBUSES);
 
 // 篩選標籤
@@ -3271,6 +3288,35 @@ function useGmbLive(region, code) {
   return { plan, etas, status, now };
 }
 
+function GmbFareBox({ m, t }) {
+  const sections = gmbSections(m);
+  const st = m.fare_status || 'unverified';
+  const verify = st === 'verified'
+    ? { icon: '🌐', text: fmt(t.gmbVerified, { ym: m.last_fare_updated || '' }), bg: '#E6F4EA', ink: '#0B6B3A' }
+    : st === 'partial'
+      ? { icon: '⚠️', text: fmt(t.gmbPartial, { ym: m.last_fare_updated || '' }), bg: 'var(--warn-bg)', ink: 'var(--warn-ink)' }
+      : { icon: 'ℹ️', text: t.gmbUnverified, bg: 'var(--surface-2)', ink: 'var(--muted)' };
+  return (
+    <div className="mt-2 rounded-lg border border-[var(--border)] px-2.5 py-2 text-xs">
+      <p className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold text-[var(--muted)]">{t.gmbFareTitle}</span>
+        {m.fare_effective_date && <span className="num text-[10px] text-[var(--muted)]">{fmt(t.gmbEffective, { d: String(m.fare_effective_date).slice(0, 10) })}</span>}
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        <li className="flex justify-between gap-2"><span>{t.gmbFare}</span><b className="num">{m.fare || '—'}</b></li>
+        {sections.map((x, i) => (
+          <li key={i} className="flex justify-between gap-2 text-[var(--muted)]"><span>{x.section || x.label}</span><b className="num text-[var(--ink)]">{x.fare}</b></li>
+        ))}
+      </ul>
+      {m.interchange_note && <p className="mt-1.5 text-[11px]">💳 <b>{t.gmbOctopus}</b>：{m.interchange_note}</p>}
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: verify.bg, color: verify.ink }}>
+        <span>{verify.icon} {verify.text}</span>
+        {m.fare_source_url && <a href={m.fare_source_url} target="_blank" rel="noopener noreferrer" className="underline">{t.gmbSource}</a>}
+      </p>
+    </div>
+  );
+}
+
 function MinibusCard({ m, t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
   const { plan, etas, status, now } = useGmbLive(m.region || 'KLN', m.route_number);
@@ -3298,10 +3344,10 @@ function MinibusCard({ m, t, lang }) {
           <h3 className="font-bold leading-snug">{m.origin} {m.is_circular ? '↺' : '⇄'} {m.destination}</h3>
           <p className="mt-0.5 text-xs text-[var(--muted)]">{m.is_circular ? t.gmbCircular : t.gmbTwoWay} · {m.category}</p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[10px] text-[var(--muted)]">{t.gmbFare}</p>
-          <p className="num text-lg font-bold">{m.fare || '—'}</p>
-        </div>
+        <span className="num shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-black shadow-sm"
+          style={m.fare ? { background: '#FFF4CC', borderColor: '#E0B100', color: '#6B4E00' } : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--muted)' }}>
+          💰 {m.fare ? fmt(t.gmbFareBadge, { fare: m.fare }) : t.gmbFareNa}
+        </span>
       </div>
 
       {/* 出口指引 */}
@@ -3350,6 +3396,7 @@ function MinibusCard({ m, t, lang }) {
             : <b className="num text-sm" style={{ color: 'var(--tml)' }}>🚐 {etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>}
         </p>
       </div>
+      <GmbFareBox m={m} t={t} />
       {m.note && <p className="mt-2 text-xs text-[var(--muted)]">ℹ️ {m.note}</p>}
 
       <div className="mt-auto pt-3">
@@ -3375,7 +3422,7 @@ function MinibusPanel({ t, lang }) {
       .filter((m) => {
         if (!k) return true;
         if (fold(m.route_number) === k || fold(m.route_number).startsWith(k)) return true;
-        const hay = fold([m.origin, m.destination, m.boarding_location, m.category, m.note, ...gmbVia(m), ...gmbCats(m),
+        const hay = fold([m.origin, m.destination, m.boarding_location, m.category, m.note, ...gmbSections(m).map((x) => x.section || x.label), ...gmbVia(m), ...gmbCats(m),
           /醫院/.test(`${m.destination} ${gmbVia(m).join(' ')} ${gmbCats(m).join(' ')}`) ? 'hospital 醫院' : ''].join(' '));
         return hay.includes(k);
       })
@@ -3422,40 +3469,52 @@ function MinibusPanel({ t, lang }) {
 
 const UI_V15 = {
   zh: {
+    gmbFareBadge: '全程 {fare}', gmbFareNa: '車費待核實', gmbFareTitle: '車費資料', gmbEffective: '{d} 起生效', gmbOctopus: '八達通轉乘',
+    gmbVerified: '已用網上搜尋核實最新官方車費（{ym}）', gmbPartial: '部分核實（{ym}）：路線已延長，新車費請以車廂公布為準', gmbUnverified: '車費未經核實，請以車廂公布為準',
+    gmbSource: '運輸署通告',
     tabGmb: '專線小巴', gmbTitle: '綠色專線小巴：啟德站接駁', gmbIntro: '最後一公里接駁：撳「步行導航去上車點」可由建議出口直接導航到小巴站。',
     gmbSearchPh: '🔍 搜尋路線號碼或目的地（例如：88、九龍城、醫院、新蒲崗）', gmbBadge: '綠小', gmbCircular: '循環線', gmbTwoWay: '雙向',
     gmbFare: '全程車費', gmbExitLine: '啟德站 Exit {exit} 出站', gmbWalkMin: '，步行約 {m} 分鐘', gmbTo: '至「{place}」上車',
     gmbVia: '沿途主要站點', gmbHeadway: '班次', gmbHours: '服務時間', gmbEvery: '約 {n} 分鐘一班', gmbEtaTitle: '實時到站',
     gmbEtaAt: '「{stop}」實時到站', gmbNav: '步行導航去上車點', gmbNone: '找不到相符路線。試試輸入路線號碼或地區名稱。',
     gmbSrcLive: '路線資料來自 Supabase，修改後即時更新。', gmbSrcSeed: '目前顯示內置路線資料。',
-    gmbSrcTd: '班次、服務時間及實時到站來自運輸署專線小巴開放數據；車費以車廂及運輸署公布為準。',
+    gmbSrcTd: '班次、服務時間及實時到站來自運輸署專線小巴開放數據；車費資料來自運輸署交通通告。',
   },
   en: {
+    gmbFareBadge: 'Full {fare}', gmbFareNa: 'Fare TBC', gmbFareTitle: 'Fares', gmbEffective: 'from {d}', gmbOctopus: 'Octopus interchange',
+    gmbVerified: 'Latest official fare checked by web search ({ym})', gmbPartial: 'Partly checked ({ym}): route extended, check the fare on board', gmbUnverified: 'Fare not yet verified. Check on board',
+    gmbSource: 'TD notice',
     tabGmb: 'Green minibus', gmbTitle: 'Green minibuses from Kai Tak Station', gmbIntro: 'Last-mile connections. Tap "Walk to the boarding point" for directions from the suggested exit.',
     gmbSearchPh: '🔍 Search route number or destination (e.g. 88, Kowloon City, hospital)', gmbBadge: 'GMB', gmbCircular: 'Circular', gmbTwoWay: 'Two-way',
     gmbFare: 'Full fare', gmbExitLine: 'Leave Kai Tak Station by Exit {exit}', gmbWalkMin: ', about {m} min walk', gmbTo: ' to board at "{place}"',
     gmbVia: 'Main stops', gmbHeadway: 'Frequency', gmbHours: 'Service hours', gmbEvery: 'every {n} min', gmbEtaTitle: 'Live arrivals',
     gmbEtaAt: 'Live arrivals at "{stop}"', gmbNav: 'Walk to the boarding point', gmbNone: 'No matching routes. Try a route number or place name.',
     gmbSrcLive: 'Route data from Supabase, updated live.', gmbSrcSeed: 'Showing built-in route data.',
-    gmbSrcTd: 'Frequency, hours and live arrivals come from Transport Department green minibus open data. Check fares on board.',
+    gmbSrcTd: 'Frequency, hours and live arrivals come from Transport Department green minibus open data. Fares come from Transport Department notices.',
   },
   ko: {
+    gmbFareBadge: '전 구간 {fare}', gmbFareNa: '요금 확인 중', gmbFareTitle: '요금 정보', gmbEffective: '{d}부터', gmbOctopus: '옥토퍼스 환승',
+    gmbVerified: '웹 검색으로 최신 공식 요금 확인 ({ym})', gmbPartial: '일부 확인 ({ym}): 노선 연장, 요금은 차내 안내 확인', gmbUnverified: '요금 미확인, 차내 안내를 확인하세요',
+    gmbSource: '운수서 공지',
     tabGmb: '그린 미니버스', gmbTitle: '그린 미니버스: 카이탁역 연계', gmbIntro: '라스트 마일 연계. "승차 지점까지 도보 길찾기"로 추천 출구에서 바로 안내받으세요.',
     gmbSearchPh: '🔍 노선 번호 또는 목적지 검색 (예: 88, 구룡성, 병원)', gmbBadge: '미니', gmbCircular: '순환', gmbTwoWay: '양방향',
     gmbFare: '전 구간 요금', gmbExitLine: '카이탁역 {exit} 출구로 나와', gmbWalkMin: ' 도보 약 {m}분', gmbTo: ' "{place}"에서 승차',
     gmbVia: '주요 경유지', gmbHeadway: '배차 간격', gmbHours: '운행 시간', gmbEvery: '약 {n}분 간격', gmbEtaTitle: '실시간 도착',
     gmbEtaAt: '"{stop}" 실시간 도착', gmbNav: '승차 지점까지 도보 길찾기', gmbNone: '일치하는 노선이 없습니다.',
     gmbSrcLive: '노선 정보는 Supabase에서 실시간 업데이트.', gmbSrcSeed: '내장 노선 데이터를 표시 중.',
-    gmbSrcTd: '배차·운행 시간·실시간 도착은 운수서 그린 미니버스 오픈 데이터 기준이며, 요금은 차내 안내를 확인하세요.',
+    gmbSrcTd: '배차·운행 시간·실시간 도착은 운수서 그린 미니버스 오픈 데이터 기준이며, 요금은 운수서 공지 기준입니다.',
   },
   ja: {
+    gmbFareBadge: '全区間 {fare}', gmbFareNa: '運賃確認中', gmbFareTitle: '運賃情報', gmbEffective: '{d} から適用', gmbOctopus: 'オクトパス乗継割引',
+    gmbVerified: 'Web検索により最新公式運賃を確認済み（{ym}）', gmbPartial: '一部確認済み（{ym}）：路線延長のため、運賃は車内表示をご確認ください', gmbUnverified: '運賃未確認。車内表示をご確認ください',
+    gmbSource: '運輸署の通告',
     tabGmb: 'ミニバス', gmbTitle: 'グリーンミニバス：啓徳駅からの連絡', gmbIntro: 'ラストワンマイルの移動に。「乗車地点まで徒歩ナビ」でおすすめ出口から案内します。',
     gmbSearchPh: '🔍 路線番号・行き先で検索（例：88、九龍城、病院）', gmbBadge: '緑小', gmbCircular: '循環線', gmbTwoWay: '往復',
     gmbFare: '全区間運賃', gmbExitLine: '啓徳駅 {exit}出口から', gmbWalkMin: '徒歩約{m}分', gmbTo: '「{place}」で乗車',
     gmbVia: '主な経由地', gmbHeadway: '運行間隔', gmbHours: '運行時間', gmbEvery: '約{n}分間隔', gmbEtaTitle: 'リアルタイム到着',
     gmbEtaAt: '「{stop}」リアルタイム到着', gmbNav: '乗車地点まで徒歩ナビ', gmbNone: '該当する路線がありません。',
     gmbSrcLive: '路線データは Supabase から、変更は即時反映。', gmbSrcSeed: '内蔵の路線データを表示中。',
-    gmbSrcTd: '運行間隔・運行時間・リアルタイム到着は運輸署のミニバス・オープンデータに基づきます。運賃は車内でご確認ください。',
+    gmbSrcTd: '運行間隔・運行時間・リアルタイム到着は運輸署のミニバス・オープンデータに基づきます。運賃は運輸署の通告に基づきます。',
   },
 };
 Object.keys(UI_V15).forEach((l) => Object.assign(UI[l], UI_V15[l]));
