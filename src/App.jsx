@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10.4（22S／AIRSIDE 公共運輸交匯處：經 C 或 D 出口）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v11（綠色專線小巴模組：88／88A／86）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -3160,6 +3160,306 @@ const UI_V13 = {
 };
 Object.keys(UI_V13).forEach((l) => Object.assign(UI[l], UI_V13[l]));
 
+/* ============================ 🚐 綠色專線小巴 ============================ */
+// Supabase 連線失敗或未設定時使用的備用資料（與 02_minibuses.sql 初始資料一致）
+const SEED_MINIBUSES = [
+  { id: 'gmb-88', route_number: '88', region: 'KLN', origin: '啟德(啟晴邨)', destination: '黃大仙站',
+    via_locations: ['天璽·天', '世運道', '九龍城街市', '東頭邨', '新蒲崗彩虹道', '黃大仙下邨', '采頤花園', '啟陽苑'],
+    exit_code: 'C', walk_minutes: 2, boarding_location: '協調道（天璽·天外，經啟新道天橋）', fare: null, headway: null, operating_hours: null,
+    is_circular: true, category: '新蒲崗工廈區', tags: ['區內接駁', '新蒲崗工廈區'], note: null, sort: 10 },
+  { id: 'gmb-88a', route_number: '88A', region: 'KLN', origin: '黃大仙', destination: '啟德醫院／香港兒童醫院',
+    via_locations: ['黃大仙', '新蒲崗', '啟德站周邊', '九龍灣', '啟德醫院'],
+    exit_code: 'C/D', walk_minutes: null, boarding_location: null, fare: null, headway: null, operating_hours: null,
+    is_circular: true, category: '醫院專線', tags: ['醫院專線', '新蒲崗工廈區'], note: null, sort: 20 },
+  { id: 'gmb-86', route_number: '86', region: 'KLN', origin: '德福花園／九龍灣', destination: '啟德郵輪碼頭',
+    via_locations: ['九龍灣商貿區', '香港兒童醫院', '啟德醫院', '跑道區公園', '啟德郵輪碼頭'],
+    exit_code: 'D', walk_minutes: null, boarding_location: null, fare: null, headway: null, operating_hours: null,
+    is_circular: false, category: '郵輪碼頭/跑道區', tags: ['郵輪碼頭/跑道區', '醫院專線'], note: '前往跑道區可於 D 出口一帶轉乘', sort: 30 },
+];
+const useMinibuses = () => useLiveTable('minibuses', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_MINIBUSES);
+
+// 篩選標籤
+const GMB_FILTERS = [
+  { id: 'all', label: { zh: '全部路線', en: 'All routes', ko: '전체 노선', ja: 'すべての路線' } },
+  { id: 'hosp', cat: '醫院專線', label: { zh: '🏥 往啟德/兒童醫院', en: '🏥 To the hospitals', ko: '🏥 병원 방면', ja: '🏥 病院方面' } },
+  { id: 'spk', cat: '新蒲崗工廈區', label: { zh: '🏭 往新蒲崗/九龍城', en: '🏭 To San Po Kong / Kowloon City', ko: '🏭 산포콩·구룡성 방면', ja: '🏭 新蒲崗・九龍城方面' } },
+  { id: 'cruise', cat: '郵輪碼頭/跑道區', label: { zh: '🚢 往郵輪碼頭/跑道區', en: '🚢 To the cruise terminal / runway', ko: '🚢 크루즈 터미널·활주로 방면', ja: '🚢 クルーズターミナル・ランウェイ方面' } },
+  { id: 'exitC', exit: 'C', label: { zh: 'Exit C 上車', en: 'Board via Exit C', ko: 'C 출구 승차', ja: 'C出口で乗車' } },
+  { id: 'exitD', exit: 'D', label: { zh: 'Exit D 上車', en: 'Board via Exit D', ko: 'D 출구 승차', ja: 'D出口で乗車' } },
+];
+const gmbCats = (m) => [m.category, ...(Array.isArray(m.tags) ? m.tags : [])];
+const gmbVia = (m) => (Array.isArray(m.via_locations) ? m.via_locations : (() => { try { return JSON.parse(m.via_locations || '[]'); } catch { return []; } })());
+const gmbExits = (m) => String(m.exit_code || '').replace(/exit\s*/gi, '').split('/').map((x) => x.trim()).filter(Boolean);
+
+// ---------- 運輸署專線小巴開放數據：班次、服務時間、啟德站附近上車點及實時到站 ----------
+const hhmm = (s) => String(s || '').slice(0, 5);
+async function loadGmbPlan(region, code) {
+  const key = `kat-gmb-plan-v1-${region}-${code}`;
+  const cache = lsGet(key);
+  if (cache && Date.now() - cache.t < 864e5) return cache.plan;
+  const j = await apiGet(GMB_BASES, `/route/${region}/${code}`);
+  const variants = (j && j.data) || [];
+  if (!variants.length) return cache ? cache.plan : null;
+  // 班次及服務時間（取所有方向的最早開車、最晚收車及班次範圍）
+  let start = null, end = null, fmin = null, fmax = null;
+  variants.forEach((v) => (v.directions || []).forEach((d) => (d.headways || []).forEach((h) => {
+    if (h.start_time && (!start || h.start_time < start)) start = h.start_time;
+    if (h.end_time && (!end || h.end_time > end)) end = h.end_time;
+    const lo = Number(h.frequency), hi = Number(h.frequency_upper || h.frequency);
+    if (Number.isFinite(lo)) fmin = fmin == null ? lo : Math.min(fmin, lo);
+    if (Number.isFinite(hi)) fmax = fmax == null ? hi : Math.max(fmax, hi);
+  })));
+  // 啟德站附近的上車點（所有方向中最接近啟德站的一個站）
+  const info = lsGet('kat-gmb-stopinfo-v1') || {};
+  let best = null;
+  for (const v of variants) {
+    for (const d of v.directions || []) {
+      const rs = await apiGet(GMB_BASES, `/route-stop/${v.route_id}/${d.route_seq}`);
+      const stops = (rs && rs.data && rs.data.route_stops) || [];
+      await inBatches(stops.filter((s) => !info[s.stop_id]), 10, async (s) => {
+        const st = await apiGet(GMB_BASES, `/stop/${s.stop_id}`);
+        const c = st && st.data && st.data.coordinates && st.data.coordinates.wgs84;
+        if (c) info[s.stop_id] = { lat: +c.latitude, lng: +c.longitude };
+      });
+      for (const s of stops) {
+        const p = info[s.stop_id];
+        if (!p) continue;
+        const dist = distM(KAT_POS, p);
+        if (dist <= 600 && (!best || dist < best.d)) {
+          best = { routeId: v.route_id, routeSeq: d.route_seq, stopSeq: s.stop_seq, zh: s.name_tc, en: s.name_en, lat: p.lat, lng: p.lng, d: dist, destZh: d.dest_tc, destEn: d.dest_en };
+        }
+      }
+    }
+  }
+  lsSet('kat-gmb-stopinfo-v1', info);
+  const plan = {
+    hours: start && end ? `${hhmm(start)} – ${hhmm(end)}` : null,
+    headway: fmin != null ? (fmax != null && fmax !== fmin ? `${fmin}–${fmax}` : `${fmin}`) : null,
+    stop: best,
+  };
+  lsSet(key, { t: Date.now(), plan });
+  return plan;
+}
+async function loadGmbEta(stop) {
+  if (!stop) return null;
+  const j = await apiGet(GMB_BASES, `/eta/route-stop/${stop.routeId}/${stop.routeSeq}/${stop.stopSeq}`);
+  if (!j) return null;
+  return ((j.data && j.data.eta) || [])
+    .map((e) => ({ at: e.timestamp ? Date.parse(e.timestamp) : Date.now() + (e.diff || 0) * 60000 }))
+    .filter((e) => !Number.isNaN(e.at)).sort((a, b) => a.at - b.at).slice(0, 3);
+}
+// Hook：載入路線資料，並每 30 秒更新實時到站
+function useGmbLive(region, code) {
+  const [plan, setPlan] = useState(null);
+  const [etas, setEtas] = useState(null);
+  const [status, setStatus] = useState('loading');
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    loadGmbPlan(region, code).then(async (p) => {
+      if (!alive) return;
+      if (!p) { setStatus('offline'); return; }
+      setPlan(p); setStatus('live');
+      const tick = async () => { if (document.hidden) return; const e = await loadGmbEta(p.stop); if (alive) setEtas(e); };
+      await tick();
+      timer = setInterval(tick, 30000);
+    }).catch(() => alive && setStatus('offline'));
+    const k = setInterval(() => setNow(Date.now()), 15000);
+    return () => { alive = false; clearInterval(k); if (timer) clearInterval(timer); };
+  }, [region, code]);
+  return { plan, etas, status, now };
+}
+
+function MinibusCard({ m, t, lang }) {
+  const zh = lang === 'zh' || lang === 'ja';
+  const { plan, etas, status, now } = useGmbLive(m.region || 'KLN', m.route_number);
+  const exits = gmbExits(m);
+  const via = gmbVia(m);
+  const chain = [m.origin, ...via.filter((v) => v !== m.origin && v !== m.destination), m.destination];
+  const headway = m.headway || (plan && plan.headway ? fmt(t.gmbEvery, { n: plan.headway }) : null);
+  const hours = m.operating_hours || (plan && plan.hours) || null;
+  const stop = plan && plan.stop;
+  const boarding = m.boarding_location || (stop ? (zh ? stop.zh : stop.en) : null);
+  const exitText = exitJoin(exits.join('/'), lang);
+  const navUrl = stop && exits[0] && EXIT_LATLNG[exits[0]]
+    ? `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[exits[0]].lat},${EXIT_LATLNG[exits[0]].lng}&destination=${stop.lat},${stop.lng}&travelmode=walking`
+    : mapsUrl(`${m.boarding_location || `專線小巴 ${m.route_number}`} 啟德`);
+
+  return (
+    <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+      className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      {/* 標頭：路線編號、起訖、車費 */}
+      <div className="flex items-start gap-3">
+        <span className="num shrink-0 rounded-lg px-2.5 py-1.5 text-center text-lg font-black leading-none text-white" style={{ background: '#0F9D58' }}>
+          <span className="block text-[10px] font-bold opacity-90">{t.gmbBadge}</span>{m.route_number}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold leading-snug">{m.origin} {m.is_circular ? '↺' : '⇄'} {m.destination}</h3>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">{m.is_circular ? t.gmbCircular : t.gmbTwoWay} · {m.category}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-[10px] text-[var(--muted)]">{t.gmbFare}</p>
+          <p className="num text-lg font-bold">{m.fare || '—'}</p>
+        </div>
+      </div>
+
+      {/* 出口指引 */}
+      <div className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+        <span className="flex shrink-0 gap-1">{exits.map((e) => <ExitPlate key={e} exit={e} />)}</span>
+        <span>
+          {fmt(t.gmbExitLine, { exit: exitText })}
+          {m.walk_minutes ? fmt(t.gmbWalkMin, { m: m.walk_minutes }) : ''}
+          {boarding ? fmt(t.gmbTo, { place: boarding }) : ''}
+        </span>
+      </div>
+
+      {/* 沿途主要站點 */}
+      <p className="mt-3 text-[11px] font-bold text-[var(--muted)]">{t.gmbVia}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+        {chain.map((c, i) => (
+          <React.Fragment key={`${c}-${i}`}>
+            {i > 0 && <span className="text-[var(--muted)]">➔</span>}
+            <span className={`rounded-md px-1.5 py-0.5 ${i === 0 || i === chain.length - 1 ? 'bg-[var(--surface-2)] font-bold' : ''}`}>{c}</span>
+          </React.Fragment>
+        ))}
+        {m.is_circular && <span className="text-[var(--muted)]">↺</span>}
+      </div>
+
+      {/* 班次、服務時間、實時到站 */}
+      <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
+          <p className="text-[10px] text-[var(--muted)]">{t.gmbHeadway}</p>
+          <p className="font-bold">{headway || (status === 'loading' ? '…' : '—')}</p>
+        </div>
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
+          <p className="text-[10px] text-[var(--muted)]">{t.gmbHours}</p>
+          <p className="num font-bold">{hours || (status === 'loading' ? '…' : '—')}</p>
+        </div>
+      </div>
+      <div className="mt-1.5 rounded-lg border border-[var(--border)] px-2.5 py-2 text-xs">
+        <p className="flex items-center justify-between text-[10px] text-[var(--muted)]">
+          <span>{stop ? fmt(t.gmbEtaAt, { stop: zh ? stop.zh : stop.en }) : t.gmbEtaTitle}</span>
+          {status === 'live' && etas && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.hospLive}</span>}
+        </p>
+        <p className="mt-0.5">
+          {status === 'loading' || (status === 'live' && stop && etas === null)
+            ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-[var(--surface-2)]" />
+            : status === 'offline' || !stop ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
+            : etas.length === 0 ? <span className="text-[var(--muted)]">{t.busNoEta}</span>
+            : <b className="num text-sm" style={{ color: 'var(--tml)' }}>🚐 {etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>}
+        </p>
+      </div>
+      {m.note && <p className="mt-2 text-xs text-[var(--muted)]">ℹ️ {m.note}</p>}
+
+      <div className="mt-auto pt-3">
+        <a href={navUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ background: '#0F9D58' }}>
+          <Footprints size={15} />{t.gmbNav}
+        </a>
+      </div>
+    </motion.article>
+  );
+}
+
+function MinibusPanel({ t, lang }) {
+  const { data, status } = useMinibuses();
+  const [q, setQ] = useState('');
+  const [f, setF] = useState('all');
+  const list = useMemo(() => {
+    const filter = GMB_FILTERS.find((x) => x.id === f) || GMB_FILTERS[0];
+    const k = fold(q.trim());
+    return (data || [])
+      .filter((m) => !filter.cat || gmbCats(m).includes(filter.cat))
+      .filter((m) => !filter.exit || gmbExits(m).includes(filter.exit))
+      .filter((m) => {
+        if (!k) return true;
+        if (fold(m.route_number) === k || fold(m.route_number).startsWith(k)) return true;
+        const hay = fold([m.origin, m.destination, m.boarding_location, m.category, m.note, ...gmbVia(m), ...gmbCats(m),
+          /醫院/.test(`${m.destination} ${gmbVia(m).join(' ')} ${gmbCats(m).join(' ')}`) ? 'hospital 醫院' : ''].join(' '));
+        return hay.includes(k);
+      })
+      .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  }, [data, q, f]);
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden>🚐</span>{t.gmbTitle}</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">{t.gmbIntro}</p>
+        <label className="relative mt-3 block">
+          <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.gmbSearchPh}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--ink)]" />
+          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
+        </label>
+        <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-5 sm:px-5">
+          {GMB_FILTERS.map((x) => (
+            <button key={x.id} onClick={() => setF(x.id)}
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${f === x.id ? 'border-transparent text-white' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}
+              style={f === x.id ? { background: '#0F9D58' } : undefined}>
+              {x.exit && <ExitPlate exit={x.exit} />}{tx(x.label, lang)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {status === 'loading' ? (
+        <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-xl bg-[var(--surface)]" />)}</div>
+      ) : list.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.gmbNone}</p>
+      ) : (
+        <motion.div layout className="grid gap-3 md:grid-cols-2">
+          <AnimatePresence mode="popLayout">
+            {list.map((m) => <MinibusCard key={m.id || m.route_number} m={m} t={t} lang={lang} />)}
+          </AnimatePresence>
+        </motion.div>
+      )}
+      <p className="text-[11px] leading-relaxed text-[var(--muted)]">{status === 'live' ? t.gmbSrcLive : t.gmbSrcSeed} {t.gmbSrcTd}</p>
+    </section>
+  );
+}
+
+const UI_V15 = {
+  zh: {
+    tabGmb: '專線小巴', gmbTitle: '綠色專線小巴：啟德站接駁', gmbIntro: '最後一公里接駁：撳「步行導航去上車點」可由建議出口直接導航到小巴站。',
+    gmbSearchPh: '🔍 搜尋路線號碼或目的地（例如：88、九龍城、醫院、新蒲崗）', gmbBadge: '綠小', gmbCircular: '循環線', gmbTwoWay: '雙向',
+    gmbFare: '全程車費', gmbExitLine: '啟德站 Exit {exit} 出站', gmbWalkMin: '，步行約 {m} 分鐘', gmbTo: '至「{place}」上車',
+    gmbVia: '沿途主要站點', gmbHeadway: '班次', gmbHours: '服務時間', gmbEvery: '約 {n} 分鐘一班', gmbEtaTitle: '實時到站',
+    gmbEtaAt: '「{stop}」實時到站', gmbNav: '步行導航去上車點', gmbNone: '找不到相符路線。試試輸入路線號碼或地區名稱。',
+    gmbSrcLive: '路線資料來自 Supabase，修改後即時更新。', gmbSrcSeed: '目前顯示內置路線資料。',
+    gmbSrcTd: '班次、服務時間及實時到站來自運輸署專線小巴開放數據；車費以車廂及運輸署公布為準。',
+  },
+  en: {
+    tabGmb: 'Green minibus', gmbTitle: 'Green minibuses from Kai Tak Station', gmbIntro: 'Last-mile connections. Tap "Walk to the boarding point" for directions from the suggested exit.',
+    gmbSearchPh: '🔍 Search route number or destination (e.g. 88, Kowloon City, hospital)', gmbBadge: 'GMB', gmbCircular: 'Circular', gmbTwoWay: 'Two-way',
+    gmbFare: 'Full fare', gmbExitLine: 'Leave Kai Tak Station by Exit {exit}', gmbWalkMin: ', about {m} min walk', gmbTo: ' to board at "{place}"',
+    gmbVia: 'Main stops', gmbHeadway: 'Frequency', gmbHours: 'Service hours', gmbEvery: 'every {n} min', gmbEtaTitle: 'Live arrivals',
+    gmbEtaAt: 'Live arrivals at "{stop}"', gmbNav: 'Walk to the boarding point', gmbNone: 'No matching routes. Try a route number or place name.',
+    gmbSrcLive: 'Route data from Supabase, updated live.', gmbSrcSeed: 'Showing built-in route data.',
+    gmbSrcTd: 'Frequency, hours and live arrivals come from Transport Department green minibus open data. Check fares on board.',
+  },
+  ko: {
+    tabGmb: '그린 미니버스', gmbTitle: '그린 미니버스: 카이탁역 연계', gmbIntro: '라스트 마일 연계. "승차 지점까지 도보 길찾기"로 추천 출구에서 바로 안내받으세요.',
+    gmbSearchPh: '🔍 노선 번호 또는 목적지 검색 (예: 88, 구룡성, 병원)', gmbBadge: '미니', gmbCircular: '순환', gmbTwoWay: '양방향',
+    gmbFare: '전 구간 요금', gmbExitLine: '카이탁역 {exit} 출구로 나와', gmbWalkMin: ' 도보 약 {m}분', gmbTo: ' "{place}"에서 승차',
+    gmbVia: '주요 경유지', gmbHeadway: '배차 간격', gmbHours: '운행 시간', gmbEvery: '약 {n}분 간격', gmbEtaTitle: '실시간 도착',
+    gmbEtaAt: '"{stop}" 실시간 도착', gmbNav: '승차 지점까지 도보 길찾기', gmbNone: '일치하는 노선이 없습니다.',
+    gmbSrcLive: '노선 정보는 Supabase에서 실시간 업데이트.', gmbSrcSeed: '내장 노선 데이터를 표시 중.',
+    gmbSrcTd: '배차·운행 시간·실시간 도착은 운수서 그린 미니버스 오픈 데이터 기준이며, 요금은 차내 안내를 확인하세요.',
+  },
+  ja: {
+    tabGmb: 'ミニバス', gmbTitle: 'グリーンミニバス：啓徳駅からの連絡', gmbIntro: 'ラストワンマイルの移動に。「乗車地点まで徒歩ナビ」でおすすめ出口から案内します。',
+    gmbSearchPh: '🔍 路線番号・行き先で検索（例：88、九龍城、病院）', gmbBadge: '緑小', gmbCircular: '循環線', gmbTwoWay: '往復',
+    gmbFare: '全区間運賃', gmbExitLine: '啓徳駅 {exit}出口から', gmbWalkMin: '徒歩約{m}分', gmbTo: '「{place}」で乗車',
+    gmbVia: '主な経由地', gmbHeadway: '運行間隔', gmbHours: '運行時間', gmbEvery: '約{n}分間隔', gmbEtaTitle: 'リアルタイム到着',
+    gmbEtaAt: '「{stop}」リアルタイム到着', gmbNav: '乗車地点まで徒歩ナビ', gmbNone: '該当する路線がありません。',
+    gmbSrcLive: '路線データは Supabase から、変更は即時反映。', gmbSrcSeed: '内蔵の路線データを表示中。',
+    gmbSrcTd: '運行間隔・運行時間・リアルタイム到着は運輸署のミニバス・オープンデータに基づきます。運賃は車内でご確認ください。',
+  },
+};
+Object.keys(UI_V15).forEach((l) => Object.assign(UI[l], UI_V15[l]));
+
 /* ============================ App ============================ */
 function App() {
   const [lang, setLang] = useState('zh');
@@ -3235,6 +3535,7 @@ function App() {
     { id: 'land', label: t.tabLand, Icon: MapPin },
     { id: 'mtr', label: t.tabMtr, Icon: Train },
     { id: 'bus', label: t.tabBus, Icon: Bus },
+    { id: 'gmb', label: t.tabGmb, Icon: Bus },
   ];
 
   return (
@@ -3292,8 +3593,10 @@ function App() {
                 onDelete={askDelete} onRoute={goRoute} />
             ) : tab === 'mtr' ? (
               <MTRGuide t={t} lang={lang} initialDest={routeDest} />
-            ) : (
+            ) : tab === 'bus' ? (
               <BusPanel t={t} lang={lang} items={items} />
+            ) : (
+              <MinibusPanel t={t} lang={lang} />
             )}
           </motion.div>
         </AnimatePresence>
@@ -3321,6 +3624,5 @@ function App() {
     </div>
   );
 }
-
 
 export default App;
