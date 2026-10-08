@@ -1,12 +1,15 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v9.4（轉乘巴士／小巴卡片：實時到站班次倒數）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v10（開放數據版）
+ * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
+ * 環境變數：VITE_SUPABASE_URL、VITE_SUPABASE_ANON_KEY、VITE_ADMIN_EMAIL
+ *          （可選）VITE_YOUTUBE_URL_EXIT_C、VITE_YOUTUBE_URL_EXIT_D
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
-import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, UtensilsCrossed, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, UtensilsCrossed, Play, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X } from 'lucide-react';
 
 const ENV = import.meta.env;
 
@@ -401,6 +404,7 @@ const CATS = [
   { id: 'government', Icon: Landmark, emoji: '🏛️', label: { zh: '政府/公共', en: 'Government', ko: '정부·공공', ja: '政府・公共' } },
   { id: 'medical', Icon: HeartPulse, emoji: '🏥', label: { zh: '醫療/健康', en: 'Medical', ko: '의료·건강', ja: '医療・健康' } },
   { id: 'industry', Icon: Factory, emoji: '🏭', label: { zh: '工商業區', en: 'Business', ko: '상공업지구', ja: '商工業エリア' } },
+  { id: 'spk', Icon: Factory, emoji: '🏭', label: { zh: '新蒲崗工廈區', en: 'San Po Kong factories', ko: '산포콩 공업빌딩', ja: '新蒲崗工業ビル' } },
   { id: 'sports', Icon: Ship, emoji: '🚢', label: { zh: '體育/景點', en: 'Sports & Sights', ko: '스포츠·명소', ja: 'スポーツ・観光' } },
   { id: 'bank', Icon: Banknote, emoji: '🏦', label: { zh: '銀行/找換店', en: 'Banks & FX', ko: '은행·환전', ja: '銀行・両替' } },
   { id: 'transport', Icon: Bus, emoji: '🚌', label: { zh: '接駁交通', en: 'Transport', ko: '환승 교통', ja: '交通乗換' } },
@@ -470,6 +474,9 @@ const MALLS = {
   cullinan: { exit: 'B2', walk: '1–3', q: '天璽天', label: { zh: '天璽天Mall', en: 'Cullinan Sky Mall', ko: 'Cullinan Sky Mall', ja: '天璽天Mall' } },
   kat: { exit: 'KAT', walk: '', q: '啟德站', label: { zh: '啟德站大堂', en: 'Kai Tak Station', ko: '카이탁역 대합실', ja: '啓徳駅構内' } },
   other: { exit: 'A', walk: '', q: '', label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
+  // 由 Supabase 每週自動收錄的食肆
+  sync: { exit: 'C', walk: '', q: '', label: { zh: '自動收錄', en: 'Auto-added', ko: '자동 추가', ja: '自動追加' } },
+  spkzone: { exit: 'C', walk: '', q: '新蒲崗', label: { zh: '新蒲崗工廈區', en: 'San Po Kong', ko: '산포콩', ja: '新蒲崗' } },
 };
 const CUISINES = {
   fastfood: { zh: '連鎖快餐', en: 'Fast food', ko: '패스트푸드', ja: 'ファストフード' },
@@ -491,6 +498,7 @@ const CUISINES = {
   conv: { zh: '便利店／輕食', en: 'Convenience store & snacks', ko: '편의점·간식', ja: 'コンビニ・軽食' },
   foodcourt: { zh: '美食廣場', en: 'Food court', ko: '푸드코트', ja: 'フードコート' },
   area: { zh: '美食區', en: 'Dining area', ko: '식당가', ja: '飲食エリア' },
+  other: { zh: '其他餐廳', en: 'Other restaurants', ko: '기타 식당', ja: 'その他の飲食店' },
 };
 const TRANSFER_CRUISE = { zh: '啟德站 A 出口轉乘城巴 22M 往啟德郵輪碼頭', en: 'From Kai Tak Station Exit A, take Citybus 22M to Kai Tak Cruise Terminal', ko: '카이탁역 A 출구에서 시티버스 22M으로 카이탁 크루즈 터미널까지', ja: '啓徳駅A出口からシティバス22Mで啓徳クルーズターミナルへ' };
 const TRANSFER_RUNWAY = { zh: '啟德站 A 出口轉乘城巴 22X（往維港1號）或 22D（往跑道區，只限繁忙時間）', en: 'From Kai Tak Station Exit A, take Citybus 22X (to One Victoria) or 22D (to the runway area, peak hours only)', ko: '카이탁역 A 출구에서 시티버스 22X(원 빅토리아행) 또는 22D(활주로 지구행, 혼잡 시간대만) 환승', ja: '啓徳駅A出口からシティバス22X（維港1号行き）または22D（ランウェイ地区行き・ラッシュ時のみ）に乗り換え' };
@@ -1319,7 +1327,7 @@ const CUISINE_GROUPS = [
   { id: 'cn', cuisines: ['chinese', 'sea'], label: { zh: '中菜／亞洲', en: 'Chinese & Asian', ko: '중식·아시아', ja: '中華・アジア' } },
   { id: 'bar', cuisines: ['bar'], label: { zh: '酒吧／Sports Bar', en: 'Bars', ko: '바', ja: 'バー' } },
   { id: 'hotpot', cuisines: ['hotpot'], label: { zh: '火鍋', en: 'Hotpot', ko: '훠궈', ja: '鍋料理' } },
-  { id: 'court', cuisines: ['foodcourt', 'area'], label: { zh: '美食廣場／美食區', en: 'Food courts & areas', ko: '푸드코트·식당가', ja: 'フードコート・飲食エリア' } },
+  { id: 'court', cuisines: ['foodcourt', 'area', 'other'], label: { zh: '美食廣場／美食區', en: 'Food courts & areas', ko: '푸드코트·식당가', ja: 'フードコート・飲食エリア' } },
 ];
 const groupOf = (cuisine) => CUISINE_GROUPS.find((g) => g.cuisines.includes(cuisine));
 // 區域篩選標籤：每個標籤包含一組商場／屋苑
@@ -1330,6 +1338,8 @@ const AREA_TABS = [
   { id: 'runway', malls: ['runway'], label: { zh: '🌊 跑道區/承豐道海景餐飲', en: '🌊 Runway area / waterfront', ko: '🌊 활주로 지구·해변', ja: '🌊 ランウェイ地区・海辺' } },
   { id: 'muktai', malls: ['muktai'], label: { zh: '☕ 沐泰街屋苑地舖', en: '☕ Muk Tai Street shops', ko: '☕ 묵타이 스트리트', ja: '☕ 沐泰街の店舗' } },
   { id: 'mikiki', malls: ['mikiki'], label: { zh: '🏬 Mikiki', en: '🏬 Mikiki', ko: '🏬 Mikiki', ja: '🏬 Mikiki' } },
+  { id: 'spkzone', malls: ['spkzone'], label: { zh: '🏭 新蒲崗工廈區', en: '🏭 San Po Kong', ko: '🏭 산포콩', ja: '🏭 新蒲崗' } },
+  { id: 'sync', malls: ['sync'], label: { zh: '🔄 自動收錄', en: '🔄 Auto-added', ko: '🔄 자동 추가', ja: '🔄 自動追加' } },
   { id: 'other', malls: ['other'], label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
 ];
 // 菜式關鍵字：令「快餐」「茶餐廳」「CAFE」「拉麵」等常用字都搜尋得到
@@ -1382,14 +1392,15 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
       className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-      {isAdmin && (
+      {isAdmin && !item.synced && (
         <div className="absolute right-2 top-2 flex gap-1">
           <button onClick={() => onEdit(item)} aria-label={t.edit} className="rounded-md bg-[var(--surface-2)] p-1.5 hover:bg-[var(--border)]"><Pencil size={12} /></button>
           <button onClick={() => onDelete(item)} aria-label={t.del} className="rounded-md bg-red-600 p-1.5 text-white hover:bg-red-700"><Trash2 size={12} /></button>
         </div>
       )}
       {/* 主標題：餐廳名稱 + 菜式 */}
-      <div className={isAdmin ? 'pr-16' : ''}>
+      <div className={isAdmin && !item.synced ? 'pr-16' : ''}>
+        {item.synced && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800"><RefreshCw size={10} />{t.syncedBadge}</span>}
         <h3 className="text-lg font-bold leading-snug">{title}</h3>
         {sub && <p className="text-sm text-[var(--muted)]">{sub}</p>}
         {(() => {
@@ -1428,6 +1439,7 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
           className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
           📍 {t.navigate}<ExternalLink size={14} />
         </a>
+        {item.meta && item.meta.source === 'fehd' && <p className="mt-1 text-right text-[10px] text-[var(--muted)]">{t.srcFehd}{item.meta.licence ? `（${item.meta.licence}）` : ''}</p>}
       </div>
     </motion.article>
   );
@@ -1471,18 +1483,19 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
     });
   }, [items, q, cat, mallF, groupF]);
 
+  const { data: spkBuildings } = useBuildings();
   const counts = useMemo(() => {
-    const c = { all: items.length };
+    const c = { all: items.length, spk: (spkBuildings || []).length };
     items.forEach((i) => { c[i.category] = (c[i.category] || 0) + 1; });
     return c;
-  }, [items]);
+  }, [items, spkBuildings]);
 
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative flex-1">
           <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={cat === 'dining' ? t.searchDining : t.searchPh}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={cat === 'dining' ? t.searchDining : cat === 'spk' ? t.spkSearchPh : t.searchPh}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-3 pl-10 pr-10 text-[15px] outline-none focus:border-[var(--ink)]" />
           {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={16} /></button>}
         </label>
@@ -1512,6 +1525,8 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
         </div>
       </div>
 
+      {cat === 'medical' && <div className="mt-4"><HospitalVideoRoutes t={t} lang={lang} /></div>}
+      {cat === 'spk' && <SpkModule t={t} lang={lang} q={q} />}
       {cat === 'bank' && <div className="mt-4"><MoneyExchangeFinder t={t} lang={lang} items={items} onRoute={onRoute} /></div>}
       {cat === 'dining' && (() => {
         const dining = items.filter((x) => x.category === 'dining');
@@ -1541,9 +1556,9 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
           </motion.div>
         );
       })()}
-      <p className="mt-3 text-sm text-[var(--muted)]">{fmt(t.count, { n: filtered.length })}</p>
+      {cat !== 'spk' && <p className="mt-3 text-sm text-[var(--muted)]">{fmt(t.count, { n: filtered.length })}</p>}
 
-      {filtered.length === 0 ? (
+      {cat === 'spk' ? null : filtered.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-sm text-[var(--muted)]">{t.noResult}</p>
           <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setGroupF('all'); }} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
@@ -2622,6 +2637,7 @@ function HospitalGuide({ t, lang }) {
 
   return (
     <div className="mt-3 space-y-2">
+      <HospitalVideoRoutes t={t} lang={lang} compact />
       <div className="flex gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-[13px] font-bold leading-relaxed text-red-700">
         <AlertTriangle size={16} className="mt-0.5 shrink-0" />{t.hospWarn}
       </div>
@@ -2705,6 +2721,350 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
   );
 }
 
+/* =====================================================================
+ *  v10：Supabase 直連資料（restaurants／industrial_buildings／route_videos）
+ * ===================================================================== */
+
+// 🎥 醫院實景導航影片（優先次序：Supabase route_videos 表 > 環境變數 > 下面常數）
+const YOUTUBE_URL_EXIT_C = ENV.VITE_YOUTUBE_URL_EXIT_C || 'https://youtu.be/t8FljCGZ7V4';
+const YOUTUBE_URL_EXIT_D = ENV.VITE_YOUTUBE_URL_EXIT_D || 'https://youtu.be/_G5zDSUqBxo';
+
+// ---------- 未連接 Supabase 時的後備資料（只收錄已核實的資料） ----------
+const SEED_BUILDINGS = [
+  { id: 'kai-tak-factory-2', slug: 'kai-tak-factory-2', name: '啟德工廠大廈二期', name_en: 'Kai Tak Factory Building Phase 2', category: 'industrial', address: '新蒲崗景福街99–101號', exit_code: 'C', note: {}, highlights: [], sort: 10 },
+  { id: 'wah-hing', slug: 'wah-hing', name: '華興工業大廈', name_en: 'Wah Hing Industrial Mansions', category: 'industrial', address: '新蒲崗大有街36號', exit_code: 'C', lat: 22.3362185, lng: 114.1967581, note: {}, highlights: [], sort: 20 },
+  { id: 'wong-king', slug: 'wong-king', name: '旺景工業大廈', name_en: 'Wong King Industrial Building', category: 'industrial', address: '新蒲崗彩虹道192–198號（大有街2–4號）', exit_code: 'C', highlights: [], sort: 30,
+    note: { zh: '位於新蒲崗北面，由鑽石山站步行約 5 分鐘更近', en: 'In northern San Po Kong; about 5 min from Diamond Hill Station is closer', ko: '산포콩 북쪽, 다이아몬드힐역에서 도보 약 5분이 더 가까움', ja: '新蒲崗北部。鑽石山駅から徒歩約5分の方が近い' } },
+  { id: 'maxgrand', slug: 'maxgrand', name: '萬廸廣場', name_en: 'Maxgrand Plaza', category: 'commercial', address: '新蒲崗大有街3號', exit_code: 'C', highlights: [], sort: 40,
+    note: { zh: '2016 年落成的銀座式商廈；由鑽石山站步行約 5 分鐘更近', en: 'Ginza-style commercial building (2016); about 5 min from Diamond Hill Station is closer', ko: '2016년 준공 상업빌딩, 다이아몬드힐역에서 도보 약 5분이 더 가까움', ja: '2016年竣工の商業ビル。鑽石山駅から徒歩約5分の方が近い' } },
+  { id: 'spk-plaza', slug: 'spk-plaza', name: '新蒲崗廣場', name_en: 'San Po Kong Plaza', category: 'commercial', address: null, exit_code: 'C', note: {}, highlights: [], sort: 50 },
+  { id: 'port-33', slug: 'port-33', name: 'PORT 33', name_en: 'PORT 33', category: 'commercial', address: null, exit_code: 'C', note: { zh: '港鐵官方指南列為 C 出口', en: 'Listed under Exit C in the MTR leaflet' }, highlights: [], sort: 60 },
+  { id: 'stelux-house', slug: 'stelux-house', name: '寶光商業中心', name_en: 'Stelux House', category: 'commercial', address: null, exit_code: 'C', note: { zh: '港鐵官方指南列為 C 出口', en: 'Listed under Exit C in the MTR leaflet' }, highlights: [], sort: 70 },
+  { id: 'yuexiu-plaza', slug: 'yuexiu-plaza', name: '越秀廣場', name_en: 'Yue Xiu Plaza', category: 'commercial', address: null, exit_code: 'C', note: { zh: '港鐵官方指南列為 C 出口', en: 'Listed under Exit C in the MTR leaflet' }, highlights: [], sort: 80 },
+];
+const SEED_RESTAURANTS = [
+  { id: 'manual:charsiu-don', source_id: 'manual:charsiu-don', name: '叉燒丼家', name_en: 'The Master of Char Siu', category: 'hkcafe', address: '新蒲崗景福街99–101號啟德工廠大廈二期地下', building_name: '啟德工廠大廈二期', building_id: 'kai-tak-factory-2', area: 'spk', exit_code: 'C', source: 'manual', is_active: true },
+];
+const SEED_VIDEOS = [
+  { route_key: 'hosp_exit_c', youtube_url: YOUTUBE_URL_EXIT_C },
+  { route_key: 'hosp_exit_d', youtube_url: YOUTUBE_URL_EXIT_D },
+];
+
+// ---------- 通用 Hook：讀取 Supabase 資料表並訂閱 Realtime 變動 ----------
+// 同一資料表的多個元件共用一份快取及一條 Realtime 頻道
+const LIVE = {};
+function liveStore(table, query, seed) {
+  if (LIVE[table]) return LIVE[table];
+  const store = { data: seed, status: supabase ? 'loading' : 'seed', subs: new Set(), timer: null };
+  const emit = () => store.subs.forEach((fn) => fn({ data: store.data, status: store.status }));
+  const load = async () => {
+    try {
+      const { data, error } = await query(supabase.from(table));
+      if (error) throw error;
+      store.data = data; store.status = 'live';
+    } catch (e) {
+      console.warn(`[${table}]`, e && e.message);
+      if (store.status === 'loading') store.status = 'seed';
+    }
+    emit();
+  };
+  if (supabase) {
+    load();
+    try {
+      supabase.channel(`live-${table}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table }, () => { clearTimeout(store.timer); store.timer = setTimeout(load, 800); })
+        .subscribe();
+    } catch {}
+  }
+  LIVE[table] = store;
+  return store;
+}
+function useLiveTable(table, query, seed) {
+  const store = liveStore(table, query, seed);
+  const [state, setState] = useState({ data: store.data, status: store.status });
+  useEffect(() => {
+    store.subs.add(setState);
+    setState({ data: store.data, status: store.status });
+    return () => { store.subs.delete(setState); };
+  }, [store]);
+  return state;
+}
+const useRestaurants = () => useLiveTable('restaurants', (q) => q.select('*').eq('is_active', true).order('name'), SEED_RESTAURANTS);
+const useBuildings = () => useLiveTable('industrial_buildings', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_BUILDINGS);
+const useRouteVideos = () => useLiveTable('route_videos', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_VIDEOS);
+
+// ---------- 自動收錄食肆（食環署持牌食肆名單）→ 美食餐飲卡片 ----------
+const RUNWAY_RE = /承豐道|SHING FUNG/i;
+function rowToDiningItem(r) {
+  const cuisine = CUISINES[r.category] ? r.category : 'other';
+  const exit = r.exit_code || 'C';
+  const walk = r.walk_minutes ? String(r.walk_minutes) : '';
+  const runway = RUNWAY_RE.test(`${r.address || ''} ${r.address_en || ''}`);
+  const mall = r.area === 'spk' ? 'spkzone' : runway ? 'runway' : 'sync';
+  const transfer = runway ? MALLS.runway.transfer : null; // 跑道區：顯示巴士接駁提示
+  const tipOf = (l) => (transfer ? transfer[l] || transfer.en : walkText(exit, walk, l));
+  const addrEn = r.address_en || r.address || '';
+  return {
+    id: `db-${r.source_id || r.id}`,
+    category: 'dining', exit, synced: true,
+    name: { zh: r.name, en: r.name_en || r.name, ko: r.name_en || r.name, ja: r.name },
+    desc: {
+      zh: r.address || '', en: addrEn,
+      ko: `${CUISINES[cuisine].ko} · ${addrEn}`, ja: `${CUISINES[cuisine].ja}・${r.address || addrEn}`,
+    },
+    tip: { zh: tipOf('zh'), en: tipOf('en'), ko: tipOf('ko'), ja: tipOf('ja') },
+    mapQuery: `${r.name} ${r.address || (r.area === 'spk' ? '新蒲崗' : '啟德')}`,
+    meta: {
+      mall, cuisine, walk, source: r.source, building: r.building_name || null, licence: r.licence_type || null,
+      floor: { zh: r.building_name || '', en: r.building_name || '' },
+      ...(transfer ? { transfer } : {}),
+    },
+  };
+}
+// 合併人手整理的食肆與自動收錄的食肆：同名而且同出口（或同一大廈）的視為同一間，以人手資料為準
+function mergeDining(items, rows) {
+  const curated = items.filter((x) => x.category === 'dining');
+  const dup = (r) => curated.some((c) => {
+    const sameName = [c.name.zh, c.name.en].some((n) => n && fold(n) === fold(r.name));
+    if (!sameName) return false;
+    const where = JSON.stringify([c.meta && c.meta.floor, c.mapQuery]);
+    return c.exit === r.exit_code || (r.building_name && where.includes(r.building_name));
+  });
+  return [...items, ...(rows || []).filter((r) => !dup(r)).map(rowToDiningItem)];
+}
+
+/* ============================ 🎥 YouTube 播放器 ============================ */
+function youtubeId(url) {
+  if (!url) return null;
+  const m = String(url).match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+function YouTubeModal({ video, onClose, t }) {
+  const id = video && youtubeId(video.url);
+  return (
+    <Modal open={!!video} onClose={onClose} wide>
+      {video && (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-base font-bold"><Play size={17} />{video.title}</h2>
+            <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+          </div>
+          <div className="relative mt-3 w-full overflow-hidden rounded-xl bg-black" style={{ paddingTop: '56.25%' }}>
+            {id && (
+              <iframe className="absolute inset-0 h-full w-full" src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`}
+                title={video.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+            )}
+          </div>
+          <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--muted)] underline">
+            {t.vidOpenYt}<ExternalLink size={12} />
+          </a>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+/* ============================ 🏥 去啟德醫院／香港兒童醫院：實景導航 ============================ */
+const HOSP_VIDEO_ROUTES = [
+  { key: 'hosp_exit_c', exit: 'C', btn: 'vidBtnC',
+    steps: { zh: ['經 C 出口出站', '前往 C 出口巴士站', '乘搭城巴 22S', '直達啟德醫院／香港兒童醫院'], en: ['Leave by Exit C', 'Go to the bus stop at Exit C', 'Take Citybus 22S', 'Straight to Kai Tak Hospital / HK Children\'s Hospital'] } },
+  { key: 'hosp_exit_d', exit: 'D', btn: 'vidBtnD',
+    steps: { zh: ['經 D 出口出站', '穿過啟德車站廣場', '前往 22S 巴士站', '乘搭城巴 22S 直達醫院'], en: ['Leave by Exit D', 'Walk through Kai Tak Station Square', 'Go to the 22S bus stop', 'Take Citybus 22S to the hospitals'] } },
+];
+function HospitalVideoRoutes({ t, lang, compact }) {
+  const { data } = useRouteVideos();
+  const [video, setVideo] = useState(null);
+  const zh = lang === 'zh' || lang === 'ja';
+  const urlOf = (key) => {
+    const row = (data || []).find((v) => v.route_key === key);
+    return (row && row.youtube_url) || (key === 'hosp_exit_c' ? YOUTUBE_URL_EXIT_C : YOUTUBE_URL_EXIT_D) || '';
+  };
+  const VideoBtn = ({ r }) => {
+    const url = urlOf(r.key);
+    const ok = !!youtubeId(url);
+    return (
+      <button disabled={!ok} onClick={() => setVideo({ url, title: t[r.btn] })}
+        className={`flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold transition-opacity ${ok ? 'text-white hover:opacity-90' : 'cursor-not-allowed bg-[var(--surface-2)] text-[var(--muted)]'}`}
+        style={ok ? { background: '#C8102E' } : undefined}>
+        🎥 {ok ? t[r.btn] : t.vidSoon}
+      </button>
+    );
+  };
+  return (
+    <>
+      {compact ? (
+        <div className="grid grid-cols-2 gap-1.5">{HOSP_VIDEO_ROUTES.map((r) => <VideoBtn key={r.key} r={r} />)}</div>
+      ) : (
+        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-2xl border-2 border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><HeartPulse size={19} />{t.vidTitle}</h2>
+          <p className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{t.hospWarn}</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {HOSP_VIDEO_ROUTES.map((r) => (
+              <article key={r.key} className="flex flex-col rounded-xl border border-[var(--border)] p-3">
+                <div className="flex items-center gap-2">
+                  <ExitPlate exit={r.exit} size="lg" />
+                  <p className="text-sm font-bold">{fmt(t.vidRoute, { exit: r.exit })}</p>
+                </div>
+                <ol className="mt-3 flex-1 space-y-1.5 text-sm">
+                  {(zh ? r.steps.zh : r.steps.en).map((s, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: LINES.TML.color }}>{i + 1}</span>
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-3"><VideoBtn r={r} /></div>
+              </article>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--muted)]">{t.vidNote}</p>
+        </motion.section>
+      )}
+      <YouTubeModal video={video} onClose={() => setVideo(null)} t={t} />
+    </>
+  );
+}
+
+/* ============================ 🏭 新蒲崗工廈區 ============================ */
+const SPK_EXIT_C = { lat: 22.3298, lng: 114.1979 }; // 啟德站 C 出口（估算）
+const HIGHLIGHT_TYPES = {
+  canteen: { zh: '食堂', en: 'Canteen', ko: '구내식당', ja: '食堂' },
+  cafe: { zh: 'CAFE', en: 'Café', ko: '카페', ja: 'カフェ' },
+  studio: { zh: '工作室', en: 'Studio', ko: '스튜디오', ja: 'スタジオ' },
+  outlet: { zh: '開倉店', en: 'Warehouse sale', ko: '창고 세일', ja: '倉庫セール' },
+  restaurant: { zh: '食肆', en: 'Eatery', ko: '식당', ja: '飲食店' },
+};
+function buildingWalk(b) {
+  if (b.walk_minutes) return `${b.walk_minutes}`;
+  if (b.lat && b.lng) {
+    const m = Math.round((distM(SPK_EXIT_C, { lat: b.lat, lng: b.lng }) * 1.3) / 75);
+    return `${Math.max(3, m)}–${Math.max(3, m) + 2}`;
+  }
+  return '';
+}
+function SpkModule({ t, lang, q }) {
+  const { data: buildings, status } = useBuildings();
+  const { data: restaurants } = useRestaurants();
+  const k = fold(q.trim());
+  const list = useMemo(() => {
+    const shopsOf = (b) => [
+      ...(b.highlights || []).map((h) => ({ ...h, key: `h-${h.name}` })),
+      ...(restaurants || []).filter((r) => r.building_id === b.id || (r.building_name && r.building_name === b.name))
+        .map((r) => ({ key: `r-${r.id}`, name: r.name, name_en: r.name_en, type: /食堂/.test(r.licence_type || '') ? 'canteen' : r.category === 'cafe' ? 'cafe' : 'restaurant', floor: r.address, source: r.source })),
+    ];
+    return (buildings || []).map((b) => ({ b, shops: shopsOf(b) })).filter(({ b, shops }) => {
+      if (!k) return true;
+      const hay = fold([b.name, b.name_en, b.address, ...shops.flatMap((s) => [s.name, s.name_en, ...Object.values(HIGHLIGHT_TYPES[s.type] || {})])].join(' '));
+      return hay.includes(k);
+    });
+  }, [buildings, restaurants, k]);
+  const zh = lang === 'zh' || lang === 'ja';
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold" style={{ background: 'var(--sign)', color: '#111418' }}>
+        <span>{t.spkFrom}</span><ExitPlate exit="C" /><ArrowRight size={16} /><span>{t.spkBridge}</span><ArrowRight size={16} /><Footprints size={16} /><span>{t.spkWalk}</span>
+      </div>
+      <p className="text-xs leading-relaxed text-[var(--muted)]">{t.spkNote}</p>
+      {status === 'loading' && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-xl bg-[var(--surface)]" />)}</div>}
+      {status !== 'loading' && list.length === 0 && <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.noResult}</p>}
+      <motion.div layout className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <AnimatePresence mode="popLayout">
+          {list.map(({ b, shops }) => {
+            const walk = buildingWalk(b);
+            const note = b.note && (b.note[lang] || b.note.en || b.note.zh);
+            return (
+              <motion.article key={b.id} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                <div className="flex items-start gap-3">
+                  <ExitPlate exit={b.exit_code || 'C'} size="lg" />
+                  <div className="min-w-0">
+                    <h3 className="font-bold leading-snug">{zh ? b.name : (b.name_en || b.name)}</h3>
+                    <p className="text-xs text-[var(--muted)]">{zh ? b.name_en : b.name}</p>
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-semibold">
+                      <Factory size={11} />{b.category === 'commercial' ? t.spkCommercial : t.spkIndustrial}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-2.5 flex items-start gap-1.5 text-sm"><MapPin size={14} className="mt-0.5 shrink-0 text-[var(--muted)]" />{b.address || t.spkAddrTbc}</p>
+                {walk && <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--muted)]"><Footprints size={13} />{fmt(t.spkWalkFrom, { m: walk })}</p>}
+                {note && <p className="mt-1 text-xs text-[var(--warn-ink)]">{note}</p>}
+                <div className="mt-3 rounded-lg bg-[var(--surface-2)] p-2.5">
+                  <p className="text-[11px] font-bold text-[var(--muted)]">{t.spkInside}</p>
+                  {shops.length === 0 ? (
+                    <p className="mt-1 text-xs text-[var(--muted)]">{t.spkNoShops}</p>
+                  ) : (
+                    <ul className="mt-1.5 space-y-1">
+                      {shops.map((s) => (
+                        <li key={s.key} className="flex items-center gap-1.5 text-xs">
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>{tx(HIGHLIGHT_TYPES[s.type] || HIGHLIGHT_TYPES.restaurant, lang)}</span>
+                          <span className="min-w-0 flex-1 truncate font-semibold">{zh ? s.name : (s.name_en || s.name)}</span>
+                          {s.source === 'fehd' && <span className="text-[9px] text-[var(--muted)]">{t.srcFehdShort}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
+                  <a href={mapsUrl(`${b.name} 新蒲崗`)} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>📍 {t.navigate}</a>
+                  <a href={mapsUrl(`餐廳 ${b.name} 新蒲崗`)} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-bold hover:border-[var(--ink)]"><UtensilsCrossed size={12} />{t.spkFindFood}</a>
+                </div>
+              </motion.article>
+            );
+          })}
+        </AnimatePresence>
+      </motion.div>
+      <p className="text-[11px] text-[var(--muted)]">{status === 'live' ? t.spkLive : t.spkSeed}</p>
+    </div>
+  );
+}
+
+const UI_V13 = {
+  zh: {
+    vidTitle: '去啟德醫院／香港兒童醫院：實景導航', vidRoute: '經 {exit} 出口 ➡️ 轉乘 22S 巴士', vidBtnC: '觀看 Exit C 實景導航影片', vidBtnD: '觀看 Exit D 實景導航影片',
+    vidSoon: '導航影片即將推出', vidOpenYt: '在 YouTube 開啟', vidNote: '22S 由啟德站開出，星期一至五 10:30–19:30 設短途班次直達兩間醫院；上車位置以站牌為準。',
+    spkCat: '新蒲崗工廈區', spkSearchPh: '🔍 搜尋工廈名稱、地址、食堂、CAFE、開倉店…', spkFrom: '啟德站', spkBridge: '經太子道東行人天橋', spkWalk: '步行約 3–6 分鐘到達工廈區',
+    spkNote: '3–6 分鐘為到達新蒲崗工廈區南面（太子道東一帶）的時間；北面大廈（如旺景、萬廸廣場）路程較遠，由鑽石山站前往更近。港鐵官方指南亦列明可經 B1／B2 出口行人天橋前往新蒲崗。',
+    spkIndustrial: '工業大廈', spkCommercial: '商業大廈', spkAddrTbc: '地址待核實', spkWalkFrom: 'C 出口步行約 {m} 分鐘（估算）',
+    spkInside: '大廈內：食堂／CAFE／工作室／開倉店', spkNoShops: '暫未收錄；每週會按食環署持牌食肆名單自動加入大廈內的食肆及工廠食堂，亦可撳「搵大廈內食肆」在 Google 地圖查看。', spkFindFood: '搵大廈內食肆',
+    spkLive: '食肆資料來自食環署持牌食肆名單，每週自動更新，變動即時顯示。', spkSeed: '目前顯示內置資料；連接 Supabase 後會顯示每週自動更新的資料。',
+    syncedBadge: '自動收錄', srcFehd: '資料來源：食環署持牌食肆名單', srcFehdShort: '食環署',
+  },
+  en: {
+    vidTitle: "To Kai Tak Hospital / HK Children's Hospital: video guide", vidRoute: 'Exit {exit} ➡️ Citybus 22S', vidBtnC: 'Watch the Exit C video guide', vidBtnD: 'Watch the Exit D video guide',
+    vidSoon: 'Video coming soon', vidOpenYt: 'Open on YouTube', vidNote: '22S starts at Kai Tak Station; Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the stop sign for the boarding point.',
+    spkCat: 'San Po Kong industrial area', spkSearchPh: '🔍 Search buildings, addresses, canteens, cafés, warehouse sales…', spkFrom: 'Kai Tak Station', spkBridge: 'Prince Edward Road East footbridge', spkWalk: 'about 3–6 min to the industrial area',
+    spkNote: '3–6 min reaches the southern edge of the industrial area (Prince Edward Road East). Northern buildings (e.g. Wong King, Maxgrand Plaza) are farther and closer to Diamond Hill Station. The MTR leaflet also lists the footbridge from Exits B1/B2.',
+    spkIndustrial: 'Industrial building', spkCommercial: 'Commercial building', spkAddrTbc: 'Address to be confirmed', spkWalkFrom: 'About {m} min walk from Exit C (estimate)',
+    spkInside: 'Inside: canteens / cafés / studios / warehouse sales', spkNoShops: 'None listed yet. Eateries and factory canteens are added weekly from the FEHD licensed restaurant list; tap "Find food inside" to check Google Maps.', spkFindFood: 'Find food inside',
+    spkLive: 'Eatery data comes from the FEHD licensed restaurant list, updated weekly and shown live.', spkSeed: 'Showing built-in data; connect Supabase for weekly updates.',
+    syncedBadge: 'Auto-added', srcFehd: 'Source: FEHD licensed restaurants list', srcFehdShort: 'FEHD',
+  },
+  ko: {
+    vidTitle: '카이탁 병원·홍콩 아동병원 가는 길: 영상 안내', vidRoute: '{exit} 출구 ➡️ 시티버스 22S', vidBtnC: 'C 출구 영상 안내 보기', vidBtnD: 'D 출구 영상 안내 보기',
+    vidSoon: '영상 준비 중', vidOpenYt: 'YouTube에서 열기', vidNote: '22S는 카이탁역에서 출발하며, 월–금 10:30–19:30 두 병원 직행 단거리 운행이 있습니다. 승차 위치는 정류장 표지판을 확인하세요.',
+    spkCat: '산포콩 공업빌딩 지구', spkSearchPh: '🔍 빌딩 이름, 주소, 구내식당, 카페 검색…', spkFrom: '카이탁역', spkBridge: '프린스 에드워드 로드 이스트 육교', spkWalk: '도보 약 3–6분',
+    spkNote: '3–6분은 공업지구 남쪽 끝까지의 시간입니다. 북쪽 빌딩은 더 멀며 다이아몬드힐역에서 더 가깝습니다. MTR 안내에는 B1/B2 출구 육교 경로도 있습니다.',
+    spkIndustrial: '공업빌딩', spkCommercial: '상업빌딩', spkAddrTbc: '주소 확인 필요', spkWalkFrom: 'C 출구에서 도보 약 {m}분 (추정)',
+    spkInside: '빌딩 내: 구내식당·카페·스튜디오·창고 세일', spkNoShops: '아직 등록된 곳이 없습니다. 매주 자동 동기화로 추가됩니다.', spkFindFood: '빌딩 내 식당 찾기',
+    spkLive: '식당 정보는 식품환경위생서 허가 목록 기준, 매주 자동 업데이트.', spkSeed: '내장 데이터를 표시 중입니다.',
+    syncedBadge: '자동 추가', srcFehd: '출처: 홍콩 식품환경위생서 허가 식당 목록', srcFehdShort: 'FEHD',
+  },
+  ja: {
+    vidTitle: '啓徳病院・香港小児病院への行き方：動画ガイド', vidRoute: '{exit}出口 ➡️ シティバス22S', vidBtnC: 'C出口の動画ガイドを見る', vidBtnD: 'D出口の動画ガイドを見る',
+    vidSoon: '動画は近日公開', vidOpenYt: 'YouTube で開く', vidNote: '22Sは啓徳駅発。月–金10:30–19:30は両病院へ直行する区間便あり。乗車位置は停留所の標識でご確認ください。',
+    spkCat: '新蒲崗工業ビル地区', spkSearchPh: '🔍 ビル名・住所・食堂・カフェで検索…', spkFrom: '啓徳駅', spkBridge: '太子道東の歩道橋経由', spkWalk: '徒歩約3–6分',
+    spkNote: '3–6分は工業地区南端までの目安です。北側のビルは遠く、鑽石山駅からの方が近いです。MTR公式案内ではB1/B2出口の歩道橋ルートも記載されています。',
+    spkIndustrial: '工業ビル', spkCommercial: '商業ビル', spkAddrTbc: '住所未確認', spkWalkFrom: 'C出口から徒歩約{m}分（目安）',
+    spkInside: 'ビル内：食堂・カフェ・スタジオ・倉庫セール', spkNoShops: '未登録です。毎週の自動同期で追加されます。', spkFindFood: 'ビル内の飲食店を探す',
+    spkLive: '飲食店情報は食物環境衞生署の許可リストに基づき毎週自動更新。', spkSeed: '内蔵データを表示中。',
+    syncedBadge: '自動追加', srcFehd: '出典：香港食物環境衞生署 許可飲食店リスト', srcFehdShort: 'FEHD',
+  },
+};
+Object.keys(UI_V13).forEach((l) => Object.assign(UI[l], UI_V13[l]));
+
 /* ============================ App ============================ */
 function App() {
   const [lang, setLang] = useState('zh');
@@ -2727,6 +3087,9 @@ function App() {
   const tRef = useRef(t);
   tRef.current = t;
   const diff = useMemo(() => diffWithSeed(items), [items]);
+  const { data: liveRestaurants } = useRestaurants();
+  // 人手整理的地標 + Supabase 每週自動收錄的食肆（只供顯示，不會寫回 landmarks 表）
+  const diningMerged = useMemo(() => mergeDining(items, liveRestaurants), [items, liveRestaurants]);
 
   useEffect(() => { db.list().then((d) => { if (d && d.length) setItems(d); }).catch(() => {}); }, []);
 
@@ -2828,7 +3191,7 @@ function App() {
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
             {tab === 'land' ? (
-              <LandmarkPortal items={items} lang={lang} t={t} isAdmin={isAdmin}
+              <LandmarkPortal items={diningMerged} lang={lang} t={t} isAdmin={isAdmin}
                 onAdd={() => { setEditing(null); setFormOpen(true); }}
                 onEdit={(it) => { setEditing(it); setFormOpen(true); }}
                 onDelete={askDelete} onRoute={goRoute} />
@@ -2863,5 +3226,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
