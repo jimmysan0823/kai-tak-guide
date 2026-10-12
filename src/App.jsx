@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v14（實時班次修正、景點實時列車倒數、港鐵／輕鐵官方原圖路綫圖）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v15（城巴 B14 皇崗口岸、巴士路線開放數據自動同步）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -641,6 +641,8 @@ const SEED = [
   /* ---------- 公共交通 Public transport ---------- */
   mk('t-22s-hosp', 'transport', 'C/D', '往啟德醫院／香港兒童醫院（22S）', "To Kai Tak Hospital / Hong Kong Children's Hospital (22S)", '於 AIRSIDE 公共運輸交匯處乘搭 22S 路線。', 'Take route 22S at the AIRSIDE public transport interchange.',
     ['經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處上車；星期一至五 10:30–19:30 設短途班次直達兩間醫院。上車前請核對車頭路線號碼。', 'Go via Exit C or D to the AIRSIDE public transport interchange. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the route number before boarding.'], 'AIRSIDE 公共運輸交匯處 啟德'),
+  mk('t-b14-huanggang', 'transport', 'D', '往皇崗口岸（城巴 B14）', 'To Huanggang Port (Citybus B14)', '2026-10-12 開辦的過境口岸專線，經中九龍繞道及大欖隧道，全程 $20.8。', 'New cross-boundary route from 12 Oct 2026 via Central Kowloon Route and Tai Lam Tunnel; full fare $20.8.',
+    ['由 D 出口步行往沐泰街（承啟道）巴士站，或到宋皇臺站 D 出口（世運道）／世運道總站上車。每日 08:00–11:00 及 18:00–21:00，啟德有大型活動時會延長。', 'From Exit D walk to the Muk Tai Street (Shing Kai Road) stop, or board at Sung Wong Toi Station Exit D (Olympic Avenue) or the Olympic Avenue terminus. Daily 08:00–11:00 and 18:00–21:00, extended after major Kai Tak events.'], '沐泰街 承啟道 巴士站'),
   mk('t-rehabus-hosp', 'transport', 'A', '復康穿梭巴士站（往啟德醫院／香港兒童醫院）', "Rehabus Feeder Bus Stop (to Kai Tak Hospital / Hong Kong Children's Hospital)", '為有需要人士提供的復康穿梭巴士站。', 'Rehabus feeder stop for passengers with mobility needs.',
     ['位於 A 出口，輪椅使用者可經升降機往返街面。', 'At Exit A. Wheelchair users can use the lift between street and concourse.'], '啟德站 A出口'),
   mk('t-22m-cruise', 'transport', 'A', '往啟德郵輪碼頭（22M）', 'To Kai Tak Cruise Terminal (22M)', '於 A 出口附近巴士站乘搭 22M 路線。', 'Take route 22M from the bus stop near Exit A.',
@@ -1051,7 +1053,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 10 版：22S 經 C／D 出口）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 11 版：城巴 B14 皇崗口岸）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -2193,12 +2195,13 @@ function ConfirmModal({ request, onClose, t }) {
 /* ============================ 巴士實時到站（九巴／城巴開放數據） ============================ */
 const KAT_POS = { lat: 22.3305, lng: 114.1993 }; // 啟德站大約位置
 const BUS_RADIUS_M = 650; // 搜尋車站範圍（米）
-const KEY_ROUTES = ['20', '20A', '22', '22D', '22M', '22R', '22S', '22X', '5R'];
+const KEY_ROUTES = ['20', '20A', '22', '22D', '22M', '22R', '22S', '22X', '5R', 'B14'];
 const KMB_BASES = ['/api/kmb', 'https://data.etabus.gov.hk/v1/transport/kmb'];
 const CTB_BASES = ['/api/ctb', 'https://rt.data.gov.hk/v2/transport/citybus'];
 // 城巴沒有「按車站查詢所有路線」的接口，所以要列出途經啟德站一帶的城巴路線
 // 啟德的 20／22 系列均為城巴路線；日後有新城巴路線開辦，在此加入路線號碼即可
-const CTB_ROUTES = ['20', '20A', '20X', '22', '22D', '22M', '22R', '22S', '22X'];
+const CTB_ROUTES = ['20', '20A', '20X', '22', '22D', '22M', '22R', '22S', '22X', 'B14'];
+// v15：另外加上 Supabase「buses」表中由開放數據自動同步、途經啟德站附近的城巴路線（見 BusPanel）
 
 const apiGet = (bases, path, timeout = 8000) => fetchFirst(bases.map((b) => b + path), (r) => r.json(), timeout);
 function distM(a, b) {
@@ -2232,13 +2235,14 @@ async function inBatches(list, size, fn) {
   for (let k = 0; k < list.length; k += size) out.push(...(await Promise.all(list.slice(k, k + size).map(fn))));
   return out;
 }
-async function nearbyCtbStops() {
-  if (!CTB_ROUTES.length) return [];
-  const cacheKey = CTB_ROUTES.join(',');
+async function nearbyCtbStops(extra = []) {
+  const ROUTES = [...new Set([...CTB_ROUTES, ...extra])];
+  if (!ROUTES.length) return [];
+  const cacheKey = ROUTES.join(',');
   const cache = lsGet('kat-ctb-stops-v3');
   if (cache && Date.now() - cache.t < 864e5 && cache.key === cacheKey) return cache.list;
   // 1. 取得每條路線兩個方向的車站序列（循環線只有 outbound）
-  const combos = CTB_ROUTES.flatMap((route) => ['inbound', 'outbound'].map((dir) => ({ route, dir })));
+  const combos = ROUTES.flatMap((route) => ['inbound', 'outbound'].map((dir) => ({ route, dir })));
   const seqs = await inBatches(combos, 8, async (c) => {
     const j = await apiGet(CTB_BASES, `/route-stop/CTB/${c.route}/${c.dir}`);
     return { ...c, stops: ((j && j.data) || []).map((r) => r.stop) };
@@ -2270,7 +2274,7 @@ async function nearbyCtbStops() {
 }
 
 // 取得所有途經附近車站的路線及到站時間（新開辦路線會自動出現，取消的路線會自動消失）
-async function loadBusEtas() {
+async function loadBusEtas(extraCtb = []) {
   const stops = (await nearbyKmbStops()) || [];
   const results = await inBatches(stops, 10, (s) => apiGet(KMB_BASES, `/stop-eta/${s.id}`).then((j) => ({ s, data: (j && j.data) || null })));
   const kmbOk = results.some((r) => r.data !== null);
@@ -2282,7 +2286,7 @@ async function loadBusEtas() {
       if (map[key].stop.id === s.id && e.eta) map[key].etas.push({ at: Date.parse(e.eta), rmkZh: e.rmk_tc, rmkEn: e.rmk_en });
     }
   }
-  const ctb = (await nearbyCtbStops()) || [];
+  const ctb = (await nearbyCtbStops(extraCtb)) || [];
   const ctbEtas = await inBatches(ctb, 8, async (c) => {
     const j = await apiGet(CTB_BASES, `/eta/CTB/${c.stop.id}/${c.route}`);
     return { c, rows: ((j && j.data) || []).filter((e) => (c.dir === 'inbound' ? e.dir === 'I' : e.dir === 'O')) };
@@ -2381,7 +2385,210 @@ function BusStopGuide({ r, t, lang }) {
   );
 }
 
+/* ============================ 🛂 過境巴士／🏟️ 啟德體育園巴士（buses 表） ============================ */
+// 人手核實的路線（is_curated）＋ Edge Function「sync-buses」由城巴／九巴開放數據自動同步的路線
+const SEED_BUSES = [
+  {
+    id: 'bus-ctb-b14', operator: 'CTB', route_number: 'B14', service_type: '1',
+    orig_tc: '皇崗口岸', orig_en: 'Huanggang Port', dest_tc: '啟德世運道 (經 宋皇臺站)', dest_en: 'Kai Tak Olympic Avenue (via Sung Wong Toi Station)',
+    name: { zh: '城巴 B14（過境口岸專線）', en: 'Citybus B14 (Huanggang Port)', ko: '시티버스 B14 (황강 커우안)', ja: 'シティバス B14（皇崗口岸線）' },
+    category: 'cross_boundary',
+    kai_tak_stops: [{"id": "003934", "zh": "啟德簡約公屋, 世運道", "en": "Kai Tak Light Public Housing, Olympic Avenue", "lat": 22.330305552091, "lng": 114.19478573053, "dir": "inbound", "seq": 1, "area": "olympic"}, {"id": "003935", "zh": "宋皇臺站 - D出口, 世運道", "en": "Sung Wong Toi Station - Exit D, Olympic Avenue", "lat": 22.326008552091, "lng": 114.19027220053, "dir": "inbound", "seq": 2, "area": "olympic"}, {"id": "003708", "zh": "沐泰街, 承啟道", "en": "Muk Tai Street, Shing Kai Road", "lat": 22.325202662091, "lng": 114.20053610053, "dir": "inbound", "seq": 3, "area": "muk_tai"}, {"id": "003911", "zh": "中電總部, 承啟道", "en": "CLP Headquarters, Shing Kai Road", "lat": 22.322879312091, "lng": 114.19502957053, "dir": "outbound", "seq": 3, "area": "shing_kai"}, {"id": "003932", "zh": "宋皇臺站 - D出口, 世運道", "en": "Sung Wong Toi Station - Exit D, Olympic Avenue", "lat": 22.326644792091, "lng": 114.19040360053, "dir": "outbound", "seq": 4, "area": "olympic"}, {"id": "003933", "zh": "啟德(世運道)", "en": "Kai Tak (Olympic Avenue)", "lat": 22.330053552091, "lng": 114.19430892053, "dir": "outbound", "seq": 5, "area": "olympic"}, {"id": "003934", "zh": "啟德簡約公屋, 世運道", "en": "Kai Tak Light Public Housing, Olympic Avenue", "lat": 22.330305552091, "lng": 114.19478573053, "dir": "outbound", "seq": 6, "area": "olympic"}],
+    areas: ['olympic', 'muk_tai', 'shing_kai', 'sports_park'],
+    via: ['啟德（世運道）', '宋皇臺站 D 出口', '沐泰街（承啟道）', '中九龍繞道', '大欖隧道巴士轉乘站', '皇崗口岸'],
+    exit_code: 'D',
+    boarding_note: {
+      zh: '往皇崗：可於世運道（啟德簡約公屋）總站、宋皇臺站 D 出口（世運道）或沐泰街（承啟道）上車；由啟德站 D 出口步行往沐泰街站最直接。',
+      en: 'To Huanggang: board at the Olympic Avenue terminus (Kai Tak Light Public Housing), Sung Wong Toi Station Exit D, or Muk Tai Street (Shing Kai Road) — the Muk Tai Street stop is the most direct walk from Kai Tak Exit D.',
+      ja: '皇崗行き：世運道（啓徳簡約公屋）始発、宋皇臺駅D出口（世運道）、または沐泰街（承啓道）で乗車。啓徳駅D出口からは沐泰街の停留所が最も近道です。',
+    },
+    fare: '$20.8',
+    fare_note: {
+      zh: '全程單程車費；可經 793、E23、E23A、20 號線免費轉乘（全程合共 $20.8）。',
+      en: 'Full single fare; free interchange with routes 793, E23, E23A and 20 (total $20.8).',
+      ja: '全区間片道運賃。793・E23・E23A・20番から無料乗り継ぎ可（合計$20.8）。',
+    },
+    service_hours: {
+      zh: '每日 08:00–11:00 及 18:00–21:00（雙向，初期繁忙時間服務，約 30 分鐘一班）；啟德有大型活動時會延長至活動完結。',
+      en: 'Daily 08:00–11:00 and 18:00–21:00 (both directions, initial peak-hour service, about every 30 min); extended after major Kai Tak events.',
+      ja: '毎日08:00〜11:00・18:00〜21:00（双方向、当初はピーク時間のみ、約30分間隔）。啓徳で大型イベントがある日は終了時刻まで延長。',
+    },
+    highlights: [
+      { zh: '經中九龍繞道及大欖隧道的特快路線', en: 'Express via Central Kowloon Route and Tai Lam Tunnel', ja: '中九龍幹線・大欖トンネル経由の特快' },
+      { zh: '途經啟德體育園', en: 'Serves Kai Tak Sports Park', ja: '啓徳スポーツパーク経由' },
+    ],
+    source_url: 'https://www.td.gov.hk/en/transport_in_hong_kong/land_based_cross_boundary_transport/athp/',
+    is_curated: true, is_active: true, sort: 5, first_seen_at: '2026-10-12T00:00:00+08:00', synced_at: null,
+  },
+];
+const useBuses = () => useLiveTable('buses', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_BUSES);
+
+const BUS_CAT = {
+  cross_boundary: { zh: '🛂 過境口岸', en: '🛂 Cross-boundary', ko: '🛂 국경 통과', ja: '🛂 越境' },
+  sports_park: { zh: '🏟️ 啟德體育園', en: '🏟️ Sports Park', ko: '🏟️ 스포츠파크', ja: '🏟️ スポーツパーク' },
+  hospital: { zh: '🏥 醫院', en: '🏥 Hospitals', ko: '🏥 병원', ja: '🏥 病院' },
+  runway: { zh: '🌊 跑道區', en: '🌊 Runway', ko: '🌊 활주로 지구', ja: '🌊 ランウェイ' },
+  airport: { zh: '✈️ 機場', en: '✈️ Airport', ko: '✈️ 공항', ja: '✈️ 空港' },
+  local: { zh: '🚌 區內', en: '🚌 Local', ko: '🚌 지역', ja: '🚌 地域' },
+};
+const jsonArr = (v) => (Array.isArray(v) ? v : (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })());
+
+// 某路線在某車站的到站時間（城巴／九巴），25 秒快取
+const STOP_ETA_CACHE = {};
+async function stopEta(op, route, stopId, dir, serviceType = '1') {
+  const key = `${op}|${route}|${stopId}|${dir}`;
+  const c = STOP_ETA_CACHE[key];
+  if (c && Date.now() - c.t < 25000) return c.p;
+  const p = (async () => {
+    const j = op === 'KMB'
+      ? await apiGet(KMB_BASES, `/eta/${stopId}/${encodeURIComponent(route)}/${serviceType}`)
+      : await apiGet(CTB_BASES, `/eta/CTB/${stopId}/${encodeURIComponent(route)}`);
+    if (!j) return null;
+    const want = dir === 'inbound' ? 'I' : 'O';
+    return (j.data || []).filter((e) => e.dir === want && e.eta)
+      .map((e) => ({ at: Date.parse(e.eta), dest: { zh: e.dest_tc, en: e.dest_en }, rmk: { zh: e.rmk_tc, en: e.rmk_en } }))
+      .filter((e) => !Number.isNaN(e.at)).sort((a, b) => a.at - b.at).slice(0, 3);
+  })().catch(() => null);
+  STOP_ETA_CACHE[key] = { t: Date.now(), p };
+  return p;
+}
+
+// 每個方向揀第一個（最早上車）的啟德一帶車站；以「啟德」為終點的方向不顯示上車班次
+function departures(row) {
+  const stops = jsonArr(row.kai_tak_stops);
+  return ['inbound', 'outbound'].map((dir) => {
+    const list = stops.filter((s) => s.dir === dir).sort((a, b) => a.seq - b.seq);
+    if (!list.length) return null;
+    const dest = dir === 'outbound' ? { zh: row.dest_tc, en: row.dest_en } : { zh: row.orig_tc, en: row.orig_en };
+    // 過境路線以啟德為終點的方向（例如 B14 往啟德）不用在啟德上車
+    if (row.category === 'cross_boundary' && /^啟德/.test(dest.zh || '')) return null;
+    return { dir, dest, stops: list };
+  }).filter(Boolean);
+}
+
+function BusRouteCard({ row, t, lang }) {
+  const zh = lang === 'zh' || lang === 'ja';
+  const deps = departures(row);
+  const [etas, setEtas] = useState({});
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      const out = {};
+      await Promise.all(deps.flatMap((d) => d.stops.slice(0, 3).map(async (s) => {
+        out[`${d.dir}|${s.id}`] = await stopEta(row.operator, row.route_number, s.id, d.dir, row.service_type);
+      })));
+      if (alive) setEtas(out);
+    };
+    load();
+    const a = setInterval(load, 30000);
+    const b = setInterval(() => setNow(Date.now()), 15000);
+    return () => { alive = false; clearInterval(a); clearInterval(b); };
+  }, [row.id, row.synced_at]);
+  const isCtb = row.operator === 'CTB';
+  const name = jx(row.name, lang) || `${isCtb ? t.busCtb : t.busKmb} ${row.route_number}`;
+  const via = jsonArr(row.via);
+  const hl = jsonArr(row.highlights);
+  const isNew = row.first_seen_at && Date.now() - Date.parse(row.first_seen_at) < 14 * 864e5;
+  const walk = (s) => {
+    const e = nearestExitTo({ lat: s.lat, lng: s.lng });
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[e.code].lat},${EXIT_LATLNG[e.code].lng}&destination=${s.lat},${s.lng}&travelmode=walking`;
+    return { exit: e.code, mins: Math.max(1, Math.round((e.d * 1.3) / 75)), url };
+  };
+  return (
+    <motion.article layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <div className="flex items-start gap-3">
+        <span className="num shrink-0 rounded-md px-2.5 py-1.5 text-xl font-black leading-none" style={{ background: isCtb ? '#F2B705' : '#C8102E', color: isCtb ? '#111' : '#fff' }}>{row.route_number}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-[var(--muted)]">{tx(BUS_CAT[row.category] || BUS_CAT.local, lang)}{isNew && <span className="ml-1.5 rounded bg-[var(--sign)] px-1.5 py-0.5 text-[10px] font-bold text-[#111418]">{t.busNew}</span>}</p>
+          <h3 className="font-bold leading-snug">{name}</h3>
+          <p className="text-xs text-[var(--muted)]">{zh ? row.orig_tc : row.orig_en} ⇄ {zh ? row.dest_tc : row.dest_en}</p>
+        </div>
+        {row.fare && (
+          <span className="num shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-black shadow-sm" style={{ background: '#FFF4CC', borderColor: '#E0B100', color: '#6B4E00' }}>
+            💰 {fmt(t.gmbFareBadge, { fare: row.fare })}
+          </span>
+        )}
+      </div>
+
+      {jx(row.service_hours, lang) && <p className="mt-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs">🕐 {jx(row.service_hours, lang)}</p>}
+
+      {(row.exit_code || jx(row.boarding_note, lang)) && (
+        <div className="mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+          {row.exit_code && <span className="flex shrink-0 gap-1">{String(row.exit_code).split('/').map((e) => <ExitPlate key={e} exit={e} />)}</span>}
+          <span>{jx(row.boarding_note, lang)}</span>
+        </div>
+      )}
+
+      {deps.map((d) => (
+        <div key={d.dir} className="mt-2 rounded-lg border border-[var(--border)] px-3 py-2">
+          <p className="text-[11px] font-bold text-[var(--muted)]">{fmt(t.busTo, { dest: zh ? d.dest.zh : d.dest.en })} · {t.bxBoard}</p>
+          <ul className="mt-1 space-y-1.5">
+            {d.stops.slice(0, 3).map((s) => {
+              const w = walk(s);
+              const e = etas[`${d.dir}|${s.id}`];
+              return (
+                <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                  <span className="font-semibold">📍 {zh ? s.zh : s.en}</span>
+                  <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{fmt(t.bxWalk, { m: w.mins })}</a>
+                  {/宋皇臺站/.test(s.zh || '') && <span className="text-[var(--muted)]">{t.bxSuw}</span>}
+                  <span className="ml-auto num">
+                    {e === undefined ? <span className="inline-block h-3 w-14 animate-pulse rounded bg-[var(--surface-2)]" />
+                      : e === null ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
+                      : e.length === 0 ? <span className="text-[var(--muted)]">{t.busNoEta}</span>
+                      : <b style={{ color: 'var(--tml)' }}>{e.map((x) => etaMinLabel(x.at, now, t)).join(' | ')}</b>}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+
+      {via.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
+          {via.map((v, i) => <React.Fragment key={i}>{i > 0 && <span className="text-[var(--muted)]">➔</span>}<span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">{typeof v === 'string' ? v : jx(v, lang)}</span></React.Fragment>)}
+        </div>
+      )}
+      {hl.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{hl.map((h, i) => <span key={i} className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-[11px]">⚡ {jx(h, lang)}</span>)}</div>}
+      {jx(row.fare_note, lang) && <p className="mt-2 text-xs text-[var(--muted)]">💳 {jx(row.fare_note, lang)}</p>}
+
+      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+        style={row.synced_at ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>
+        <span>{row.synced_at ? fmt(isCtb ? t.bxSyncedCtb : t.bxSyncedKmb, { time: new Date(row.synced_at).toLocaleString(lang === 'en' ? 'en-GB' : 'zh-HK', { timeZone: 'Asia/Hong_Kong', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }) : t.bxManual}</span>
+        {row.source_url && <a href={row.source_url} target="_blank" rel="noopener noreferrer" className="underline">{t.bxSource}</a>}
+      </p>
+    </motion.article>
+  );
+}
+
+// 巴士頁頂部：過境／體育園路線（人手核實 + 自動同步）
+function FeaturedBuses({ rows, t, lang }) {
+  const list = (rows || []).filter((r) => r.is_curated || r.category === 'cross_boundary' || r.category === 'sports_park')
+    .sort((a, b) => (a.sort || 100) - (b.sort || 100) || a.route_number.localeCompare(b.route_number, 'en', { numeric: true }));
+  if (!list.length) return null;
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <h3 className="flex items-center gap-2 text-base font-bold">🛂 {t.bxTitle}</h3>
+      <p className="mt-1 text-xs text-[var(--muted)]">{t.bxIntro}</p>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        {list.map((r) => <BusRouteCard key={r.id || `${r.operator}-${r.route_number}`} row={r} t={t} lang={lang} />)}
+      </div>
+    </div>
+  );
+}
+
 function BusPanel({ t, lang, items }) {
+  const { data: busRows } = useBuses();
+  // 自動同步表中途經啟德站附近的城巴路線（新路線毋須改程式即會出現）
+  const extraCtb = useMemo(() => [...new Set((busRows || [])
+    .filter((r) => r.operator === 'CTB' && (r.is_curated || (Array.isArray(r.areas) && r.areas.includes('kat'))))
+    .map((r) => r.route_number))].sort(), [busRows]);
+  const extraKey = extraCtb.join(',');
+  const synced = (busRows || []).filter((r) => r.synced_at);
+  const lastSync = synced.reduce((m, r) => Math.max(m, Date.parse(r.synced_at) || 0), 0);
   const [data, setData] = useState(null);
   const [status, setStatus] = useState('loading');
   const [filter, setFilter] = useState('key');
@@ -2389,9 +2596,9 @@ function BusPanel({ t, lang, items }) {
   const [now, setNow] = useState(Date.now());
 
   const load = useCallback(async () => {
-    const d = await loadBusEtas();
+    const d = await loadBusEtas(extraKey ? extraKey.split(',') : []);
     if (d) { setData(d); setStatus('live'); } else setStatus((s) => (s === 'live' ? 'live' : 'offline'));
-  }, []);
+  }, [extraKey]);
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(i); }, []);
 
@@ -2405,6 +2612,7 @@ function BusPanel({ t, lang, items }) {
 
   return (
     <section className="space-y-4">
+      <FeaturedBuses rows={busRows} t={t} lang={lang} />
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-lg font-bold"><Bus size={19} />{t.busTitle}</h2>
@@ -2471,7 +2679,12 @@ function BusPanel({ t, lang, items }) {
             </motion.div>
           )
         )}
-        <p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">{t.busSource}</p>
+        <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+          <span className="rounded-md px-2 py-1" style={synced.length ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>
+            {synced.length ? fmt(t.bxSyncFooter, { n: synced.length, time: new Date(lastSync).toLocaleString(lang === 'en' ? 'en-GB' : 'zh-HK', { timeZone: 'Asia/Hong_Kong', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }) : t.bxSyncPending}
+          </span>
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{t.busSource}</p>
       </div>
 
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
@@ -4576,6 +4789,37 @@ const UI_V17 = {
   },
 };
 Object.keys(UI_V17).forEach((l) => Object.assign(UI[l], UI_V17[l]));
+const UI_V18 = {
+  zh: {
+    bxSuw: '或乘屯馬綫一站到宋皇臺站，D 出口即達',
+    bxTitle: '過境口岸及啟德體育園巴士', bxIntro: '包括 2026 年 10 月 12 日開辦的城巴 B14（啟德 ↔ 新皇崗口岸）。實時到站來自城巴開放數據。',
+    bxBoard: '啟德一帶上車站', bxWalk: '約 {m} 分鐘', bxManual: '📋 人手核實資料（運輸署及城巴公布）', bxSource: '資料來源',
+    bxSyncedCtb: '🌐 城巴開放數據 API 自動同步（{time}）', bxSyncedKmb: '🌐 九巴開放數據 API 自動同步（{time}）',
+    bxSyncFooter: '🌐 {n} 條途經啟德的路線已由城巴／九巴開放數據 API 自動同步（最近：{time}）', bxSyncPending: '⏳ 尚未執行自動同步；目前使用內置路線清單',
+  },
+  en: {
+    bxSuw: 'or ride the Tuen Ma Line one stop to Sung Wong Toi, Exit D',
+    bxTitle: 'Cross-boundary & Sports Park buses', bxIntro: 'Includes Citybus B14 (Kai Tak ↔ new Huanggang Port), launched 12 Oct 2026. Live arrivals from Citybus open data.',
+    bxBoard: 'boarding stops around Kai Tak', bxWalk: 'about {m} min', bxManual: '📋 Manually verified (TD & Citybus notices)', bxSource: 'Source',
+    bxSyncedCtb: '🌐 Auto-synced from Citybus open data API ({time})', bxSyncedKmb: '🌐 Auto-synced from KMB open data API ({time})',
+    bxSyncFooter: '🌐 {n} Kai Tak routes auto-synced from Citybus/KMB open data (latest: {time})', bxSyncPending: '⏳ Auto-sync has not run yet; using the built-in route list',
+  },
+  ko: {
+    bxSuw: '또는 툰마선 한 정거장 송웡토이역 D 출구',
+    bxTitle: '국경 통과·스포츠파크 버스', bxIntro: '2026년 10월 12일 개통한 시티버스 B14(카이탁 ↔ 신 황강 커우안) 포함. 실시간 도착은 시티버스 오픈 데이터.',
+    bxBoard: '카이탁 일대 승차 정류장', bxWalk: '약 {m}분', bxManual: '📋 수동 확인 정보 (운수서·시티버스 공지)', bxSource: '출처',
+    bxSyncedCtb: '🌐 시티버스 오픈 데이터 API 자동 동기화 ({time})', bxSyncedKmb: '🌐 KMB 오픈 데이터 API 자동 동기화 ({time})',
+    bxSyncFooter: '🌐 카이탁 경유 {n}개 노선 자동 동기화 (최근: {time})', bxSyncPending: '⏳ 자동 동기화 미실행, 내장 노선 목록 사용 중',
+  },
+  ja: {
+    bxSuw: 'または屯馬線で1駅の宋皇臺駅D出口すぐ',
+    bxTitle: '越境バス・啓徳スポーツパーク', bxIntro: '2026年10月12日開業のシティバスB14（啓徳 ↔ 新皇崗口岸）を含みます。リアルタイム到着はシティバスのオープンデータ。',
+    bxBoard: '啓徳エリアの乗り場', bxWalk: '約{m}分', bxManual: '📋 手動で確認した情報（運輸署・シティバス発表）', bxSource: '出典',
+    bxSyncedCtb: '🌐 城巴オープンデータAPI自動同期済み（{time}）', bxSyncedKmb: '🌐 九巴オープンデータAPI自動同期済み（{time}）',
+    bxSyncFooter: '🌐 啓徳経由の{n}路線を城巴／九巴オープンデータAPIで自動同期（最終：{time}）', bxSyncPending: '⏳ 自動同期は未実行。内蔵の路線リストを使用中',
+  },
+};
+Object.keys(UI_V18).forEach((l) => Object.assign(UI[l], UI_V18[l]));
 
 /* ============================ App ============================ */
 function App() {
