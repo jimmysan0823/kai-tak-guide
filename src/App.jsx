@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v17（出口地理規則全面修正：A 東北／B・C 西／D 西南）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v17.1（實時到站：按列車目的地分欄、超過一小時顯示開出時間）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -1636,9 +1636,12 @@ const hhmmHK = (ms) => { try { return new Date(ms).toLocaleTimeString('en-GB', {
 const countdown = (at, now) => {
   const d = Math.round((at - now) / 1000);
   if (d <= 30) return null;
+  if (d >= 3600) return hhmmHK(at); // 一小時以上（例如凌晨等頭班車）改為顯示開出時間
   const m = Math.floor(d / 60), s = d % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 };
+// 屯馬綫：啟德站往烏溪沙方向的車站（按列車目的地分欄，不依賴港鐵數據的 UP／DOWN 標記）
+const TML_TO_WKS = new Set('WKS MOS HEO TSH SHM CIO STW CKT TAW HIK DIH'.split(' '));
 
 function Arrivals({ t, lang }) {
   const [res, setRes] = useState(null); // nextTrains() 結果
@@ -1659,8 +1662,10 @@ function Arrivals({ t, lang }) {
   const peak = (hour >= 7 && hour < 10) || (hour >= 17 && hour < 20);
   const hw = peak ? 3 : 5;
   const fresh = (arr) => arr.filter((x) => x.at > now - 20000).slice(0, 4);
-  const up = status === 'sim' ? simTrains(now, hw, 40, 'WKS') : res && res.ok ? fresh(res.up) : [];
-  const down = status === 'sim' ? simTrains(now, hw, 150, 'TUM') : res && res.ok ? fresh(res.down) : [];
+  // 港鐵數據的 UP／DOWN 與烏溪沙／屯門方向並非固定對應，所以按每班車的目的地分欄
+  const all = res && res.ok ? [...res.up, ...res.down].sort((a, b) => a.at - b.at) : [];
+  const up = status === 'sim' ? simTrains(now, hw, 40, 'WKS') : fresh(all.filter((x) => TML_TO_WKS.has(x.dest)));
+  const down = status === 'sim' ? simTrains(now, hw, 150, 'TUM') : fresh(all.filter((x) => !TML_TO_WKS.has(x.dest)));
 
   const renderCol = (title, list) => (
     <div className="rounded-xl bg-[#16202B] p-4 text-white">
