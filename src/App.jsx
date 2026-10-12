@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v15（城巴 B14 皇崗口岸、巴士路線開放數據自動同步）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v16（B14 出口修正、深夜／散場後往內地口岸指南）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -582,7 +582,7 @@ const SEED = [
   mk('p30-kt-hosp', 'medical', 'C', '啟德醫院', 'Kai Tak Hospital', '位於啟德承昌道1號，毗鄰香港兒童醫院。2026 年 10 月 5 日起分階段投入服務，首階段為專科門診大樓及腫瘤科大樓，逐步承接伊利沙伯醫院的臨床服務。', "At 1 Shing Cheong Road, Kai Tak, next to Hong Kong Children's Hospital. Phased opening from 5 October 2026, starting with the Specialist Outpatient Block and the Oncology Block, gradually taking over services from Queen Elizabeth Hospital.",
     ['請勿由 D 出口步行前往醫院。建議經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk to the hospitals from Exit D. Go via Exit C or D to the AIRSIDE public transport interchange for Citybus 22S, or take Citybus 22M from Exit A.']),
   mk('p31-ktsp', 'sports', 'D', '啟德體育園', 'Kai Tak Sports Park', '全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.",
-    ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。', 'Covered walkway from Exit D. Allow extra time after big events.'], '啟德體育園'),
+    ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。⚠️ 散場後返內地：落馬洲 22:30、羅湖及深圳灣 24:00 關閉，趕唔切可改往 24 小時的皇崗口岸（見「巴士」頁的深夜過境指南）。', 'Covered walkway from Exit D. Allow extra time after big events. ⚠️ Heading to the Mainland afterwards: Lok Ma Chau closes at 22:30, Lo Wu and Shenzhen Bay at midnight — if you miss them, use the 24-hour Huanggang Port (see the late-night border guide on the Bus tab).'], '啟德體育園'),
   mk('p32-kt-stadium', 'sports', 'D', '啟德主場館', 'Kai Tak Stadium', '可容納約五萬人、設開合式上蓋的主場館。', 'About 50,000-seat stadium with a retractable roof.'),
   mk('p33-station-sq', 'sports', 'A', '啟德車站廣場', 'Kai Tak Station Square', '車站上蓋的大型綠化休憩空間。', 'Large landscaped open space above the station.', ['A 出口出站即達。', 'Right outside Exit A.']),
   mk('p34-kt-ysg', 'sports', 'D', '啟德青年運動場', 'Kai Tak Youth Sports Ground', '設田徑跑道及足球場的運動場。', 'Sports ground with running track and football pitch.'),
@@ -642,7 +642,7 @@ const SEED = [
   mk('t-22s-hosp', 'transport', 'C/D', '往啟德醫院／香港兒童醫院（22S）', "To Kai Tak Hospital / Hong Kong Children's Hospital (22S)", '於 AIRSIDE 公共運輸交匯處乘搭 22S 路線。', 'Take route 22S at the AIRSIDE public transport interchange.',
     ['經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處上車；星期一至五 10:30–19:30 設短途班次直達兩間醫院。上車前請核對車頭路線號碼。', 'Go via Exit C or D to the AIRSIDE public transport interchange. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. Check the route number before boarding.'], 'AIRSIDE 公共運輸交匯處 啟德'),
   mk('t-b14-huanggang', 'transport', 'D', '往皇崗口岸（城巴 B14）', 'To Huanggang Port (Citybus B14)', '2026-10-12 開辦的過境口岸專線，經中九龍繞道及大欖隧道，全程 $20.8。', 'New cross-boundary route from 12 Oct 2026 via Central Kowloon Route and Tai Lam Tunnel; full fare $20.8.',
-    ['由 D 出口步行往沐泰街（承啟道）巴士站，或到宋皇臺站 D 出口（世運道）／世運道總站上車。每日 08:00–11:00 及 18:00–21:00，啟德有大型活動時會延長。', 'From Exit D walk to the Muk Tai Street (Shing Kai Road) stop, or board at Sung Wong Toi Station Exit D (Olympic Avenue) or the Olympic Avenue terminus. Daily 08:00–11:00 and 18:00–21:00, extended after major Kai Tak events.'], '沐泰街 承啟道 巴士站'),
+    ['由 D 出口經啟德車站廣場步行約 10 分鐘到世運道（啟德簡約公屋）總站，或經車站廣場步行到宋皇臺站 D 出口（世運道），亦可在沐泰街（承啟道）上車。每日 08:00–11:00 及 18:00–21:00，啟德有大型活動時會延長。', 'From Exit D walk about 10 min via Kai Tak Station Square to the Olympic Avenue terminus (Kai Tak Light Public Housing), or through the square to Sung Wong Toi Station Exit D (Olympic Avenue); you can also board at Muk Tai Street (Shing Kai Road). Daily 08:00–11:00 and 18:00–21:00, extended after major Kai Tak events.'], '啟德簡約公屋 世運道 巴士站'),
   mk('t-rehabus-hosp', 'transport', 'A', '復康穿梭巴士站（往啟德醫院／香港兒童醫院）', "Rehabus Feeder Bus Stop (to Kai Tak Hospital / Hong Kong Children's Hospital)", '為有需要人士提供的復康穿梭巴士站。', 'Rehabus feeder stop for passengers with mobility needs.',
     ['位於 A 出口，輪椅使用者可經升降機往返街面。', 'At Exit A. Wheelchair users can use the lift between street and concourse.'], '啟德站 A出口'),
   mk('t-22m-cruise', 'transport', 'A', '往啟德郵輪碼頭（22M）', 'To Kai Tak Cruise Terminal (22M)', '於 A 出口附近巴士站乘搭 22M 路線。', 'Take route 22M from the bus stop near Exit A.',
@@ -1053,7 +1053,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 11 版：城巴 B14 皇崗口岸）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 12 版：B14 出口修正、深夜過境指南）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -2344,12 +2344,14 @@ function BusStopGuide({ r, t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
   const s = r.stop || {};
   const has = Number.isFinite(s.lat) && Number.isFinite(s.lng);
-  const fixed = boardingExits(r);
+  const ov = stopOverride(s);
+  const fixed = ov ? [ov.exit] : boardingExits(r);
   // 指定出口（例如 22S：C 或 D）時，步行導航由較近的一個出口出發
-  const ex = fixed
+  const ex = ov ? { code: ov.exit, d: null }
+    : fixed
     ? (has ? fixed.map((code) => ({ code, d: distM(s, EXIT_LATLNG[code]) })).sort((a, b) => a.d - b.d)[0] : { code: fixed[0], d: null })
     : (has ? nearestExitTo(s) : null);
-  const mins = ex && ex.d != null ? Math.max(1, Math.round((ex.d * 1.3) / 75)) : null;
+  const mins = ov ? ov.mins : ex && ex.d != null ? Math.max(1, Math.round((ex.d * 1.3) / 75)) : null;
   const stopName = zh ? s.zh : s.en;
   const dest = zh ? r.destZh : r.destEn;
   const walkUrl = has && ex && EXIT_LATLNG[ex.code]
@@ -2360,7 +2362,7 @@ function BusStopGuide({ r, t, lang }) {
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 overflow-hidden border-t border-[var(--border)] pt-3">
       <h4 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} />{t.bgTitle}</h4>
       <ol className="mt-2 space-y-1.5 text-sm">
-        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{fixed ? `（${t.bgAirside}）` : ''}</span></li>}
+        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{ov ? `（${t[ov.note]}）` : fixed ? `（${t.bgAirside}）` : ''}</span></li>}
         <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 2 : 1}</span>
           <span>{mins ? fmt(t.bgWalk, { m: mins, stop: stopName }) : fmt(t.bgWalkNoTime, { stop: stopName })}</span></li>
         <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 3 : 2}</span>
@@ -2398,9 +2400,9 @@ const SEED_BUSES = [
     via: ['啟德（世運道）', '宋皇臺站 D 出口', '沐泰街（承啟道）', '中九龍繞道', '大欖隧道巴士轉乘站', '皇崗口岸'],
     exit_code: 'D',
     boarding_note: {
-      zh: '往皇崗：可於世運道（啟德簡約公屋）總站、宋皇臺站 D 出口（世運道）或沐泰街（承啟道）上車；由啟德站 D 出口步行往沐泰街站最直接。',
-      en: 'To Huanggang: board at the Olympic Avenue terminus (Kai Tak Light Public Housing), Sung Wong Toi Station Exit D, or Muk Tai Street (Shing Kai Road) — the Muk Tai Street stop is the most direct walk from Kai Tak Exit D.',
-      ja: '皇崗行き：世運道（啓徳簡約公屋）始発、宋皇臺駅D出口（世運道）、または沐泰街（承啓道）で乗車。啓徳駅D出口からは沐泰街の停留所が最も近道です。',
+      zh: '往皇崗：世運道（啟德簡約公屋）總站由啟德站 D 出口經啟德車站廣場步行約 10 分鐘；亦可經車站廣場（體育園／青年運動場一帶行人區）步行到宋皇臺站 D 出口（世運道），或在沐泰街（承啟道）上車。',
+      en: 'To Huanggang: the Olympic Avenue terminus (Kai Tak Light Public Housing) is about a 10-minute walk from Kai Tak Exit D via Kai Tak Station Square. You can also walk through the square (pedestrian area by the Sports Park / Youth Sports Ground) to Sung Wong Toi Station Exit D (Olympic Avenue), or board at Muk Tai Street (Shing Kai Road).',
+      ja: '皇崗行き：世運道（啓徳簡約公屋）始発へは啓徳駅D出口から啓徳車站廣場経由で徒歩約10分。広場（スポーツパーク／青年運動場の歩行者エリア）を通って宋皇臺駅D出口（世運道）へも徒歩で行けます。沐泰街（承啓道）でも乗車可。',
     },
     fare: '$20.8',
     fare_note: {
@@ -2492,9 +2494,10 @@ function BusRouteCard({ row, t, lang }) {
   const hl = jsonArr(row.highlights);
   const isNew = row.first_seen_at && Date.now() - Date.parse(row.first_seen_at) < 14 * 864e5;
   const walk = (s) => {
-    const e = nearestExitTo({ lat: s.lat, lng: s.lng });
+    const ov = stopOverride(s);
+    const e = ov ? { code: ov.exit, d: null } : nearestExitTo({ lat: s.lat, lng: s.lng });
     const url = `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[e.code].lat},${EXIT_LATLNG[e.code].lng}&destination=${s.lat},${s.lng}&travelmode=walking`;
-    return { exit: e.code, mins: Math.max(1, Math.round((e.d * 1.3) / 75)), url };
+    return { exit: e.code, mins: ov ? ov.mins : Math.max(1, Math.round((e.d * 1.3) / 75)), url, note: ov ? t[ov.note] : null };
   };
   return (
     <motion.article layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -2533,7 +2536,7 @@ function BusRouteCard({ row, t, lang }) {
                 <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                   <span className="font-semibold">📍 {zh ? s.zh : s.en}</span>
                   <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{fmt(t.bxWalk, { m: w.mins })}</a>
-                  {/宋皇臺站/.test(s.zh || '') && <span className="text-[var(--muted)]">{t.bxSuw}</span>}
+                  {w.note && <span className="w-full text-[11px] text-[var(--muted)]">↳ {w.note}</span>}
                   <span className="ml-auto num">
                     {e === undefined ? <span className="inline-block h-3 w-14 animate-pulse rounded bg-[var(--surface-2)]" />
                       : e === null ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
@@ -2580,6 +2583,153 @@ function FeaturedBuses({ rows, t, lang }) {
   );
 }
 
+/* ============================ 🌙 深夜／散場後往內地口岸指南 ============================ */
+// 資料：Supabase「border_guides」表優先（見 05_border_guides.sql）；未連線時用以下內置資料
+const SEED_BORDER = [
+  { id: 'bg-huanggang', port_key: "huanggang", name: {"zh": "皇崗口岸", "en": "Huanggang Port", "ko": "황강 커우안", "ja": "皇崗口岸"}, hours: {"zh": "24 小時通關（2026-10-12 起）", "en": "24 hours (from 12 Oct 2026)", "ko": "24시간 (2026-10-12부터)", "ja": "24時間（2026-10-12〜）"}, is_24h: true, close_time: null, station: null,
+    options: [{"mode": "bus", "tag": "event", "title": {"zh": "城巴 B14（直達）", "en": "Citybus B14 (direct)", "ja": "シティバスB14（直通）"}, "text": {"zh": "世運道總站、宋皇臺站 D 出口或沐泰街上車；每日 08:00–11:00、18:00–21:00，啟德有大型活動時延長至散場。全程 $20.8。", "en": "Board at the Olympic Avenue terminus, Sung Wong Toi Exit D or Muk Tai Street. Daily 08:00–11:00 and 18:00–21:00; extended until the crowd leaves after major Kai Tak events. $20.8.", "ja": "世運道始発・宋皇臺駅D出口・沐泰街で乗車。毎日08:00〜11:00、18:00〜21:00、啓徳の大型イベント時は終演まで延長。$20.8。"}}, {"mode": "coach", "tag": "24h", "title": {"zh": "24 小時跨境巴士「觀塘線」", "en": "24-hour cross-boundary coach (Kwun Tong line)", "ja": "24時間越境バス「観塘線」"}, "text": {"zh": "乘屯馬綫一站到鑽石山站（或往九龍灣站）上車：由藍田站公共運輸交匯處開出，經觀塘（創紀之城）、九龍灣站、鑽石山站往皇崗。參考車費：日間 $55／通宵 $60。", "en": "Ride the Tuen Ma Line one stop to Diamond Hill (or go to Kowloon Bay) and board there. Runs from Lam Tin Station PTI via Kwun Tong (Millennium City), Kowloon Bay Station and Diamond Hill Station. Reference fare: $55 day / $60 overnight.", "ja": "屯馬線で1駅の鑽石山駅（または九龍灣駅）で乗車。藍田駅交通交匯処発、観塘（創紀之城）・九龍灣駅・鑽石山駅経由。参考運賃：昼$55／深夜$60。"}, "station": "DIH"}, {"mode": "gmb", "tag": "night", "title": {"zh": "通宵專線小巴 616S", "en": "Overnight green minibus 616S", "ja": "深夜ミニバス616S"}, "text": {"zh": "旺角（西洋菜南街）開出，經九龍塘往皇崗；約 22:25–05:30，參考車費 $28.5。", "en": "From Mong Kok (Sai Yeung Choi Street South) via Kowloon Tong; about 22:25–05:30, reference fare $28.5.", "ja": "旺角（西洋菜南街）発、九龍塘経由。約22:25〜05:30、参考運賃$28.5。"}, "station": "MOK"}, {"mode": "coach", "tag": "24h", "title": {"zh": "24 小時跨境巴士「旺角線」", "en": "24-hour cross-boundary coach (Mong Kok line)", "ja": "24時間越境バス「旺角線」"}, "text": {"zh": "旺角鴉蘭街（金都商場對開）上車，經長沙灣、荔枝角。參考車費：日間 $45／通宵 $50。", "en": "Board on Nga Lan Street, Mong Kok (outside Golden Plaza), via Cheung Sha Wan and Lai Chi Kok. Reference fare: $45 day / $50 overnight.", "ja": "旺角鴉蘭街（金都商場前）で乗車、長沙湾・茘枝角経由。参考運賃：昼$45／深夜$50。"}, "station": "PRE"}, {"mode": "bus", "tag": "night", "title": {"zh": "九巴 NB73（通宵）", "en": "KMB NB73 (overnight)", "ja": "KMB NB73（深夜）"}, "text": {"zh": "沙田市中心開出，經大埔（廣福）、上水站往皇崗；約 00:00–05:30，參考車費 $22.6。尾班車前可由啟德乘屯馬綫往大圍轉東鐵綫到沙田。", "en": "From Sha Tin Town Centre via Tai Po (Kwong Fuk) and Sheung Shui Station; about 00:00–05:30, reference fare $22.6. Before the last train, ride the Tuen Ma Line to Tai Wai and change to the East Rail Line for Sha Tin.", "ja": "沙田市中心発、大埔（広福）・上水駅経由。約00:00〜05:30、参考運賃$22.6。終電前に屯馬線で大圍→東鉄線で沙田へ。"}, "station": "SHT"}],
+    note: {"zh": "跨境巴士及小巴車費、班次以營辦商公布為準。", "en": "Coach and minibus fares and times are set by the operators.", "ja": "越境バス・ミニバスの運賃・時刻は事業者の発表に従ってください。"}, source_url: "https://www.info.gov.hk/gia/general/202610/07/P2026100700238.htm", is_active: true, sort: 10 },
+  { id: 'bg-hzmb', port_key: "hzmb", name: {"zh": "港珠澳大橋香港口岸（往澳門／珠海）", "en": "HZMB Hong Kong Port (Macao / Zhuhai)", "ko": "강주아오 대교 홍콩 커우안", "ja": "港珠澳大橋香港口岸（マカオ／珠海）"}, hours: {"zh": "24 小時", "en": "24 hours", "ko": "24시간", "ja": "24時間"}, is_24h: true, close_time: null, station: null,
+    options: [{"mode": "bus", "tag": "dawn", "title": {"zh": "城巴 NA29（清晨）", "en": "Citybus NA29 (early morning)", "ja": "シティバスNA29（早朝）"}, "text": {"zh": "寶琳開出，經九龍灣站（觀塘道）及鑽石山站（龍翔道）往機場／港珠澳大橋；往口岸方向只有寶琳 04:15、05:05 兩班，全程 $52。適合清晨出發，不適合散場後即時乘搭。", "en": "From Po Lam via Kowloon Bay Station (Kwun Tong Road) and Diamond Hill Station (Lung Cheung Road) to the Airport / HZMB. Only two departures towards the port (Po Lam 04:15 and 05:05), $52. Good for early mornings, not right after an event.", "ja": "寶琳発、九龍灣駅（観塘道）・鑽石山駅（龍翔道）経由で空港／港珠澳大橋へ。口岸方面は寶琳04:15・05:05の2本のみ、$52。早朝向けで、終演直後には不向き。"}, "station": "DIH"}, {"mode": "warn", "tag": "note", "title": {"zh": "⚠️ NA21 方向相反", "en": "⚠️ NA21 runs the other way", "ja": "⚠️ NA21は逆方向"}, "text": {"zh": "通宵機場巴士 NA21 只由港珠澳大橋／機場開往旺角，不能用來前往口岸。", "en": "Overnight route NA21 only runs from HZMB / Airport to Mong Kok — it cannot take you to the port.", "ja": "深夜空港バスNA21は港珠澳大橋／空港→旺角の片方向のみで、口岸へは行けません。"}}],
+    note: {"zh": "散場後深夜前往，現時最直接的方法是的士。", "en": "Late at night after an event, a taxi is currently the most direct option.", "ja": "終演後の深夜はタクシーが最も直接的です。"}, source_url: "https://www.681busterminal.com/na29.html", is_active: true, sort: 20 },
+  { id: 'bg-shenzhen_bay', port_key: "shenzhen_bay", name: {"zh": "深圳灣口岸", "en": "Shenzhen Bay Port", "ko": "선전만 커우안", "ja": "深圳湾口岸"}, hours: {"zh": "旅客 06:30–24:00", "en": "Passengers 06:30–24:00", "ko": "여객 06:30–24:00", "ja": "旅客 06:30〜24:00"}, is_24h: false, close_time: "24:00", station: "YUL",
+    options: [{"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 元朗站 ➔ B2", "en": "Tuen Ma Line ➔ Yuen Long ➔ B2", "ja": "屯馬線 ➔ 元朗駅 ➔ B2"}, "text": {"zh": "元朗港鐵站開出，參考車費 $15.8。", "en": "From Yuen Long Station, reference fare $15.8.", "ja": "元朗駅発、参考運賃$15.8。"}, "station": "YUL"}, {"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 天水圍站 ➔ B2P", "en": "Tuen Ma Line ➔ Tin Shui Wai ➔ B2P", "ja": "屯馬線 ➔ 天水圍駅 ➔ B2P"}, "text": {"zh": "B2P 由天水圍天慈邨開出（由天水圍站轉乘輕鐵或步行前往），參考車費 $11.3。", "en": "B2P starts at Tin Tsz Estate, Tin Shui Wai (Light Rail or walk from the station), reference fare $11.3.", "ja": "B2Pは天水圍天慈邨発（駅から輕鐵か徒歩）、参考運賃$11.3。"}, "station": "TIS"}, {"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 屯門站 ➔ B3X", "en": "Tuen Ma Line ➔ Tuen Mun ➔ B3X", "ja": "屯馬線 ➔ 屯門駅 ➔ B3X"}, "text": {"zh": "B3X 由屯門市中心開出，參考車費 $16.5。", "en": "B3X starts at Tuen Mun Town Centre, reference fare $16.5.", "ja": "B3Xは屯門市中心発、参考運賃$16.5。"}, "station": "TUM"}],
+    note: {"zh": "口岸 24:00 關閉，請預留排隊過關時間。", "en": "The port closes at midnight; allow time for immigration queues.", "ja": "口岸は24:00閉鎖。出入境の待ち時間を見込んでください。"}, source_url: "https://www.moneyhero.com.hk/zh/travel-insurance/blog/shenzhen-bay-port-transport", is_active: true, sort: 30 },
+  { id: 'bg-lowu', port_key: "lowu", name: {"zh": "羅湖口岸", "en": "Lo Wu Control Point", "ko": "로우 커우안", "ja": "羅湖口岸"}, hours: {"zh": "06:30–24:00", "en": "06:30–24:00", "ko": "06:30–24:00", "ja": "06:30〜24:00"}, is_24h: false, close_time: "24:00", station: "LOW",
+    options: [{"mode": "rail", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 紅磡 ➔ 東鐵綫往羅湖", "en": "Tuen Ma Line ➔ Hung Hom ➔ East Rail Line to Lo Wu", "ja": "屯馬線 ➔ 紅磡 ➔ 東鉄線で羅湖"}, "text": {"zh": "東鐵綫往羅湖尾班車約 23:00 由金鐘開出（以港鐵公布為準）。", "en": "The last East Rail train to Lo Wu leaves Admiralty around 23:00 (check MTR notices).", "ja": "東鉄線羅湖行き終電は金鐘発23:00頃（MTR発表を確認）。"}, "station": "LOW"}],
+    note: {"zh": "", "en": "", "ja": ""}, source_url: "https://hk.trip.com/guide/transport/luohu-port-opening-hours.html", is_active: true, sort: 40 },
+  { id: 'bg-lmc', port_key: "lmc", name: {"zh": "落馬洲（福田）口岸", "en": "Lok Ma Chau (Futian) Control Point", "ko": "록마차우(푸톈) 커우안", "ja": "落馬洲（福田）口岸"}, hours: {"zh": "06:30–22:30", "en": "06:30–22:30", "ko": "06:30–22:30", "ja": "06:30〜22:30"}, is_24h: false, close_time: "22:30", station: "LMC",
+    options: [{"mode": "rail", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 紅磡 ➔ 東鐵綫往落馬洲", "en": "Tuen Ma Line ➔ Hung Hom ➔ East Rail Line to Lok Ma Chau", "ja": "屯馬線 ➔ 紅磡 ➔ 東鉄線で落馬洲"}, "text": {"zh": "口岸 22:30 關閉，較羅湖早。", "en": "Closes at 22:30, earlier than Lo Wu.", "ja": "22:30閉鎖で羅湖より早い。"}, "station": "LMC"}],
+    note: {"zh": "", "en": "", "ja": ""}, source_url: "https://hk.trip.com/guide/transport/luohu-port-opening-hours.html", is_active: true, sort: 50 },
+];
+const useBorderGuides = () => useLiveTable('border_guides', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_BORDER);
+
+// 個別車站的指定出口（實地步行路線，優先於「最近出口」計算）
+const STOP_EXIT_OVERRIDES = [
+  { re: /啟德簡約公屋|Kai Tak Light Public Housing/i, exit: 'D', mins: 10, note: 'ovLph' },
+  { re: /宋皇臺站.*D\s*出口|Sung Wong Toi Station\s*-\s*Exit D/i, exit: 'D', mins: 15, note: 'ovSuw' },
+];
+const stopOverride = (s) => { const n = `${(s && s.zh) || ''} ${(s && s.en) || ''}`; return STOP_EXIT_OVERRIDES.find((o) => o.re.test(n)) || null; };
+
+// 由啟德站出發的最遲時間（估算）：口岸關閉時間 − 港鐵時間 − 轉乘巴士時間 − 過關預留
+const PORT_EXTRA_MIN = { shenzhen_bay: 25 }; // 由港鐵站轉乘巴士往口岸的估算分鐘
+const PORT_BUFFER_MIN = 10;
+// 尾班車限制（估算）：東鐵綫往羅湖尾班車約 23:01 由金鐘開出 → 約 23:08 經紅磡 → 啟德最遲約 22:50 上車
+const PORT_CAP_MIN = { lowu: 22 * 60 + 50 };
+const hkNowMin = () => {
+  try {
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Hong_Kong', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    const h = +p.find((x) => x.type === 'hour').value % 24, m = +p.find((x) => x.type === 'minute').value;
+    return h * 60 + m;
+  } catch { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+};
+const mm2hhmm = (x) => `${String(Math.floor(((x % 1440) + 1440) % 1440 / 60)).padStart(2, '0')}:${String(((x % 60) + 60) % 60).padStart(2, '0')}`;
+function leaveBy(p) {
+  if (p.is_24h || !p.close_time || !p.station) return null;
+  const r = routeTo(p.station);
+  if (!r) return null;
+  const [h, m] = String(p.close_time).split(':').map(Number);
+  const close = (h === 24 ? 24 * 60 : h * 60 + m);
+  const by = close - r.mins - (PORT_EXTRA_MIN[p.port_key] || 0) - PORT_BUFFER_MIN;
+  return PORT_CAP_MIN[p.port_key] != null ? Math.min(by, PORT_CAP_MIN[p.port_key]) : by;
+}
+// 「現在」相對於最遲出發時間：凌晨 0–5 時視為前一晚的延續
+function leaveStatus(by, now) {
+  if (by == null) return null;
+  const n = now < 5 * 60 ? now + 1440 : now;
+  if (n < 6 * 60 + 30) return null;
+  return by - n; // 正數 = 仲有幾多分鐘
+}
+const MODE_ICON = { bus: '🚌', coach: '🛂', gmb: '🚐', rail: '🚆', warn: '⚠️' };
+const TAG_STYLE = {
+  '24h': { bg: '#E6F4EA', fg: '#0B6B3A', zh: '24 小時', en: '24 h', ko: '24시간', ja: '24時間' },
+  night: { bg: '#E8E5FF', fg: '#3B2F9E', zh: '通宵', en: 'Overnight', ko: '심야', ja: '深夜' },
+  event: { bg: '#FFF4CC', fg: '#6B4E00', zh: '活動加班', en: 'Event extra', ko: '행사 증편', ja: 'イベント増便' },
+  dawn: { bg: '#E0F2FE', fg: '#075985', zh: '清晨', en: 'Early morning', ko: '새벽', ja: '早朝' },
+};
+
+function BorderDeadlineBadge({ ports, t, lang, now }) {
+  const rows = ports.map((p) => ({ p, by: leaveBy(p) })).filter((x) => x.by != null).sort((a, b) => a.by - b.by);
+  if (!rows.length) return null;
+  return (
+    <div className="rounded-xl border-2 border-amber-500 bg-amber-50 px-3 py-2.5 text-amber-900">
+      <p className="flex items-center gap-1.5 text-sm font-black"><AlertTriangle size={16} />{t.blWarnTitle}</p>
+      <ul className="mt-1.5 grid gap-1 sm:grid-cols-3">
+        {rows.map(({ p, by }) => {
+          const left = leaveStatus(by, now);
+          const late = left != null && left < 0;
+          return (
+            <li key={p.port_key} className={`rounded-lg px-2.5 py-1.5 text-xs ${late ? 'bg-red-100 text-red-800' : 'bg-white/70'}`}>
+              <b>{jx(p.name, lang)}</b>
+              <span className="num ml-1 font-black">{fmt(t.blBy, { time: mm2hhmm(by) })}</span>
+              {left != null && <span className="block text-[11px]">{late ? t.blMissed : fmt(t.blLeft, { n: left })}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-1.5 text-[11px]">{t.blWarnNote}</p>
+    </div>
+  );
+}
+
+function LateNightBorderGuide({ t, lang }) {
+  const { data } = useBorderGuides();
+  const [now, setNow] = useState(hkNowMin());
+  useEffect(() => { const i = setInterval(() => setNow(hkNowMin()), 30000); return () => clearInterval(i); }, []);
+  const night = now >= 21 * 60 || now < 6 * 60;
+  const [open, setOpen] = useState(night);
+  const [port, setPort] = useState(null);
+  const ports = (data || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <button onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center justify-between gap-2 text-left">
+        <span>
+          <span className="flex items-center gap-2 text-base font-bold">🌙 {t.blTitle}</span>
+          <span className="mt-0.5 block text-xs text-[var(--muted)]">{t.blIntro}</span>
+        </span>
+        <ChevronDown size={18} className={`shrink-0 text-[var(--muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div className="mt-3"><BorderDeadlineBadge ports={ports} t={t} lang={lang} now={now} /></div>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {ports.map((p) => {
+            const isOpen = port === p.port_key || (port === null && p.port_key === 'huanggang');
+            const opts = jsonArr(p.options);
+            return (
+              <div key={p.port_key} className={`rounded-xl border ${isOpen ? 'border-[var(--ink)]' : 'border-[var(--border)]'}`}>
+                <button onClick={() => setPort(isOpen ? '' : p.port_key)} aria-expanded={isOpen} className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <b className="text-sm">{jx(p.name, lang)}</b>
+                    <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={p.is_24h ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>🕐 {jx(p.hours, lang)}</span>
+                  </span>
+                  <ChevronDown size={16} className={`shrink-0 text-[var(--muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="space-y-2 border-t border-[var(--border)] px-3 py-3">
+                    {opts.map((o, i) => (
+                      <div key={i} className={`rounded-lg px-3 py-2 ${o.mode === 'warn' ? 'bg-red-50 text-red-800' : 'bg-[var(--surface-2)]'}`}>
+                        <p className="flex flex-wrap items-center gap-1.5 text-sm font-bold">
+                          <span aria-hidden>{MODE_ICON[o.mode] || '🚏'}</span>{jx(o.title, lang)}
+                          {TAG_STYLE[o.tag] && <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ background: TAG_STYLE[o.tag].bg, color: TAG_STYLE[o.tag].fg }}>{tx(TAG_STYLE[o.tag], lang)}</span>}
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed">{jx(o.text, lang)}</p>
+                        {o.station && o.station !== 'KAT' && ST[o.station] && <div className="mt-1.5 text-xs"><RouteChain code={o.station} lang={lang} t={t} /></div>}
+                      </div>
+                    ))}
+                    {jx(p.note, lang) && <p className="text-xs text-[var(--muted)]">ℹ️ {jx(p.note, lang)}</p>}
+                    {p.source_url && <a href={p.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold underline"><ExternalLink size={11} />{t.bxSource}</a>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <p className="text-[11px] leading-relaxed text-[var(--muted)]">{t.blSrc}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BusPanel({ t, lang, items }) {
   const { data: busRows } = useBuses();
   // 自動同步表中途經啟德站附近的城巴路線（新路線毋須改程式即會出現）
@@ -2613,6 +2763,7 @@ function BusPanel({ t, lang, items }) {
   return (
     <section className="space-y-4">
       <FeaturedBuses rows={busRows} t={t} lang={lang} />
+      <LateNightBorderGuide t={t} lang={lang} />
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-lg font-bold"><Bus size={19} />{t.busTitle}</h2>
@@ -4820,6 +4971,37 @@ const UI_V18 = {
   },
 };
 Object.keys(UI_V18).forEach((l) => Object.assign(UI[l], UI_V18[l]));
+const UI_V19 = {
+  zh: {
+    ovLph: '經啟德車站廣場往世運道方向，步行約 10 分鐘', ovSuw: '經啟德車站廣場（體育園／青年運動場一帶行人區）步行到宋皇臺站 D 出口，約 15 分鐘（估算）；亦可乘屯馬綫一站',
+    blTitle: '尾班車後的過境（內地口岸）交通指南', blIntro: '體育園散場後趕唔切羅湖／落馬洲？改往 24 小時的皇崗口岸或港珠澳大橋。',
+    blWarnTitle: '⚠️ 體育園散場注意：最遲喺啟德站上車時間（估算）', blBy: '{time} 前', blLeft: '仲有約 {n} 分鐘', blMissed: '已趕唔切 → 改往皇崗口岸（24 小時）',
+    blWarnNote: '按口岸關閉時間、港鐵行車時間及過關預留 10 分鐘估算；東鐵綫往羅湖尾班車約 23:00 由金鐘開出，實際以港鐵公布為準。',
+    blSrc: '資料：政府新聞公報（2026-10-07）、運輸署及營辦商資料；「參考車費」來自第三方整理，以營辦商公布為準。',
+  },
+  en: {
+    ovLph: 'via Kai Tak Station Square towards Olympic Avenue, about 10 min', ovSuw: 'walk through Kai Tak Station Square (pedestrian area by the Sports Park / Youth Sports Ground) to Sung Wong Toi Exit D, about 15 min (estimate); or ride the Tuen Ma Line one stop',
+    blTitle: 'After the last train: getting to Mainland border ports', blIntro: 'Missed Lo Wu / Lok Ma Chau after an event? Use the 24-hour Huanggang Port or HZMB.',
+    blWarnTitle: '⚠️ Sports Park events: latest time to board at Kai Tak (estimate)', blBy: 'by {time}', blLeft: 'about {n} min left', blMissed: 'Too late → go to Huanggang Port (24 h)',
+    blWarnNote: 'Estimated from port closing times, MTR journey time and 10 min for immigration. The last East Rail train to Lo Wu leaves Admiralty around 23:00 — check MTR notices.',
+    blSrc: 'Sources: government press release (7 Oct 2026), Transport Department and operators. "Reference fares" come from third-party summaries; operators’ notices prevail.',
+  },
+  ko: {
+    ovLph: '카이탁 역광장을 지나 세운도 방향, 도보 약 10분', ovSuw: '카이탁 역광장(스포츠파크·청년운동장 보행자 구역)을 지나 송웡토이역 D 출구까지 약 15분(추정), 또는 툰마선 한 정거장',
+    blTitle: '막차 이후 본토 커우안 가는 법', blIntro: '행사 후 로우·록마차우를 놓쳤다면 24시간 황강 커우안 또는 강주아오 대교로.',
+    blWarnTitle: '⚠️ 스포츠파크 행사: 카이탁역 최종 탑승 시각(추정)', blBy: '{time}까지', blLeft: '약 {n}분 남음', blMissed: '늦음 → 황강 커우안(24시간)으로',
+    blWarnNote: '커우안 마감 시각, MTR 소요 시간, 출입국 10분을 기준으로 추정. 로우행 막차는 애드미럴티 약 23:00 출발(MTR 공지 확인).',
+    blSrc: '출처: 정부 보도자료(2026-10-07), 운수서 및 운영사. 참고 요금은 제3자 자료이며 운영사 공지가 우선입니다.',
+  },
+  ja: {
+    ovLph: '啓徳車站廣場を通って世運道方面へ徒歩約10分', ovSuw: '啓徳車站廣場（スポーツパーク／青年運動場の歩行者エリア）経由で宋皇臺駅D出口まで徒歩約15分（目安）。屯馬線で1駅も可',
+    blTitle: '終電後の過境（內地口岸）交通指南', blIntro: '終演後に羅湖／落馬洲に間に合わない場合は、24時間の皇崗口岸や港珠澳大橋へ。',
+    blWarnTitle: '⚠️ スポーツパーク終演後の注意：啓徳駅の最終乗車時刻（目安）', blBy: '{time}まで', blLeft: 'あと約{n}分', blMissed: '間に合いません → 皇崗口岸（24時間）へ',
+    blWarnNote: '口岸の閉鎖時刻・MTR所要時間・出入境10分から推計。東鉄線羅湖行き終電は金鐘発23:00頃（MTR発表を確認）。',
+    blSrc: '出典：政府プレスリリース（2026-10-07）、運輸署・事業者。「参考運賃」は第三者の整理によるもので、事業者の発表が優先します。',
+  },
+};
+Object.keys(UI_V19).forEach((l) => Object.assign(UI[l], UI_V19[l]));
 
 /* ============================ App ============================ */
 function App() {
