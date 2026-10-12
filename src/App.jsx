@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v16（B14 出口修正、深夜／散場後往內地口岸指南）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v17（出口地理規則全面修正：A 東北／B・C 西／D 西南）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -434,11 +434,11 @@ const CAT_DESC = {
   dining: { ko: '식당·푸드 구역', ja: 'レストラン・飲食エリア' },
 };
 const EXIT_TIP = {
-  A: { zh: 'A 出口連接啟德車站廣場及公共運輸交匯處，出站後按街道指示牌前往。', en: 'Exit A leads to Kai Tak Station Square and the public transport interchange. Follow the street signs.', ko: 'A 출구는 카이탁역 광장과 환승센터로 연결됩니다. 거리 표지판을 따라가세요.', ja: 'A出口は啓徳駅前広場と公共交通ターミナルに通じています。案内標識に従ってください。' },
+  A: { zh: 'A 出口往東北面沐翠街、沐虹街一帶（啟晴邨、德朗邨、天寰、機電工程署總部、保良局何壽南小學），出站後按街道指示牌前往。', en: 'Exit A leads north-east towards Muk Chui Street and Muk Hung Street (Kai Ching Estate, Tak Long Estate, Victoria Skye, EMSD Headquarters, PLK Stanley Ho Sau Nan Primary School). Follow the street signs.', ko: 'A 출구는 북동쪽 목초이 스트리트·목홍 스트리트 방면(카이칭·탁롱 단지, 빅토리아 스카이, 기전공정서 본부)입니다. 거리 표지판을 따라가세요.', ja: 'A出口は北東の沐翠街・沐虹街方面（啓晴邨・德朗邨・天寰・機電工程署本部・保良局何壽南小学）へ。案内標識に従ってください。' },
   B1: { zh: 'B1 出口可經行人天橋前往新蒲崗及東啟德一帶。', en: 'From Exit B1, take the footbridge towards San Po Kong and East Kai Tak.', ko: 'B1 출구에서 보행 육교를 이용해 산포콩·동카이탁 방면으로 이동하세요.', ja: 'B1出口から歩道橋で新蒲崗・東啓徳方面へ。' },
   B2: { zh: 'B2 出口直達天璽天，亦可經行人天橋前往新蒲崗。', en: 'Exit B2 leads straight to Tin Sai Tin, with a footbridge to San Po Kong.', ko: 'B2 출구는 틴사이틴으로 바로 연결되며, 육교로 산포콩에 갈 수 있습니다.', ja: 'B2出口は天璽天に直結。歩道橋で新蒲崗へも行けます。' },
-  C: { zh: 'C 出口往 AIRSIDE 一帶及新蒲崗東面（太子道東沿線）。', en: 'Exit C leads towards AIRSIDE and the eastern side of San Po Kong along Prince Edward Road East.', ko: 'C 출구는 AIRSIDE 및 산포콩 동쪽(프린스 에드워드 로드 이스트) 방면입니다.', ja: 'C出口はAIRSIDE方面と新蒲崗東側（太子道東沿い）へ。' },
-  D: { zh: 'D 出口往啟德體育園、跑道區方向及 D 出口公共運輸交匯處。', en: 'Exit D leads to Kai Tak Sports Park, the runway area and the Exit D transport interchange.', ko: 'D 출구는 카이탁 스포츠파크, 활주로 지구 및 D 출구 환승센터 방면입니다.', ja: 'D出口は啓徳スポーツパーク、ランウェイ地区、D出口交通ターミナル方面へ。' },
+  C: { zh: 'C 出口往 AIRSIDE、協調道（稅務中心、工業貿易大樓）一帶及新蒲崗東面（太子道東沿線）。', en: 'Exit C leads towards AIRSIDE and Concorde Road (Inland Revenue Centre, Trade and Industry Tower) and the eastern side of San Po Kong along Prince Edward Road East.', ko: 'C 출구는 AIRSIDE·콩코드 로드(세무센터, 공업무역빌딩) 및 산포콩 동쪽(프린스 에드워드 로드 이스트) 방면입니다.', ja: 'C出口はAIRSIDE・協調道（税務中心・工業貿易大樓）方面と新蒲崗東側（太子道東沿い）へ。' },
+  D: { zh: 'D 出口往西南面啟德車站廣場、啟德體育園、世運道、宋皇臺及九龍城方向，亦通往跑道區及 D 出口公共運輸交匯處。', en: 'Exit D leads south-west to Kai Tak Station Square, Kai Tak Sports Park, Olympic Avenue, Sung Wong Toi and Kowloon City, and also to the runway area and the Exit D transport interchange.', ko: 'D 출구는 남서쪽 카이탁역 광장, 카이탁 스포츠파크, 세운도, 송웡토이·구룡성 방면이며 활주로 지구 및 D 출구 환승센터로도 이어집니다.', ja: 'D出口は南西の啓徳車站廣場・啓徳スポーツパーク・世運道・宋皇臺・九龍城方面へ。ランウェイ地区とD出口交通ターミナルにも通じます。' },
   KAT: { zh: '位於啟德站大堂閘外，毋須出站。', en: 'In the station concourse outside the gates; no need to exit.', ko: '역 대합실 개찰구 밖에 있어 출구로 나갈 필요가 없습니다.', ja: '駅コンコースの改札外にあり、出口を出る必要はありません。' },
   'C/D': { zh: '可經 C 或 D 出口前往。', en: 'Reach it via Exit C or D.', ko: 'C 또는 D 출구를 이용하세요.', ja: 'C出口またはD出口から。' },
   'B1/B2': { zh: '可經 B1 或 B2 出口的行人天橋前往。', en: 'Reach it via the footbridge from Exit B1 or B2.', ko: 'B1 또는 B2 출구의 보행 육교를 이용하세요.', ja: 'B1またはB2出口の歩道橋を利用。' },
@@ -584,7 +584,7 @@ const SEED = [
   mk('p31-ktsp', 'sports', 'D', '啟德體育園', 'Kai Tak Sports Park', '全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.",
     ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。⚠️ 散場後返內地：落馬洲 22:30、羅湖及深圳灣 24:00 關閉，趕唔切可改往 24 小時的皇崗口岸（見「巴士」頁的深夜過境指南）。', 'Covered walkway from Exit D. Allow extra time after big events. ⚠️ Heading to the Mainland afterwards: Lok Ma Chau closes at 22:30, Lo Wu and Shenzhen Bay at midnight — if you miss them, use the 24-hour Huanggang Port (see the late-night border guide on the Bus tab).'], '啟德體育園'),
   mk('p32-kt-stadium', 'sports', 'D', '啟德主場館', 'Kai Tak Stadium', '可容納約五萬人、設開合式上蓋的主場館。', 'About 50,000-seat stadium with a retractable roof.'),
-  mk('p33-station-sq', 'sports', 'A', '啟德車站廣場', 'Kai Tak Station Square', '車站上蓋的大型綠化休憩空間。', 'Large landscaped open space above the station.', ['A 出口出站即達。', 'Right outside Exit A.']),
+  mk('p33-station-sq', 'sports', 'D', '啟德車站廣場', 'Kai Tak Station Square', '車站上蓋的大型綠化休憩空間。', 'Large landscaped open space above the station.', ['D 出口出站即達，可經廣場步行往啟德體育園、世運道及宋皇臺站 D 出口。', 'Right outside Exit D; walk through the square to Kai Tak Sports Park, Olympic Avenue and Sung Wong Toi Station Exit D.']),
   mk('p34-kt-ysg', 'sports', 'D', '啟德青年運動場', 'Kai Tak Youth Sports Ground', '設田徑跑道及足球場的運動場。', 'Sports ground with running track and football pitch.'),
   mk('p35-kb-park', 'sports', 'A', '九龍灣公園', 'Kowloon Bay Park', '設球場及休憩設施的地區公園。', 'District park with sports courts and sitting areas.'),
   mk('p36-police', 'government', 'B1', '東九龍總區總部及行動基地暨牛頭角分區警署', 'Kowloon East Regional Headquarters and Operational Base-cum-Ngau Tau Kok Divisional Police Station', '東九龍總區警察總部、行動基地及分區警署。', 'Police regional headquarters, operational base and divisional station.'),
@@ -657,7 +657,7 @@ const SEED = [
     ['A 出口巴士站上車。', 'Board at the bus stop by Exit A.'], '維港1號 啟德'),
   /* ---------- 新增：最新落成學校 ---------- */
   mk('e74-baptist-rainbow', 'education', 'A', '浸信會孔憲紹天虹小學', 'Baptist Hung Hin Shiu Rainbow Primary School', '位於九龍啟德沐安街2號的新校舍，前身為黃大仙的浸信會天虹小學，2025 年 9 月起改用現名並改屬九龍城 34 校網。', 'New campus at 2 Muk On Street, Kai Tak. Formerly Baptist Rainbow Primary School in Wong Tai Sin, renamed in September 2025.',
-    ['經 A 出口沿車站廣場／沐安街步行約 3 至 5 分鐘。', 'From Exit A, walk via Kai Tak Station Square and Muk On Street, about 3 to 5 min.'], '浸信會孔憲紹天虹小學'),
+    ['經 A 出口沿沐安街步行約 3 至 5 分鐘。', 'From Exit A, walk along Muk On Street, about 3 to 5 min.'], '浸信會孔憲紹天虹小學'),
 
   /* ---------- 美食餐飲（2026 年 10 月整理：主要依據中電「九龍城區食肆」商戶名單（2026 年 9 月 18 日更新）及 2025–2026 年飲食媒體報道；食肆經常轉換，出發前請以 Google 地圖為準） ---------- */
   // 步行時間為由建議出口出發的估算
@@ -1053,7 +1053,7 @@ const STATION_NAME = {
 
 /* ============================ 官方指南資料版本與差異同步 ============================ */
 // 每次按港鐵新版《車站指南》更新 SEED 後，請同時更新此版本號
-const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 12 版：B14 出口修正、深夜過境指南）';
+const DATA_VERSION = '港鐵啟德站指南 09/2026 + 2026-10 增補（第 13 版：出口地理規則全面修正）';
 const isCustomId = (id) => String(id).startsWith('lm-'); // 管理員自行新增的地點，同步時保留
 const normItem = (x) => JSON.stringify([x.category, x.exit, x.name, x.desc, x.tip, x.mapQuery, x.meta || null], (k, v) =>
   v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((o, key) => { o[key] = v[key]; return o; }, {}) : v);
@@ -1301,6 +1301,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
         <ExitPlate exit={item.exit} size="lg" />
         <div className={`min-w-0 flex-1 ${isAdmin ? 'pr-28 sm:pr-0 sm:pt-7' : ''}`}>
           <h3 className="text-base font-bold leading-snug">{tx(item.name, lang)}</h3>
+          {isAdmin && exitAudit(item) && <p className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-900">{fmt(t.exitAudit, { exit: exitAudit(item) })}</p>}
           {lang !== 'zh' && item.name.zh !== tx(item.name, lang) && <p className="text-xs text-[var(--muted)]">{item.name.zh}</p>}
           <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--muted)]">
             <cat.Icon size={11} />{tx(cat.label, lang)}
@@ -2340,18 +2341,53 @@ function boardingExits(r) {
   if (r.route === '22S' || AIRSIDE_PTI_RE.test(`${s.zh || ''} ${s.en || ''}`)) return ['C', 'D'];
   return null;
 }
+
+/* ---------- 出口地理規則（v17）：按地點名稱／地址自動判斷正確出口 ---------- */
+// 東北（A）：沐翠街、沐虹街、啟晴邨、德朗邨、天寰、機電工程署總部、保良局何壽南小學
+// 西南（D）：世運道、宋皇臺、九龍城、啟德車站廣場、啟德體育園、啟德簡約公屋
+// 西／西北（B／C）：AIRSIDE、協調道、稅務中心、工業貿易大樓
+const EXIT_ZONES = [
+  { key: 'A', exits: ['A'], re: /沐翠街|沐虹街|啟晴|德朗|天寰|機電工程署|何壽南|Muk Chui|Muk Hung|Kai Ching|Tak Long|Victoria Skye|EMSD|Electrical and Mechanical|Stanley Ho Sau Nan/i },
+  { key: 'D', exits: ['D'], re: /世運道|宋皇臺|九龍城(?!青少年|區)|車站廣場|體育園|簡約公屋|Olympic Ave|Sung Wong Toi|Kowloon City(?! (?:Children|Youth|District|Integrated))|Station Square|Sports Park|Light Public Housing/i },
+  { key: 'BC', exits: ['C', 'B2'], re: /AIRSIDE|協調道|稅務|工業貿易|Concorde|Inland Revenue|Trade and Industry/i },
+];
+const zoneOf = (text) => EXIT_ZONES.find((z) => z.re.test(String(text || ''))) || null;
+const zoneExits = (text) => { const z = zoneOf(text); return z ? z.exits : null; };
+// CMS／管理員檢查：地點名稱所屬範圍與所填出口不符時提示
+function exitAudit(item) {
+  if (!item || !item.exit || item.exit === 'KAT') return null;
+  const z = zoneOf(`${(item.name && item.name.zh) || ''} ${(item.name && item.name.en) || ''}`);
+  if (!z) return null;
+  return String(item.exit).split('/').some((e) => z.exits.includes(e)) ? null : z.exits.join('/');
+}
+// 巴士／小巴車站的出口：① 個別車站實地路線 ② AIRSIDE 公共運輸交匯處 ③ 地點名稱規則 ④ 目的地規則 ⑤ 最近出口
+function exitPlanForStop(r) {
+  const s = (r && r.stop) || r || {};
+  const has = Number.isFinite(s.lat) && Number.isFinite(s.lng);
+  const pick = (codes) => (has ? codes.map((code) => ({ code, d: distM(s, EXIT_LATLNG[code]) })).sort((a, b) => a.d - b.d)[0] : { code: codes[0], d: null });
+  const minsOf = (d) => (d != null ? Math.max(1, Math.round((d * 1.3) / 75)) : null);
+  const ov = stopOverride(s);
+  if (ov) return { exits: [ov.exit], code: ov.exit, mins: ov.mins, note: ov.note, why: 'site' };
+  const fixed = r && r.route ? boardingExits(r) : null;
+  if (fixed) { const e = pick(fixed); return { exits: fixed, code: e.code, mins: minsOf(e.d), why: 'pti' }; }
+  const z = zoneExits(`${s.zh || ''} ${s.en || ''}`);
+  if (z) { const e = pick(z); return { exits: z, code: e.code, mins: minsOf(e.d), why: 'zone' }; }
+  if (!has) return null;
+  const near = nearestExitTo(s);
+  const dz = zoneOf(`${(r && r.destZh) || ''} ${(r && r.destEn) || ''}`);
+  if (near.code === 'A' && dz && dz.key === 'D') { const e = pick(['D']); return { exits: ['D'], code: 'D', mins: minsOf(e.d), why: 'dest' }; }
+  return { exits: [near.code], code: near.code, mins: minsOf(near.d), why: 'near' };
+}
+
 function BusStopGuide({ r, t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
   const s = r.stop || {};
   const has = Number.isFinite(s.lat) && Number.isFinite(s.lng);
-  const ov = stopOverride(s);
-  const fixed = ov ? [ov.exit] : boardingExits(r);
-  // 指定出口（例如 22S：C 或 D）時，步行導航由較近的一個出口出發
-  const ex = ov ? { code: ov.exit, d: null }
-    : fixed
-    ? (has ? fixed.map((code) => ({ code, d: distM(s, EXIT_LATLNG[code]) })).sort((a, b) => a.d - b.d)[0] : { code: fixed[0], d: null })
-    : (has ? nearestExitTo(s) : null);
-  const mins = ov ? ov.mins : ex && ex.d != null ? Math.max(1, Math.round((ex.d * 1.3) / 75)) : null;
+  const plan = exitPlanForStop(r);
+  const ov = plan && plan.why === 'site' ? { note: plan.note } : null;
+  const fixed = plan && plan.why !== 'near' ? plan.exits : null;
+  const ex = plan ? { code: plan.code } : null;
+  const mins = plan ? plan.mins : null;
   const stopName = zh ? s.zh : s.en;
   const dest = zh ? r.destZh : r.destEn;
   const walkUrl = has && ex && EXIT_LATLNG[ex.code]
@@ -2362,7 +2398,7 @@ function BusStopGuide({ r, t, lang }) {
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 overflow-hidden border-t border-[var(--border)] pt-3">
       <h4 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} />{t.bgTitle}</h4>
       <ol className="mt-2 space-y-1.5 text-sm">
-        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{ov ? `（${t[ov.note]}）` : fixed ? `（${t.bgAirside}）` : ''}</span></li>}
+        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{ov ? `（${t[ov.note]}）` : plan && plan.why === 'pti' ? `（${t.bgAirside}）` : ''}</span></li>}
         <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 2 : 1}</span>
           <span>{mins ? fmt(t.bgWalk, { m: mins, stop: stopName }) : fmt(t.bgWalkNoTime, { stop: stopName })}</span></li>
         <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 3 : 2}</span>
@@ -2494,10 +2530,9 @@ function BusRouteCard({ row, t, lang }) {
   const hl = jsonArr(row.highlights);
   const isNew = row.first_seen_at && Date.now() - Date.parse(row.first_seen_at) < 14 * 864e5;
   const walk = (s) => {
-    const ov = stopOverride(s);
-    const e = ov ? { code: ov.exit, d: null } : nearestExitTo({ lat: s.lat, lng: s.lng });
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[e.code].lat},${EXIT_LATLNG[e.code].lng}&destination=${s.lat},${s.lng}&travelmode=walking`;
-    return { exit: e.code, mins: ov ? ov.mins : Math.max(1, Math.round((e.d * 1.3) / 75)), url, note: ov ? t[ov.note] : null };
+    const p = exitPlanForStop({ stop: s, route: row.route_number }) || { code: 'D', mins: null };
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${EXIT_LATLNG[p.code].lat},${EXIT_LATLNG[p.code].lng}&destination=${s.lat},${s.lng}&travelmode=walking`;
+    return { exit: p.code, mins: p.mins, url, note: p.why === 'site' ? t[p.note] : null };
   };
   return (
     <motion.article layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -2535,7 +2570,7 @@ function BusRouteCard({ row, t, lang }) {
               return (
                 <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                   <span className="font-semibold">📍 {zh ? s.zh : s.en}</span>
-                  <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{fmt(t.bxWalk, { m: w.mins })}</a>
+                  <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{w.mins ? fmt(t.bxWalk, { m: w.mins }) : t.bgNav}</a>
                   {w.note && <span className="w-full text-[11px] text-[var(--muted)]">↳ {w.note}</span>}
                   <span className="ml-auto num">
                     {e === undefined ? <span className="inline-block h-3 w-14 animate-pulse rounded bg-[var(--surface-2)]" />
@@ -3301,8 +3336,10 @@ const useRouteVideos = () => useLiveTable('route_videos', (q) => q.select('*').e
 const RUNWAY_RE = /承豐道|SHING FUNG/i;
 function rowToDiningItem(r) {
   const cuisine = CUISINES[r.category] ? r.category : 'other';
-  const exit = r.exit_code || 'C';
-  const walk = r.walk_minutes ? String(r.walk_minutes) : '';
+  // v17：按地址核對出口（例如地址在世運道 → D、沐翠街 → A），與資料庫不符時以地理規則為準
+  const z = r.area === 'spk' ? null : zoneExits(`${r.address || ''} ${r.address_en || ''}`);
+  const exit = z && !z.includes(r.exit_code) ? z[0] : (r.exit_code || 'C');
+  const walk = r.walk_minutes && exit === r.exit_code ? String(r.walk_minutes) : '';
   const runway = RUNWAY_RE.test(`${r.address || ''} ${r.address_en || ''}`);
   const mall = r.area === 'spk' ? 'spkzone' : runway ? 'runway' : 'sync';
   const transfer = runway ? MALLS.runway.transfer : null; // 跑道區：顯示巴士接駁提示
@@ -3600,7 +3637,7 @@ const SEED_MINIBUSES = [
     note: "啟德總站設於啟德公共運輸交匯處（AIRSIDE），與城巴 22S 同一交匯處，經 C 或 D 出口前往。往啟德方向亦可於協調道西行（稅務中心對面）落車。穿著校服學生優惠 $4.5。另有輔助班次（每日 07:00–09:00，約 15 分鐘一班）由彩興苑開往坪石公共運輸交匯處一樓。", sort: 15 },
   { id: 'gmb-88a', route_number: "88A", region: 'KLN', origin: "黃大仙站", destination: "啟德醫院／香港兒童醫院",
     via_locations: ["黃大仙巴士總站", "新蒲崗（彩虹道／四美街）", "協調道（AIRSIDE）", "沐虹街", "晴朗商場", "德朗邨", "啟華街", "零碳天地", "香港兒童醫院", "啟德醫院", "啟晴邨"],
-    exit_code: "C/D", walk_minutes: null, boarding_location: "協調道東行（近稅務大樓）或沐虹街南行停車灣",
+    exit_code: "A/C", walk_minutes: null, boarding_location: "協調道東行（近稅務大樓，C 出口）或沐虹街南行停車灣（A 出口）",
     fare: "$8.8", section_fares: [{"section": "黃大仙 ↔ 啟晴邨", "fare": "$4.9"}, {"section": "啟晴邨 ↔ 香港兒童醫院", "fare": "$6.1"}],
     last_fare_updated: '2026-10', fare_effective_date: "2025-03-31", fare_status: "partial",
     fare_source_url: "https://www.td.gov.hk/filemanager/sc/content_13/TOK/KK/2025/ta_plb_88a_20250331_tc.pdf",
@@ -3677,6 +3714,7 @@ const GMB_CAT_ALIAS = { '醫院專線': '醫院', '郵輪碼頭/跑道區': '跑
 const GMB_FILTERS = [
   { id: 'all', label: { zh: '全部路線', en: 'All routes', ko: '전체 노선', ja: '全路線' } },
   ...['AIRSIDE/協調道', '啟德體育園', '醫院', '跑道區/承豐道', '新蒲崗工廈區'].map((c) => ({ id: c, cat: c, label: GMB_CAT_LABEL[c] })),
+  { id: 'exitA', exit: 'A', label: { zh: 'Exit A 上車', en: 'Board via Exit A', ko: 'A 출구 승차', ja: 'A出口乗り場' } },
   { id: 'exitC', exit: 'C', label: { zh: 'Exit C 上車', en: 'Board via Exit C', ko: 'C 출구 승차', ja: 'C出口乗り場' } },
   { id: 'exitD', exit: 'D', label: { zh: 'Exit D 上車', en: 'Board via Exit D', ko: 'D 출구 승차', ja: 'D出口乗り場' } },
 ];
@@ -5002,6 +5040,13 @@ const UI_V19 = {
   },
 };
 Object.keys(UI_V19).forEach((l) => Object.assign(UI[l], UI_V19[l]));
+const UI_V20 = {
+  zh: { exitAudit: '⚠️ 按地點應為 {exit} 出口，請核對' },
+  en: { exitAudit: '⚠️ By location this should be Exit {exit} — please check' },
+  ko: { exitAudit: '⚠️ 위치상 {exit} 출구로 보입니다 — 확인하세요' },
+  ja: { exitAudit: '⚠️ 位置からは{exit}出口のはずです。確認してください' },
+};
+Object.keys(UI_V20).forEach((l) => Object.assign(UI[l], UI_V20[l]));
 
 /* ============================ App ============================ */
 function App() {
