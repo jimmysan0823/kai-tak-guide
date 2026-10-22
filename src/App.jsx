@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v18（城巴 B14 全日服務試辦至 11 月 1 日）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v19（💬 問答助手：免費站內搜尋 ＋ 轉交外部 AI，毋須帳戶）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -5053,6 +5053,227 @@ const UI_V20 = {
 };
 Object.keys(UI_V20).forEach((l) => Object.assign(UI[l], UI_V20[l]));
 
+/* ============================ 💬 問答助手：免費智能搜尋 ＋ AI 後備 ============================ */
+// ① 先用網站內的資料（地標、巴士、小巴、景點、過境指南、港鐵站、常見問題）即時搜尋 —— 免費、答案準確
+// ② 搵唔到答案時，提供「轉交外部 AI」掣（ChatGPT／Google AI 模式／Perplexity），自動填好問題並開新分頁 —— 毋須任何帳戶或金鑰
+const FAQ = [
+  { k: '兒童醫院 啟德醫院 醫院 hospital 病院 小児病院 啓徳病院 子供病院 아동병원 병원 22S', go: 'bus',
+    a: { zh: '經 C 或 D 出口往 AIRSIDE 公共運輸交匯處搭城巴 22S（星期一至五 10:30–19:30 有短途班次直達兩間醫院），或在 A 出口搭城巴 22M。請勿由 D 出口步行前往醫院。', en: 'Go via Exit C or D to the AIRSIDE public transport interchange for Citybus 22S (Mon–Fri 10:30–19:30 short trips go straight to both hospitals), or take Citybus 22M at Exit A. Do not walk to the hospitals from Exit D.', ja: 'C出口またはD出口からAIRSIDE公共交通交匯処でシティバス22S（平日10:30〜19:30は両病院直行の区間便あり）、またはA出口でシティバス22M。D出口から病院へ歩かないでください。' } },
+  { k: '體育園 體育場 主場館 sports park stadium スポーツパーク 啓徳スポーツパーク 스포츠파크 演唱會 concert コンサート', go: 'land',
+    a: { zh: '由 D 出口經有蓋通道前往啟德體育園，大型活動散場時請預留排隊時間。散場後返內地：落馬洲 22:30、羅湖及深圳灣 24:00 關閉，趕唔切可改往 24 小時的皇崗口岸。', en: 'Use Exit D and the covered walkway to Kai Tak Sports Park; allow extra time after big events. Heading to the Mainland afterwards: Lok Ma Chau closes at 22:30, Lo Wu and Shenzhen Bay at midnight — otherwise use the 24-hour Huanggang Port.', ja: 'D出口から屋根付き通路でスポーツパークへ。大型イベント後は混雑に注意。本土へ戻る場合、落馬洲は22:30、羅湖・深圳湾は24:00閉鎖。間に合わなければ24時間の皇崗口岸へ。' } },
+  { k: 'AIRSIDE 商場 mall 稅務 協調道', go: 'land',
+    a: { zh: 'AIRSIDE 由 C 出口前往；協調道（稅務中心、工業貿易大樓）一帶亦用 C 出口。', en: 'AIRSIDE is via Exit C; the Concorde Road area (Inland Revenue Centre, Trade and Industry Tower) also uses Exit C.', ja: 'AIRSIDEはC出口へ。協調道（税務中心・工業貿易大樓）方面もC出口です。' } },
+  { k: '皇崗 口岸 深圳 B14 過關 huanggang border 越境 皇崗口岸 황강', go: 'bus',
+    a: { zh: '城巴 B14 直達皇崗口岸（全程 $20.8），全日服務試辦至 11 月 1 日：往皇崗每日 08:00–21:00，可在世運道總站、宋皇臺站 D 出口或沐泰街上車（由 D 出口前往）。深夜可搭屯馬綫到鑽石山站，轉 24 小時跨境巴士「觀塘線」。', en: 'Citybus B14 goes direct to Huanggang Port ($20.8); all-day trial until 1 Nov: to Huanggang daily 08:00–21:00 from the Olympic Avenue terminus, Sung Wong Toi Exit D or Muk Tai Street (via Exit D). Late at night, ride the Tuen Ma Line to Diamond Hill for the 24-hour cross-boundary coach (Kwun Tong line).', ja: 'シティバスB14で皇崗口岸へ直行（$20.8）。11月1日まで終日運行を試行：皇崗行き毎日08:00〜21:00、世運道始発・宋皇臺駅D出口・沐泰街で乗車（D出口から）。深夜は屯馬線で鑽石山駅へ行き24時間越境バス「観塘線」に乗換。' } },
+  { k: '羅湖 落馬洲 尾班車 last train lo wu lok ma chau 終電 막차', go: 'bus',
+    a: { zh: '估算最遲上車時間：往落馬洲約 21:30 前、往羅湖約 22:50 前喺啟德站上車（東鐵綫往羅湖尾班車約 23:00 由金鐘開出）。趕唔切可改往 24 小時的皇崗口岸。', en: 'Estimated latest boarding at Kai Tak: about 21:30 for Lok Ma Chau and 22:50 for Lo Wu (last East Rail train to Lo Wu leaves Admiralty around 23:00). Otherwise use the 24-hour Huanggang Port.', ja: '啓徳駅の最終乗車目安：落馬洲は21:30頃、羅湖は22:50頃まで（東鉄線羅湖行き終電は金鐘発23:00頃）。間に合わなければ24時間の皇崗口岸へ。' } },
+  { k: '郵輪碼頭 cruise クルーズ 크루즈 22M', go: 'bus',
+    a: { zh: '往啟德郵輪碼頭：A 出口搭城巴 22M，或經 C／D 出口往 AIRSIDE 公共運輸交匯處搭城巴 22S。郵輪抵港日人流較多。', en: 'To Kai Tak Cruise Terminal: Citybus 22M at Exit A, or Citybus 22S at the AIRSIDE public transport interchange (via Exit C or D). Expect crowds on cruise days.', ja: 'クルーズターミナルへはA出口でシティバス22M、またはC／D出口からAIRSIDE交通交匯処でシティバス22S。' } },
+  { k: '跑道區 維港1號 天瀧 runway ランウェイ 22X 22D', go: 'bus',
+    a: { zh: '往跑道區：A 出口搭城巴 22X（往維港1號）或 22D（只限繁忙時間）。', en: 'To the runway area: Citybus 22X (to One Victoria) or 22D (peak hours only) at Exit A.', ja: 'ランウェイ地区へはA出口でシティバス22X（維港1號行き）または22D（ピーク時のみ）。' } },
+  { k: '黃大仙 wong tai sin 88 小巴 minibus ミニバス', go: 'gmb',
+    a: { zh: '往黃大仙：可搭綠色專線小巴 88（協調道上車，C 出口），或搭屯馬綫到鑽石山轉觀塘綫到黃大仙站。', en: 'To Wong Tai Sin: green minibus 88 (board on Concorde Road, Exit C), or the Tuen Ma Line to Diamond Hill then the Kwun Tong Line.', ja: '黄大仙へはミニバス88（協調道で乗車、C出口）、または屯馬線で鑽石山→観塘線。' } },
+  { k: '車費 票價 fare 運賃 요금 八達通 octopus', go: 'mtr',
+    a: { zh: '港鐵車費可在「港鐵」頁的車站搜尋揀目的地，即時顯示成人、小童、長者及樂悠咭車費（港鐵開放數據）。', en: 'For MTR fares, pick a destination in the station search on the MTR tab — adult, child, elderly and JoyYou fares appear instantly (MTR open data).', ja: 'MTR運賃は「MTR」タブの駅検索で目的地を選ぶと、大人・小児・高齢者などの運賃を表示します。' } },
+  { k: '實時 到站 班次 next train 発車 열차', go: 'mtr',
+    a: { zh: '屯馬綫實時到站在「港鐵」頁頂部；巴士及小巴實時到站分別在「巴士」及「專線小巴」頁。', en: 'Live Tuen Ma Line departures are at the top of the MTR tab; live bus and minibus arrivals are on the Bus and Minibus tabs.', ja: '屯馬線のリアルタイム発車は「MTR」タブ上部、バス・ミニバスはそれぞれのタブで確認できます。' } },
+  { k: '銀行 提款 ATM 找換 換錢 bank exchange 両替 환전', go: 'land',
+    a: { zh: '銀行及自動櫃員機：啟德站大堂閘外有中銀 ATM 及恒生（毋須出站）；AIRSIDE 有中銀、工銀亞洲（C 出口）；滙豐啟德分行在啟德零售館（D 出口）。', en: 'Banks & ATMs: BOC ATM and Hang Seng in the station concourse (no need to exit); BOC and ICBC Asia at AIRSIDE (Exit C); HSBC Kai Tak branch at Kai Tak Mall (Exit D).', ja: '銀行・ATM：駅コンコース改札外に中国銀行ATMと恒生（出口不要）、AIRSIDEに中国銀行・ICBCアジア（C出口）、HSBC啓徳支店は啓徳零售館（D出口）。' } },
+  { k: '車站廣場 station square 広場', go: 'land',
+    a: { zh: '啟德車站廣場由 D 出口出站即達，可經廣場步行往啟德體育園、世運道及宋皇臺站 D 出口。', en: 'Kai Tak Station Square is right outside Exit D; walk through it to the Sports Park, Olympic Avenue and Sung Wong Toi Exit D.', ja: '啓徳車站廣場はD出口を出てすぐ。広場を通ってスポーツパーク・世運道・宋皇臺駅D出口へ歩けます。' } },
+];
+const STOP_WORDS = /[？?！!。，,、：:（）()「」]|點去|點樣|怎樣|怎麼|如何|請問|想去|我想|我要|去|往|嘅|呢|呀|啊|嗎|的|在哪|喺邊|邊度|哪裡|有冇|有沒有|ありますか|どこ|行き方|への|어디|가는 법/g;
+const STOP_WORDS_EN = /\b(how to|how do i|get to|where is|where|the|to|go|is|a|an|from)\b/g;
+// 中日文以兩個字為一組比對；英文按字詞比對
+function qTokens(q) {
+  const s = fold(String(q || '')).replace(STOP_WORDS, ' ').replace(STOP_WORDS_EN, ' ');
+  const out = new Set();
+  for (const w of s.match(/[a-z0-9]{2,}/g) || []) out.add(w);
+  for (const run of s.match(/[぀-ヿ㐀-鿿가-힯]+/g) || []) {
+    if (run.length === 1) out.add(run);
+    for (let i = 0; i < run.length - 1; i++) out.add(run.slice(i, i + 2));
+  }
+  return [...out];
+}
+function scoreDoc(tokens, title, hay) {
+  if (!tokens.length) return 0;
+  const T = fold(title), H = fold(hay);
+  let s = 0, hit = 0;
+  for (const k of tokens) { if (T.includes(k)) { s += 3; hit++; } else if (H.includes(k)) { s += 1; hit++; } }
+  return hit / tokens.length >= 0.5 ? s : 0;
+}
+
+function useAssistantDocs({ items, lang, t }) {
+  const { data: gmb } = useMinibuses();
+  const { data: buses } = useBuses();
+  const { data: atts } = useAttractions();
+  const { data: ports } = useBorderGuides();
+  return useMemo(() => {
+    const docs = [];
+    for (const x of items || []) {
+      docs.push({ type: 'place', go: 'land', exit: x.exit, icon: catById(x.category).emoji || '📍',
+        title: tx(x.name, lang), sub: tx(x.tip, lang),
+        hay: `${x.name.zh} ${x.name.en} ${tx(x.desc, 'zh')} ${tx(x.desc, 'en')} ${tx(x.tip, 'zh')} ${catById(x.category).label.zh} ${catById(x.category).label.en}` });
+    }
+    for (const m of gmb || []) {
+      docs.push({ type: 'gmb', go: 'gmb', exit: m.exit_code, icon: '🚐', title: `${t.gmbBadge} ${m.route_number}：${m.origin} ⇄ ${m.destination}`,
+        sub: m.boarding_location || m.note || '', hay: `${m.route_number} 小巴 minibus ${m.origin} ${m.destination} ${gmbVia(m).join(' ')} ${m.boarding_location || ''} ${m.category}` });
+    }
+    for (const r of buses || []) {
+      if (!r.is_curated && r.category === 'local') continue; // 自動同步的一般路線太多，交給巴士頁實時清單
+      docs.push({ type: 'bus', go: 'bus', exit: r.exit_code, icon: '🚌', title: `${jx(r.name, lang) || r.route_number}：${r.orig_tc || ''} ⇄ ${r.dest_tc || ''}`,
+        sub: jx(r.service_hours, lang) || jx(r.boarding_note, lang) || '', hay: `${r.route_number} bus 巴士 ${r.orig_tc} ${r.dest_tc} ${r.orig_en} ${r.dest_en} ${jsonArr(r.via).join(' ')} ${tx(BUS_CAT[r.category] || {}, 'zh')}` });
+    }
+    for (const a of atts || []) {
+      const r = a.station ? routeTo(a.station) : null;
+      docs.push({ type: 'spot', go: 'explore', exit: null, icon: '🎡', title: jx(a.name, lang),
+        sub: `${r ? fmt(t.attAbout, { n: r.mins + (Number(a.last_mile_minutes) || 0) }) + ' · ' : ''}${jx(a.last_mile, lang)}`,
+        hay: `${jx(a.name, 'zh')} ${jx(a.name, 'en')} ${jx(a.name, 'ja')} ${jx(a.area, 'zh')} ${jx(a.last_mile, 'zh')} ${tx(ATT_CATS[a.category] || {}, 'zh')}` });
+    }
+    for (const p of ports || []) {
+      docs.push({ type: 'port', go: 'bus', exit: null, icon: '🛂', title: `${jx(p.name, lang)}（${jx(p.hours, lang)}）`,
+        sub: jsonArr(p.options).map((o) => jx(o.title, lang)).join('／'), hay: `${jx(p.name, 'zh')} ${jx(p.name, 'en')} 口岸 border port ${jsonArr(p.options).map((o) => `${jx(o.title, 'zh')} ${jx(o.text, 'zh')}`).join(' ')}` });
+    }
+    for (const code of ALL_STATIONS) {
+      if (code === 'KAT') continue;
+      docs.push({ type: 'station', code, go: 'mtr', exit: null, icon: '🚇', title: fmt(t.qaToStation, { st: stName(code, lang) }),
+        sub: '', hay: `${ST[code][0]} ${ST[code][1]}` });
+    }
+    return docs;
+  }, [items, gmb, buses, atts, ports, lang, t]);
+}
+
+// 外部 AI：開新分頁並自動填好問題（網址格式按各服務公開的 ?q= 參數；如日後改動，只需修改這裏）
+const EXT_AI = [
+  { id: 'chatgpt', name: 'ChatGPT', color: '#10A37F', url: (p) => `https://chatgpt.com/?q=${encodeURIComponent(p)}` },
+  { id: 'google', name: 'Google AI', color: '#1A73E8', url: (p) => `https://www.google.com/search?udm=50&q=${encodeURIComponent(p)}` },
+  { id: 'perplexity', name: 'Perplexity', color: '#20808D', url: (p) => `https://www.perplexity.ai/?q=${encodeURIComponent(p)}` },
+];
+const extPrompt = (q, lang) => fmt(UI[lang].qaPrompt, { q: String(q || '').trim() });
+
+function AssistantWidget({ t, lang, items, onGo, onRoute }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const docs = useAssistantDocs({ items, lang, t });
+  const tokens = useMemo(() => qTokens(q), [q]);
+  const faq = useMemo(() => (tokens.length ? FAQ.map((f) => ({ f, s: scoreDoc(tokens, f.k, `${f.k} ${tx(f.a, 'zh')} ${tx(f.a, 'en')}`) }))
+    .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 2) : []), [tokens]);
+  const results = useMemo(() => {
+    if (!tokens.length) return [];
+    return docs.map((d) => ({ d, s: d.type === 'station' ? scoreDoc(tokens, d.hay, d.hay) : scoreDoc(tokens, d.title, d.hay) }))
+      .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 8).map((x) => x.d);
+  }, [docs, tokens]);
+  const nothing = q.trim().length > 0 && !faq.length && !results.length;
+  const go = (d) => { if (d.type === 'station') onRoute(d.code); else onGo(d.go); setOpen(false); };
+  return (
+    <>
+      <button onClick={() => setOpen(true)} aria-label={t.qaTitle}
+        className="fixed bottom-5 right-4 z-[55] flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl"
+        style={{ background: LINES.TML.color, marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <span aria-hidden>💬</span><span className="hidden sm:inline">{t.qaTitle}</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={() => setOpen(false)}>
+            <motion.div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}
+              className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:max-w-xl sm:rounded-2xl"
+              initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}>
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+                <h2 className="flex items-center gap-2 text-base font-bold">💬 {t.qaTitle}</h2>
+                <button onClick={() => setOpen(false)} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+              </div>
+              <div className="border-b border-[var(--border)] p-3">
+                <label className="relative block">
+                  <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                  <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                    placeholder={t.qaPh} className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--ink)]" />
+                  {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)]"><X size={15} /></button>}
+                </label>
+                {!q && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {t.qaSamples.map((s) => <button key={s} onClick={() => setQ(s)} className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs hover:border-[var(--ink)]">{s}</button>)}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-2 overflow-y-auto p-3">
+                {faq.map(({ f }, i) => (
+                  <div key={i} className="rounded-xl px-3 py-2.5 text-sm" style={{ background: 'var(--tml-soft)' }}>
+                    <p className="text-[11px] font-bold" style={{ color: 'var(--tml)' }}>💡 {t.qaAnswer}</p>
+                    <p className="mt-0.5 leading-relaxed">{tx(f.a, lang)}</p>
+                    <button onClick={() => { onGo(f.go); setOpen(false); }} className="mt-1.5 text-xs font-bold underline">{t.qaOpen}</button>
+                  </div>
+                ))}
+                {results.map((d, i) => (
+                  <button key={i} onClick={() => go(d)} className="flex w-full items-start gap-2.5 rounded-xl border border-[var(--border)] px-3 py-2 text-left hover:border-[var(--ink)]">
+                    {d.exit ? <span className="flex shrink-0 gap-0.5">{String(d.exit).split('/').slice(0, 2).map((e) => <ExitPlate key={e} exit={e} />)}</span> : <span className="w-7 shrink-0 text-center text-lg">{d.icon}</span>}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{d.title}</span>
+                      {d.sub && <span className="line-clamp-2 block text-xs text-[var(--muted)]">{d.sub}</span>}
+                    </span>
+                  </button>
+                ))}
+                {nothing && <p className="px-1 text-sm text-[var(--muted)]">{t.qaNothing}</p>}
+                {q.trim() && (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] p-3">
+                    <p className="text-xs font-bold">🤖 {nothing ? t.qaExtTitle : t.qaExtTitleMore}</p>
+                    <div className="mt-2 grid grid-cols-3 gap-1.5">
+                      {EXT_AI.map((x) => (
+                        <a key={x.id} href={x.url(extPrompt(q, lang))} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-white" style={{ background: x.color }}>
+                          {x.name}<ExternalLink size={12} />
+                        </a>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">{t.qaExtNote}</p>
+                  </div>
+                )}
+              </div>
+              <p className="border-t border-[var(--border)] px-4 py-2 text-[10px] text-[var(--muted)]">{t.qaFoot}</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+const UI_V21 = {
+  zh: {
+    qaTitle: '問答助手', qaPh: '問我：例如「兒童醫院點去」「B14」「羅湖尾班車」', qaSamples: ['兒童醫院點去', '體育園', '皇崗口岸', '羅湖尾班車', 'AIRSIDE', '銀行'],
+    qaAnswer: '答案', qaOpen: '打開相關頁面 →', qaToStation: '搭港鐵往{st}（車費及路線）', qaNothing: '網站資料暫時搵唔到相關內容。',
+    qaExtTitle: '網站資料搵唔到？用外部 AI 問（免費，開新分頁）', qaExtTitleMore: '想問得更詳細？用外部 AI 問（免費，開新分頁）',
+    qaExtNote: '撳掣後會開啟該 AI 網站並自動填好問題；問題會傳送至該網站。部分服務問幾次後可能要求登入。AI 回答可能有錯，出發前請以港鐵、巴士公司及政府公布為準。',
+    qaPrompt: '我喺香港港鐵啟德站（屯馬綫）。想問：{q}。請用香港繁體中文（廣東話）簡單回答，並附上最新的官方資料來源。',
+    qaFoot: '先搜尋本網站資料（免費、即時）；搵唔到可以轉交外部 AI（毋須帳戶）。',
+  },
+  en: {
+    qaTitle: 'Q&A helper', qaPh: 'Ask: e.g. "Children’s Hospital", "B14", "last train to Lo Wu"', qaSamples: ['Children’s Hospital', 'Sports Park', 'Huanggang Port', 'Last train Lo Wu', 'AIRSIDE', 'Bank'],
+    qaAnswer: 'Answer', qaOpen: 'Open the related page →', qaToStation: 'MTR to {st} (fare & route)', qaNothing: 'Nothing found in this site’s data.',
+    qaExtTitle: 'Not found here? Ask an external AI (free, opens a new tab)', qaExtTitleMore: 'Want more detail? Ask an external AI (free, opens a new tab)',
+    qaExtNote: 'The AI site opens with your question filled in; the question is sent to that site. Some services may ask you to sign in after a few questions. AI answers can be wrong — check MTR, bus operators and government notices before you go.',
+    qaPrompt: 'I am at Kai Tak MTR Station (Tuen Ma Line) in Hong Kong. Question: {q}. Please answer briefly in English and include up-to-date official sources.',
+    qaFoot: 'Searches this site\u2019s data first (free, instant); if nothing is found you can hand the question to an external AI (no account needed).',
+  },
+  ko: {
+    qaTitle: 'Q&A 도우미', qaPh: '예: "아동병원", "B14", "로우 막차"', qaSamples: ['아동병원', '스포츠파크', '황강 커우안', 'AIRSIDE', '은행'],
+    qaAnswer: '답변', qaOpen: '관련 페이지 열기 →', qaToStation: 'MTR로 {st} 가기 (요금·경로)', qaNothing: '사이트 자료에서 찾지 못했습니다.',
+    qaExtTitle: '여기서 못 찾았나요? 외부 AI에게 묻기 (무료, 새 탭)', qaExtTitleMore: '더 자세히 알고 싶나요? 외부 AI에게 묻기 (무료, 새 탭)',
+    qaExtNote: '질문이 입력된 상태로 AI 사이트가 열리며, 질문은 해당 사이트로 전송됩니다. 일부 서비스는 몇 번 사용 후 로그인을 요구할 수 있습니다. AI 답변은 틀릴 수 있습니다.',
+    qaPrompt: '저는 홍콩 MTR 카이탁역(툰마선)에 있습니다. 질문: {q}. 한국어로 간단히 답하고 최신 공식 출처를 알려 주세요.',
+    qaFoot: '먼저 사이트 자료를 검색하고(무료), 없으면 외부 AI에게 질문을 넘길 수 있습니다(계정 불필요).',
+  },
+  ja: {
+    qaTitle: 'Q&Aアシスタント', qaPh: '例：「小児病院 行き方」「B14」「羅湖 終電」', qaSamples: ['小児病院', 'スポーツパーク', '皇崗口岸', '羅湖 終電', 'AIRSIDE', '銀行'],
+    qaAnswer: '回答', qaOpen: '関連ページを開く →', qaToStation: 'MTRで{st}へ（運賃・経路）', qaNothing: 'サイト内のデータでは見つかりませんでした。',
+    qaExtTitle: 'サイト内で見つからない場合は外部AIに聞く（無料・新しいタブ）', qaExtTitleMore: 'もっと詳しく知りたい場合は外部AIに聞く（無料・新しいタブ）',
+    qaExtNote: 'ボタンを押すと質問を入力した状態でAIサイトが開きます（質問はそのサイトへ送信されます）。サービスによっては数回の利用後にログインを求められます。AIの回答は誤る場合があるため、出発前にMTR・バス会社・政府の発表をご確認ください。',
+    qaPrompt: '香港のMTR啓徳駅（屯馬線）にいます。質問：{q}。日本語で簡潔に答え、最新の公式情報の出典も教えてください。',
+    qaFoot: 'まずサイト内データを検索（無料・即時）。見つからない場合は外部AIに質問を引き継げます（アカウント不要）。',
+  },
+};
+Object.keys(UI_V21).forEach((l) => Object.assign(UI[l], UI_V21[l]));
+
 /* ============================ App ============================ */
 function App() {
   const [lang, setLang] = useState('zh');
@@ -5203,6 +5424,8 @@ function App() {
         <span className="mt-1 block">{fmt(t.dataVersion, { v: DATA_VERSION })}</span>
       </footer>
 
+      <AssistantWidget t={t} lang={lang} items={diningMerged} onRoute={goRoute}
+        onGo={(tb) => { setTab(tb); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {} }} />
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={handleLoginSuccess} t={t} />
       <LandmarkForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} onSave={handleSave} t={t} lang={lang} />
       <ConfirmModal request={confirmReq} onClose={() => setConfirmReq(null)} t={t} />
