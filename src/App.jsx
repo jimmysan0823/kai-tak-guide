@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v19（💬 問答助手：免費站內搜尋 ＋ 轉交外部 AI，毋須帳戶）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v20（🧭 路線查詢：由啟德出發／自選上車站至下車站，顯示車費及車程）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -205,6 +205,7 @@ const UI = {
 };
 const UI_EXTRA = {
   zh: {
+    rfMode: '查詢方式', rfModeKat: '由啟德出發', rfModeAny: '自選起點及終點', rfFrom: '上車站', rfTo: '下車站', rfSwap: '對調起點與終點', rfPickFrom: '請在下方選擇上車站', rfPickTo: '請在下方選擇下車站', rfSame: '上車站與下車站相同，請選擇另一個車站。',
     stationPick: '選擇目的地車站', allLines: '所有路綫', stationSearch: '輸入車站名稱或代號，例如「沙田」、「Central」、「TST」',
     stops: '{n} 站', dirTo: '往{to}方向', walkTo: '步行至{to}', transferNone: '直達，毋須轉車', transferAt: '轉車站：{list}',
     fareOfficial: '港鐵開放數據車費', fareEstimate: '估算車費（未能載入官方車費表）', fareLoading: '正在載入官方車費…',
@@ -214,6 +215,7 @@ const UI_EXTRA = {
     synced: '已同步最新官方出口資料', seeded: '已上載預設資料', email: '管理員電郵', signingIn: '登入中…', stationCount: '{n} 個車站',
   },
   en: {
+    rfMode: 'Search mode', rfModeKat: 'From Kai Tak', rfModeAny: 'Any origin → destination', rfFrom: 'From', rfTo: 'To', rfSwap: 'Swap origin and destination', rfPickFrom: 'Choose your boarding station below', rfPickTo: 'Choose your alighting station below', rfSame: 'Origin and destination are the same. Please choose another station.',
     stationPick: 'Choose a destination station', allLines: 'All lines', stationSearch: 'Station name or code, e.g. "Sha Tin", "中環", "TST"',
     stops: '{n} stops', dirTo: 'towards {to}', walkTo: 'Walk to {to}', transferNone: 'Direct, no change needed', transferAt: 'Change at: {list}',
     fareOfficial: 'MTR Open Data fare', fareEstimate: 'Estimated fare (official fare table unavailable)', fareLoading: 'Loading official fares…',
@@ -223,6 +225,7 @@ const UI_EXTRA = {
     synced: 'Latest official exit data synced', seeded: 'Default data uploaded', email: 'Admin email', signingIn: 'Signing in…', stationCount: '{n} stations',
   },
   ko: {
+    rfMode: '검색 방식', rfModeKat: '카이탁 출발', rfModeAny: '출발역·도착역 직접 선택', rfFrom: '승차역', rfTo: '하차역', rfSwap: '출발역과 도착역 바꾸기', rfPickFrom: '아래에서 승차역을 선택하세요', rfPickTo: '아래에서 하차역을 선택하세요', rfSame: '승차역과 하차역이 같습니다. 다른 역을 선택하세요.',
     stationPick: '목적지 역 선택', allLines: '전체 노선', stationSearch: '역 이름 또는 코드 입력 (예: "Sha Tin", "TST")',
     stops: '{n}개 역', dirTo: '{to} 방면', walkTo: '{to}까지 도보', transferNone: '직통, 환승 없음', transferAt: '환승역: {list}',
     fareOfficial: 'MTR 오픈 데이터 요금', fareEstimate: '예상 요금 (공식 요금표 불러오기 실패)', fareLoading: '공식 요금 불러오는 중…',
@@ -232,6 +235,7 @@ const UI_EXTRA = {
     synced: '최신 공식 출구 데이터 동기화 완료', seeded: '기본 데이터 업로드 완료', email: '관리자 이메일', signingIn: '로그인 중…', stationCount: '{n}개 역',
   },
   ja: {
+    rfMode: '検索方法', rfModeKat: '啓徳発', rfModeAny: '乗車駅 → 降車駅を指定', rfFrom: '乗車駅', rfTo: '降車駅', rfSwap: '乗車駅と降車駅を入れ替え', rfPickFrom: '下の一覧から乗車駅を選んでください', rfPickTo: '下の一覧から降車駅を選んでください', rfSame: '乗車駅と降車駅が同じです。別の駅を選んでください。',
     stationPick: '目的地の駅を選択', allLines: '全路線', stationSearch: '駅名またはコードを入力（例：「沙田」「Central」「TST」）',
     stops: '{n} 駅', dirTo: '{to} 方面', walkTo: '{to} まで徒歩', transferNone: '直通・乗換なし', transferAt: '乗換駅：{list}',
     fareOfficial: 'MTR オープンデータ運賃', fareEstimate: '推定運賃（公式運賃表を読み込めません）', fareLoading: '公式運賃を読み込み中…',
@@ -931,12 +935,15 @@ const GRAPH = (() => {
 const stName = (code, lang) => (ST[code] ? (lang === 'zh' || lang === 'ja' ? ST[code][0] : ST[code][1]) : code);
 const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 
-// Dijkstra：由啟德（屯馬綫）出發，計算最快路線
+// Dijkstra：由任意車站出發（所有路綫的月台成本為 0），計算最快路線
 const ROUTE_CACHE = {};
-function routeTo(dest) {
-  if (ROUTE_CACHE[dest]) return ROUTE_CACHE[dest];
-  const start = 'KAT|TML';
-  const dist = { [start]: 0 }, prev = {}, done = new Set();
+function routeBetween(from, dest) {
+  if (!ST[from] || !ST[dest]) return null;
+  if (from === dest) return { legs: [], mins: 0, rideMins: 0, cross: false, transfers: [] };
+  const key = `${from}>${dest}`;
+  if (ROUTE_CACHE[key]) return ROUTE_CACHE[key];
+  const dist = {}, prev = {}, done = new Set();
+  (STATION_LINES[from] || []).forEach((l) => { dist[`${from}|${l}`] = 0; });
   let found = null;
   for (;;) {
     let u = null, best = Infinity;
@@ -971,9 +978,11 @@ function routeTo(dest) {
   }
   const transfers = legs.slice(1).filter((l) => l.kind === 'ride').map((l) => l.from);
   const result = { legs, mins: Math.round(dist[found]), rideMins, cross, transfers };
-  ROUTE_CACHE[dest] = result;
+  ROUTE_CACHE[key] = result;
   return result;
 }
+// 由啟德出發（保留原有介面）
+const routeTo = (dest) => routeBetween('KAT', dest);
 
 const r1 = (x) => Math.round(x * 10) / 10;
 const halfUp = (x) => Math.ceil(x * 2) / 2;
@@ -998,29 +1007,39 @@ function estimateFare(route) {
   return { oct, single: halfUp(oct * 1.1) };
 }
 
-// 由啟德往某站（不含機場快綫）的車費：優先使用港鐵開放數據
-function fareTo(code, fares) {
-  const f = fares && fares[normName(ST[code][1])];
+// 任意兩站之間（不含機場快綫）的車費：優先使用港鐵開放數據，否則按車程估算
+const ZERO_FARE = { oct: 0, single: 0, source: 'official' };
+function fareBetween(from, code, fares) {
+  if (from === code) return ZERO_FARE;
+  const row = fares && fares[normName(ST[from][1])];
+  const f = row && row[normName(ST[code][1])];
   if (f && f.oct != null) return completeFare(f, 'official');
-  const r = routeTo(code);
+  const r = routeBetween(from, code);
   return r ? completeFare(estimateFare(r), 'estimate') : null;
 }
+const fareTo = (code, fares) => fareBetween('KAT', code, fares);
+const AEL_AIRPORT = new Set(['AIR', 'AWE']);
 
-function planTrip(dest, fares) {
-  const route = routeTo(dest);
+function planTripFrom(from, dest, fares) {
+  const route = routeBetween(from, dest);
   if (!route) return null;
   const aelLeg = route.legs.find((l) => l.line === 'AEL');
   let fare;
   if (aelLeg) {
-    // 港鐵開放數據不包括機場快綫：成人車費為估算，優惠車費請參閱官網
-    const base = aelLeg.from === 'KAT' ? { oct: 0, single: 0, source: 'official' } : fareTo(aelLeg.from, fares);
-    const extra = AEL_EST[aelLeg.from] || 100;
-    fare = { oct: base.oct + extra, single: base.single + extra, childOct: null, childSingle: null, elderOct: null, elderSingle: null, joy60: null, joy65: null, source: base.source, ael: true };
+    // 港鐵開放數據不包括機場快綫：前後港鐵段用官方車費，機場快綫段為估算；優惠車費請參閱官網
+    const before = fareBetween(from, aelLeg.from, fares);
+    const after = fareBetween(aelLeg.to, dest, fares);
+    const city = AEL_AIRPORT.has(aelLeg.from) ? aelLeg.to : aelLeg.from;
+    const other = AEL_AIRPORT.has(aelLeg.from) ? aelLeg.from : aelLeg.to;
+    const extra = AEL_AIRPORT.has(other) ? (AEL_EST[city] || 100) : Math.max(10, Math.abs((AEL_EST[aelLeg.from] || 0) - (AEL_EST[aelLeg.to] || 0)));
+    const src = before.source === 'official' && after.source === 'official' ? 'official' : 'estimate';
+    fare = { oct: r1(before.oct + extra + after.oct), single: r1(before.single + extra + after.single), childOct: null, childSingle: null, elderOct: null, elderSingle: null, joy60: null, joy65: null, source: src, ael: true };
   } else {
-    fare = fareTo(dest, fares);
+    fare = fareBetween(from, dest, fares);
   }
-  return { ...route, fare, pass: MPE_ZONE.has(dest) ? 'free' : 'disc' };
+  return { ...route, from, fare, pass: MPE_ZONE.has(from) && MPE_ZONE.has(dest) ? 'free' : 'disc' };
 }
+const planTrip = (dest, fares) => planTripFrom('KAT', dest, fares);
 
 function parseFares(text) {
   const rows = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
@@ -1037,9 +1056,10 @@ function parseFares(text) {
   const out = {};
   for (let k = 1; k < rows.length; k++) {
     const c = rows[k].split(',').map((x) => x.replace(/"/g, '').trim());
-    if (normName(c[iS]) !== 'kaitak') continue;
+    const src = normName(c[iS]);
+    if (!src) continue;
     const num = (i) => (i >= 0 && c[i] !== '' && !Number.isNaN(parseFloat(c[i])) ? parseFloat(c[i]) : null);
-    out[normName(c[iD])] = Object.fromEntries(Object.entries(idx).map(([key, i]) => [key, num(i)]));
+    (out[src] || (out[src] = {}))[normName(c[iD])] = Object.fromEntries(Object.entries(idx).map(([key, i]) => [key, num(i)]));
   }
   return Object.keys(out).length ? out : null;
 }
@@ -1741,7 +1761,16 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
   const [line, setLine] = useState('ALL');
   const [q, setQ] = useState('');
   const [dest, setDest] = useState(initialDest || 'CEN');
-  useEffect(() => { if (initialDest) { setDest(initialDest); setLine('ALL'); setQ(''); } }, [initialDest]);
+  const [mode, setMode] = useState('kat'); // kat：由啟德出發；any：自選起點
+  const [origin, setOrigin] = useState('KAT');
+  const [target, setTarget] = useState('to'); // 車站清單目前設定起點或終點
+  useEffect(() => { if (initialDest) { setDest(initialDest); setLine('ALL'); setQ(''); setTarget('to'); } }, [initialDest]);
+  const from = mode === 'kat' ? 'KAT' : origin;
+  const switchMode = (m) => { setMode(m); setTarget(m === 'any' ? 'from' : 'to'); setQ(''); };
+  const pick = (c) => {
+    if (mode === 'any' && target === 'from') { setOrigin(c); setTarget('to'); setQ(''); } else setDest(c);
+  };
+  const swap = () => { setOrigin(dest); setDest(origin); };
 
   const list = useMemo(() => {
     const base = line === 'ALL' ? ALL_STATIONS : LINE_STATIONS[line];
@@ -1750,14 +1779,47 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
     return base.filter((c) => ST[c][0].includes(q.trim()) || ST[c][1].toLowerCase().includes(k) || c.toLowerCase() === k);
   }, [line, q]);
 
-  const plan = useMemo(() => (dest === 'KAT' ? null : planTrip(dest, fares)), [dest, fares]);
+  const plan = useMemo(() => (dest === from ? null : planTripFrom(from, dest, fares)), [from, dest, fares]);
+  const selected = mode === 'any' && target === 'from' ? from : dest;
+  const pickColor = mode === 'any' && target === 'from' ? '#0f766e' : LINES.TML.color;
   const fare = plan && plan.fare;
 
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Wallet size={19} />{t.fareCalc}</h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">{t.stationPick}</p>
       <RailMapCard t={t} lang={lang} />
+
+      <div role="tablist" aria-label={t.rfMode} className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-2)] p-1 text-sm font-semibold">
+        {[['kat', t.rfModeKat], ['any', t.rfModeAny]].map(([m, label]) => (
+          <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)}
+            className={`rounded-lg px-3 py-2 transition-colors ${mode === m ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>{label}</button>
+        ))}
+      </div>
+
+      {mode === 'kat' ? (
+        <p className="mt-3 text-sm text-[var(--muted)]">{t.stationPick}</p>
+      ) : (
+        <div className="mt-3">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
+            {[['from', t.rfFrom, from, '#0f766e'], null, ['to', t.rfTo, dest, LINES.TML.color]].map((f) => (f ? (
+              <button key={f[0]} onClick={() => setTarget(f[0])} aria-pressed={target === f[0]}
+                className={`min-w-0 rounded-xl border-2 px-3 py-2 text-left transition-colors ${target === f[0] ? '' : 'border-[var(--border)] hover:bg-[var(--surface-2)]'}`}
+                style={target === f[0] ? { borderColor: f[3] } : undefined}>
+                <span className="block text-[11px] font-semibold uppercase tracking-wide" style={{ color: f[3] }}>{f[1]}</span>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate font-bold">{stName(f[2], lang)}</span><StationDots code={f[2]} />
+                </span>
+              </button>
+            ) : (
+              <button key="swap" onClick={swap} aria-label={t.rfSwap} title={t.rfSwap}
+                className="self-center rounded-full border border-[var(--border)] p-2 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]">
+                <ArrowLeftRight size={16} />
+              </button>
+            )))}
+          </div>
+          <p className="mt-2 text-sm text-[var(--muted)]">{target === 'from' ? t.rfPickFrom : t.rfPickTo}</p>
+        </div>
+      )}
 
       <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,14rem)_1fr]">
         <label className="relative">
@@ -1788,11 +1850,11 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
         ) : (
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
             {list.map((c) => {
-              const active = dest === c;
+              const active = selected === c;
               return (
-                <button key={c} onClick={() => setDest(c)}
+                <button key={c} onClick={() => pick(c)} aria-pressed={active}
                   className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${active ? 'text-white' : 'hover:bg-[var(--surface-2)]'}`}
-                  style={active ? { background: LINES.TML.color } : undefined}>
+                  style={active ? { background: pickColor } : undefined}>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">{stName(c, lang)}</span>
                     <span className={`block truncate text-[11px] ${active ? 'text-white/75' : 'text-[var(--muted)]'}`}>{lang === 'zh' || lang === 'ja' ? ST[c][1] : ST[c][0]}</span>
@@ -1806,21 +1868,22 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div key={dest} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="mt-5">
+        <motion.div key={`${from}>${dest}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="mt-5">
           {!plan ? (
-            <p className="rounded-lg bg-[var(--surface-2)] p-4 text-sm">{t.atKat}</p>
+            <p className="rounded-lg bg-[var(--surface-2)] p-4 text-sm">{from === 'KAT' ? t.atKat : t.rfSame}</p>
           ) : (
             <div className="grid gap-5 md:grid-cols-[1.4fr_1fr]">
               <div>
                 <h3 className="mb-1 text-sm font-semibold text-[var(--muted)]">{t.route}</h3>
+                <p className="mb-1 text-base font-bold">{stName(from, lang)} <ArrowRight size={14} className="inline" /> {stName(dest, lang)}</p>
                 <p className="mb-3 flex items-center gap-1.5 text-sm font-medium">
                   <ArrowLeftRight size={14} className="text-[var(--muted)]" />
                   {plan.transfers.length === 0 ? t.transferNone : fmt(t.transferAt, { list: plan.transfers.map((c) => stName(c, lang)).join('、') })}
                 </p>
                 <ol>
                   <li className="flex items-center gap-3 pb-3">
-                    <div className="h-6 w-6 rounded-full border-[3px] bg-[var(--surface)]" style={{ borderColor: LINES.TML.color }} />
-                    <span className="text-sm font-bold">{stName('KAT', lang)}</span>
+                    <div className="h-6 w-6 rounded-full border-[3px] bg-[var(--surface)]" style={{ borderColor: LINES[plan.legs[0].line].color }} />
+                    <span className="text-sm font-bold">{stName(from, lang)}</span>
                   </li>
                   {plan.legs.map((lg, i) => (
                     <li key={i} className="relative flex pb-3 pl-3">
