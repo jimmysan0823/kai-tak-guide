@@ -1,5 +1,5 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v21（🍎 Apple 設計審查修正：44pt 撳位、即時按壓回饋、不回彈 spring、可下拉關閉面板、對比度、圓角及字級統一）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v21（Apple 設計審查修正：44pt 撳位、即時按壓回饋、不回彈 spring、可下拉關閉面板、對比度、圓角及字級統一）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
@@ -9,7 +9,7 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, MotionConfig, useDragControls, animate as motionAnimate } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
-import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, UtensilsCrossed, Play, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X, Compass, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, UtensilsCrossed, Play, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, TrainFront, Trash2, Accessibility, MessageCircle, Unlock, Wallet, X, Compass, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 
 const ENV = import.meta.env;
 
@@ -371,10 +371,10 @@ const UI_V8 = {
 };
 Object.keys(UI_V8).forEach((l) => Object.assign(UI[l], UI_V8[l]));
 const UI_V9 = {
-  zh: { searchDining: '🔍 搜尋餐廳名稱、菜式或美食 (例如: 拉麵、CAFE、壽司)...', dAllCuisine: '全部分類', dPopularMall: '熱門商場' },
-  en: { searchDining: '🔍 Search restaurants, cuisines or food (e.g. ramen, café, sushi)...', dAllCuisine: 'All cuisines', dPopularMall: 'Popular malls' },
-  ko: { searchDining: '🔍 식당 이름, 요리 종류, 음식 검색 (예: 라멘, 카페, 스시)...', dAllCuisine: '전체 분류', dPopularMall: '인기 쇼핑몰' },
-  ja: { searchDining: '🔍 店名・ジャンル・料理で検索（例：ラーメン、カフェ、寿司）...', dAllCuisine: 'すべてのジャンル', dPopularMall: '人気モール' },
+  zh: { searchDining: '搜尋餐廳名稱、菜式或美食 (例如: 拉麵、CAFE、壽司)...', dAllCuisine: '全部分類', dPopularMall: '熱門商場' },
+  en: { searchDining: 'Search restaurants, cuisines or food (e.g. ramen, café, sushi)...', dAllCuisine: 'All cuisines', dPopularMall: 'Popular malls' },
+  ko: { searchDining: '식당 이름, 요리 종류, 음식 검색 (예: 라멘, 카페, 스시)...', dAllCuisine: '전체 분류', dPopularMall: '인기 쇼핑몰' },
+  ja: { searchDining: '店名・ジャンル・料理で検索（例：ラーメン、カフェ、寿司）...', dAllCuisine: 'すべてのジャンル', dPopularMall: '人気モール' },
 };
 Object.keys(UI_V9).forEach((l) => Object.assign(UI[l], UI_V9[l]));
 const UI_V10 = {
@@ -382,10 +382,10 @@ const UI_V10 = {
 };
 Object.keys(UI_V10).forEach((l) => Object.assign(UI[l], UI_V10[l]));
 const UI_V11 = {
-  zh: { searchDining: '🔍 搜尋餐廳名稱、菜式 (例如: 麥當勞、拉麵、CAFE、壽司)...', dArea: '區域', dAllArea: '全部區域' },
-  en: { searchDining: "🔍 Search restaurants or cuisines (e.g. McDonald's, ramen, café, sushi)...", dArea: 'Area', dAllArea: 'All areas' },
-  ko: { searchDining: '🔍 식당 이름·요리 검색 (예: 맥도날드, 라멘, 카페, 스시)...', dArea: '지역', dAllArea: '전체 지역' },
-  ja: { searchDining: '🔍 店名・ジャンルで検索（例：マクドナルド、ラーメン、カフェ、寿司）...', dArea: 'エリア', dAllArea: 'すべてのエリア' },
+  zh: { searchDining: '搜尋餐廳名稱、菜式 (例如: 麥當勞、拉麵、CAFE、壽司)...', dArea: '區域', dAllArea: '全部區域' },
+  en: { searchDining: "Search restaurants or cuisines (e.g. McDonald's, ramen, café, sushi)...", dArea: 'Area', dAllArea: 'All areas' },
+  ko: { searchDining: '식당 이름·요리 검색 (예: 맥도날드, 라멘, 카페, 스시)...', dArea: '지역', dAllArea: '전체 지역' },
+  ja: { searchDining: '店名・ジャンルで検索（例：マクドナルド、ラーメン、カフェ、寿司）...', dArea: 'エリア', dAllArea: 'すべてのエリア' },
 };
 Object.keys(UI_V11).forEach((l) => Object.assign(UI[l], UI_V11[l]));
 const UI_V12 = {
@@ -408,17 +408,17 @@ const tx = (obj, lang) => (obj && (obj[lang] || (lang === 'ja' ? obj.zh || obj.e
 /* ============================ 分類 ============================ */
 const CATS = [
   { id: 'all', Icon: LayoutGrid, label: { zh: '全部', en: 'All', ko: '전체', ja: 'すべて' } },
-  { id: 'shopping', Icon: ShoppingBag, emoji: '🛍️', label: { zh: '文娛/購物', en: 'Leisure & Shopping', ko: '쇼핑·문화', ja: 'ショッピング' } },
-  { id: 'dining', Icon: UtensilsCrossed, emoji: '🍽️', label: { zh: '美食餐飲', en: 'Dining', ko: '맛집·식당', ja: 'グルメ' } },
-  { id: 'residential', Icon: Home, emoji: '🏠', label: { zh: '住宅屋苑', en: 'Residential', ko: '주거단지', ja: '住宅' } },
-  { id: 'education', Icon: GraduationCap, emoji: '🏫', label: { zh: '學校/教育', en: 'Schools', ko: '학교·교육', ja: '学校・教育' } },
-  { id: 'government', Icon: Landmark, emoji: '🏛️', label: { zh: '政府/公共', en: 'Government', ko: '정부·공공', ja: '政府・公共' } },
-  { id: 'medical', Icon: HeartPulse, emoji: '🏥', label: { zh: '醫療/健康', en: 'Medical', ko: '의료·건강', ja: '医療・健康' } },
-  { id: 'industry', Icon: Factory, emoji: '🏭', label: { zh: '工商業區', en: 'Business', ko: '상공업지구', ja: '商工業エリア' } },
-  { id: 'spk', Icon: Factory, emoji: '🏭', label: { zh: '新蒲崗工廈區', en: 'San Po Kong factories', ko: '산포콩 공업빌딩', ja: '新蒲崗工業ビル' } },
-  { id: 'sports', Icon: Ship, emoji: '🚢', label: { zh: '體育/景點', en: 'Sports & Sights', ko: '스포츠·명소', ja: 'スポーツ・観光' } },
-  { id: 'bank', Icon: Banknote, emoji: '🏦', label: { zh: '銀行/找換店', en: 'Banks & FX', ko: '은행·환전', ja: '銀行・両替' } },
-  { id: 'transport', Icon: Bus, emoji: '🚌', label: { zh: '接駁交通', en: 'Transport', ko: '환승 교통', ja: '交通乗換' } },
+  { id: 'shopping', Icon: ShoppingBag, label: { zh: '文娛/購物', en: 'Leisure & Shopping', ko: '쇼핑·문화', ja: 'ショッピング' } },
+  { id: 'dining', Icon: UtensilsCrossed, label: { zh: '美食餐飲', en: 'Dining', ko: '맛집·식당', ja: 'グルメ' } },
+  { id: 'residential', Icon: Home, label: { zh: '住宅屋苑', en: 'Residential', ko: '주거단지', ja: '住宅' } },
+  { id: 'education', Icon: GraduationCap, label: { zh: '學校/教育', en: 'Schools', ko: '학교·교육', ja: '学校・教育' } },
+  { id: 'government', Icon: Landmark, label: { zh: '政府/公共', en: 'Government', ko: '정부·공공', ja: '政府・公共' } },
+  { id: 'medical', Icon: HeartPulse, label: { zh: '醫療/健康', en: 'Medical', ko: '의료·건강', ja: '医療・健康' } },
+  { id: 'industry', Icon: Factory, label: { zh: '工商業區', en: 'Business', ko: '상공업지구', ja: '商工業エリア' } },
+  { id: 'spk', Icon: Factory, label: { zh: '新蒲崗工廈區', en: 'San Po Kong factories', ko: '산포콩 공업빌딩', ja: '新蒲崗工業ビル' } },
+  { id: 'sports', Icon: Ship, label: { zh: '體育/景點', en: 'Sports & Sights', ko: '스포츠·명소', ja: 'スポーツ・観光' } },
+  { id: 'bank', Icon: Banknote, label: { zh: '銀行/找換店', en: 'Banks & FX', ko: '은행·환전', ja: '銀行・両替' } },
+  { id: 'transport', Icon: Bus, label: { zh: '接駁交通', en: 'Transport', ko: '환승 교통', ja: '交通乗換' } },
 ];
 const catById = (id) => CATS.find((c) => c.id === id) || CATS[0];
 const EXITS = ['A', 'B1', 'B2', 'C', 'D', 'B1/B2', 'C/D', 'KAT']; // KAT = 車站大堂（毋須出站）
@@ -462,7 +462,7 @@ const mk = (id, category, exit, zh, en, dZh, dEn, tip, q) => ({
 });
 
 // 以下 80 個地點按港鐵啟德站官方指南（09/2026）逐項核對：中英文名稱、建議出口、分類
-// 官方「主要大廈」→ 🏭 工商業區；官方「公共服務及設施」→ 按性質分入 🏛️ 政府/公共、🏥 醫療、🚢 體育/景點
+// 官方「主要大廈」→ 工商業區；官方「公共服務及設施」→ 按性質分入 政府/公共、醫療、體育/景點
 /* ============================ 美食餐飲：商場／菜式分類 ============================ */
 // exit：預設建議出口；walk：由該出口步行的估算分鐘；q：Google 地圖搜尋時附加的地點字眼
 const MALLS = {
@@ -586,7 +586,7 @@ const SEED = [
   mk('p30-kt-hosp', 'medical', 'C', '啟德醫院', 'Kai Tak Hospital', '位於啟德承昌道1號，毗鄰香港兒童醫院。2026 年 10 月 5 日起分階段投入服務，首階段為專科門診大樓及腫瘤科大樓，逐步承接伊利沙伯醫院的臨床服務。', "At 1 Shing Cheong Road, Kai Tak, next to Hong Kong Children's Hospital. Phased opening from 5 October 2026, starting with the Specialist Outpatient Block and the Oncology Block, gradually taking over services from Queen Elizabeth Hospital.",
     ['請勿由 D 出口步行前往醫院。建議經 C 或 D 出口前往 AIRSIDE 公共運輸交匯處乘搭城巴 22S，或於 A 出口乘搭城巴 22M。', 'Do not walk to the hospitals from Exit D. Go via Exit C or D to the AIRSIDE public transport interchange for Citybus 22S, or take Citybus 22M from Exit A.']),
   mk('p31-ktsp', 'sports', 'D', '啟德體育園', 'Kai Tak Sports Park', '全港最大型體育及康樂設施。', "Hong Kong's largest sports and recreation venue.",
-    ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。⚠️ 散場後返內地：落馬洲 22:30、羅湖及深圳灣 24:00 關閉，趕唔切可改往 24 小時的皇崗口岸（見「巴士」頁的深夜過境指南）。', 'Covered walkway from Exit D. Allow extra time after big events. ⚠️ Heading to the Mainland afterwards: Lok Ma Chau closes at 22:30, Lo Wu and Shenzhen Bay at midnight — if you miss them, use the 24-hour Huanggang Port (see the late-night border guide on the Bus tab).'], '啟德體育園'),
+    ['D 出口經有蓋通道前往，大型活動散場時請預留排隊時間。散場後返內地：落馬洲 22:30、羅湖及深圳灣 24:00 關閉，趕唔切可改往 24 小時的皇崗口岸（見「巴士」頁的深夜過境指南）。', 'Covered walkway from Exit D. Allow extra time after big events. Heading to the Mainland afterwards: Lok Ma Chau closes at 22:30, Lo Wu and Shenzhen Bay at midnight — if you miss them, use the 24-hour Huanggang Port (see the late-night border guide on the Bus tab).'], '啟德體育園'),
   mk('p32-kt-stadium', 'sports', 'D', '啟德主場館', 'Kai Tak Stadium', '可容納約五萬人、設開合式上蓋的主場館。', 'About 50,000-seat stadium with a retractable roof.'),
   mk('p33-station-sq', 'sports', 'D', '啟德車站廣場', 'Kai Tak Station Square', '車站上蓋的大型綠化休憩空間。', 'Large landscaped open space above the station.', ['D 出口出站即達，可經廣場步行往啟德體育園、世運道及宋皇臺站 D 出口。', 'Right outside Exit D; walk through the square to Kai Tak Sports Park, Olympic Avenue and Sung Wong Toi Station Exit D.']),
   mk('p34-kt-ysg', 'sports', 'D', '啟德青年運動場', 'Kai Tak Youth Sports Ground', '設田徑跑道及足球場的運動場。', 'Sports ground with running track and football pitch.'),
@@ -794,7 +794,7 @@ const SEED = [
   mkR('r-ot-lstbakery', 'lph', 'bakery', '啟德社區廚房（樂善堂）', 'Lok Sin Tong Kai Tak Community Kitchen', '世運道簡約公屋第6座 G/F', '社企餅店及咖啡室。', 'Social-enterprise bakery and café.'),
   mkR('r-ot-charsiu', 'other', 'hkcafe', '叉燒丼家', 'The Master of Char Siu', '景福街99–101號啟德工廠大廈二期 G/F', '叉燒飯專門店。', 'Char siu rice specialist.', 'B1/B2'),
   mkR('dn-uplace', 'muktai', 'area', 'U PLACE Riverside 餐飲', 'U PLACE Riverside dining', '', '沿啟德河畔商場的餐飲選擇。', 'Riverside dining by the Kai Tak River.', { q: 'U PLACE Riverside' }),
-  /* 🌊 啟德跑道區／承豐道（由啟德站 A 出口轉乘巴士） */
+  /* 啟德跑道區／承豐道（由啟德站 A 出口轉乘巴士） */
   mkR('r-rw-origami', 'runway', 'chinese', '紙飛機親子空間', 'Origami Kids Cafe', '啟德郵輪碼頭 B 區北面頂層平台（承豐道33號）', '全港首間主打中菜（江浙菜）的親子餐廳，設近 20 萬呎戶外平台公園；10:00–20:00，小童遊樂區另收入場費。', 'Hong Kong\'s first Chinese (Jiangzhe) family restaurant, next to a huge rooftop park; 10:00–20:00, kids\' play area charged separately.', { transfer: TRANSFER_CRUISE }),
   mkR('r-rw-oldhangar', 'runway', 'western', 'The Old Hangar', 'The Old Hangar', '啟德郵輪碼頭 B 區 2/F N205（承豐道33號）', '樓底 5 米高的森林系玻璃屋餐廳，主打歐陸及 Fusion 菜，日間為 Café 時段；只接受 WhatsApp 預約。', 'Five-metre-high greenhouse-style restaurant with European and fusion dishes; café hours by day. WhatsApp bookings only.', { transfer: TRANSFER_CRUISE }),
   mkR('r-rw-myharbour', 'runway', 'bar', '海薈', 'My Harbour', '啟德郵輪碼頭 頂層花園 S302（承豐道33號）', '多國菜及酒吧，位於郵輪碼頭頂層花園。', 'International dishes and bar on the cruise terminal rooftop garden.', { transfer: TRANSFER_CRUISE }),
@@ -1121,7 +1121,7 @@ const GLOBAL_CSS = `
 :root{
   --bg:#EDF0F3; --surface:#FFFFFF; --surface-2:#F4F6F8; --ink:#16202B; --muted:#5A6573;
   --border:#D9DFE5; --tml:#9A3B26; --tml-soft:#F4E6E1; --sign:#FFCC00; --sign-ink:#111418;
-  --ok:#0F7B4F; --warn-bg:#FFF4D6; --warn-ink:#7A4B00;
+  --ok:#0F7B4F; --warn-bg:#FFF4D6; --warn-ink:#7A4B00; --link:#1D5FA6;
   font-family:-apple-system,BlinkMacSystemFont,'PingFang HK','Noto Sans HK','Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 }
 /* 系統字型優先（Apple 裝置用 SF + 對應語言的系統中日韓字型），其他平台用 Noto */
@@ -1140,12 +1140,12 @@ h1,h2{ letter-spacing:-0.01em; }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0E141A; --surface:#172029; --surface-2:#1E2933; --ink:#E7ECF1; --muted:#9AA6B2;
-    --border:#2C3946; --tml:#E08A70; --tml-soft:#3A2520; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C;
+    --border:#2C3946; --tml:#D9826A; --tml-soft:#1E2933; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C; --link:#8DBDF2;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0E141A; --surface:#172029; --surface-2:#1E2933; --ink:#E7ECF1; --muted:#9AA6B2;
-  --border:#2C3946; --tml:#E08A70; --tml-soft:#3A2520; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C;
+  --border:#2C3946; --tml:#D9826A; --tml-soft:#1E2933; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C; --link:#8DBDF2;
 }
 body{ background:var(--bg); color:var(--ink); margin:0; }
 .num{ font-family:'Barlow Semi Condensed','Noto Sans HK',sans-serif; font-feature-settings:'tnum'; }
@@ -1391,12 +1391,12 @@ function StationBoard({ t, lang }) {
 }
 
 /* ============================ 頁籤一：地標 ============================ */
-function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
+function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete, hideTip }) {
   const cat = catById(item.category);
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      className="relative flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="relative flex flex-col rounded-xl bg-[var(--surface)] p-4">
       {isAdmin && (
         <div className="absolute right-2 top-2 flex gap-2">
           <button onClick={() => onEdit(item)} className="flex min-h-[40px] items-center gap-1 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-xs font-medium hover:bg-[var(--border)]"><Pencil size={13} />{t.edit}</button>
@@ -1404,18 +1404,16 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
         </div>
       )}
       <div className="flex items-start gap-3">
-        <ExitPlate exit={item.exit} size="lg" />
         <div className={`min-w-0 flex-1 ${isAdmin ? 'pr-28 sm:pr-0 sm:pt-7' : ''}`}>
-          <h3 className="text-base font-bold leading-snug">{tx(item.name, lang)}</h3>
+          <h4 className="text-[1.0625rem] font-bold leading-snug">{tx(item.name, lang)}</h4>
           {isAdmin && exitAudit(item) && <p className="mt-0.5 inline-block rounded-lg bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-900">{fmt(t.exitAudit, { exit: exitAudit(item) })}</p>}
-          {lang !== 'zh' && item.name.zh !== tx(item.name, lang) && <p className="text-xs text-[var(--muted)]">{item.name.zh}</p>}
-          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--muted)]">
-            <cat.Icon size={11} />{tx(cat.label, lang)}
-          </span>
+          {lang !== 'zh' && item.name.zh !== tx(item.name, lang) && <p className="text-sm text-[var(--muted)]">{item.name.zh}</p>}
+          <p className="mt-0.5 text-sm text-[var(--muted)]">{tx(cat.label, lang)}</p>
         </div>
+        {item.exit.includes('/') && <span className="flex shrink-0 gap-0.5">{item.exit.split('/').map((e) => <ExitPlate key={e} exit={e} />)}</span>}
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-[var(--ink)]/90">{tx(item.desc, lang)}</p>
-      {tx(item.tip, lang) && (
+      <p className="mt-2 text-[0.9375rem] leading-relaxed">{tx(item.desc, lang)}</p>
+      {!hideTip && tx(item.tip, lang) && (
         <div className="mt-3 flex gap-2 rounded-lg px-3 py-2 text-[0.8125rem] leading-relaxed" style={{ background: 'var(--tml-soft)' }}>
           <Footprints size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--tml)' }} />
           <span><span className="sr-only">{t.tip}: </span>{tx(item.tip, lang)}</span>
@@ -1425,7 +1423,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       {!HOSPITAL_IDS.has(item.id) && etaTargetOf(item) && <TransitEtaBadges targetKey={etaTargetOf(item)} t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || item.name.zh)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] min-h-[44px] px-3 py-2.5 text-sm font-semibold transition-colors hover:border-[var(--ink)]">
+          className="-mx-1 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-1 text-sm font-semibold underline-offset-4 hover:underline" style={{ color: 'var(--link)' }}>
           <Navigation size={15} />{t.navigate}
         </a>
       </div>
@@ -1449,14 +1447,14 @@ const CUISINE_GROUPS = [
 const groupOf = (cuisine) => CUISINE_GROUPS.find((g) => g.cuisines.includes(cuisine));
 // 區域篩選標籤：每個標籤包含一組商場／屋苑
 const AREA_TABS = [
-  { id: 'core', malls: ['airside', 'twins', 'cullinan', 'kat'], label: { zh: '🛒 AIRSIDE / 雙子匯', en: '🛒 AIRSIDE / The Twins', ko: '🛒 AIRSIDE / 더 트윈스', ja: '🛒 AIRSIDE / The Twins' } },
-  { id: 'ktsp', malls: ['ktsp'], label: { zh: '🏟️ 體育園 / 啟德零售館', en: '🏟️ Sports Park / Kai Tak Mall', ko: '🏟️ 스포츠파크 / 카이탁 몰', ja: '🏟️ スポーツパーク／啓徳モール' } },
-  { id: 'estates', malls: ['kaiyuet', 'kaiying', 'kaiyan', 'chinglong', 'lph'], label: { zh: '🏠 啟悅/啟陽/啟欣/晴朗', en: '🏠 Public housing & HOS courts', ko: '🏠 공공주택 단지', ja: '🏠 公営住宅エリア' } },
-  { id: 'runway', malls: ['runway'], label: { zh: '🌊 跑道區/承豐道海景餐飲', en: '🌊 Runway area / waterfront', ko: '🌊 활주로 지구·해변', ja: '🌊 ランウェイ地区・海辺' } },
-  { id: 'muktai', malls: ['muktai'], label: { zh: '☕ 沐泰街屋苑地舖', en: '☕ Muk Tai Street shops', ko: '☕ 묵타이 스트리트', ja: '☕ 沐泰街の店舗' } },
-  { id: 'mikiki', malls: ['mikiki'], label: { zh: '🏬 Mikiki', en: '🏬 Mikiki', ko: '🏬 Mikiki', ja: '🏬 Mikiki' } },
-  { id: 'spkzone', malls: ['spkzone'], label: { zh: '🏭 新蒲崗工廈區', en: '🏭 San Po Kong', ko: '🏭 산포콩', ja: '🏭 新蒲崗' } },
-  { id: 'sync', malls: ['sync'], label: { zh: '🔄 自動收錄', en: '🔄 Auto-added', ko: '🔄 자동 추가', ja: '🔄 自動追加' } },
+  { id: 'core', malls: ['airside', 'twins', 'cullinan', 'kat'], label: { zh: 'AIRSIDE / 雙子匯', en: 'AIRSIDE / The Twins', ko: 'AIRSIDE / 더 트윈스', ja: 'AIRSIDE / The Twins' } },
+  { id: 'ktsp', malls: ['ktsp'], label: { zh: '體育園 / 啟德零售館', en: 'Sports Park / Kai Tak Mall', ko: '스포츠파크 / 카이탁 몰', ja: 'スポーツパーク／啓徳モール' } },
+  { id: 'estates', malls: ['kaiyuet', 'kaiying', 'kaiyan', 'chinglong', 'lph'], label: { zh: '啟悅/啟陽/啟欣/晴朗', en: 'Public housing & HOS courts', ko: '공공주택 단지', ja: '公営住宅エリア' } },
+  { id: 'runway', malls: ['runway'], label: { zh: '跑道區/承豐道海景餐飲', en: 'Runway area / waterfront', ko: '활주로 지구·해변', ja: 'ランウェイ地区・海辺' } },
+  { id: 'muktai', malls: ['muktai'], label: { zh: '沐泰街屋苑地舖', en: 'Muk Tai Street shops', ko: '묵타이 스트리트', ja: '沐泰街の店舗' } },
+  { id: 'mikiki', malls: ['mikiki'], label: { zh: 'Mikiki', en: 'Mikiki', ko: 'Mikiki', ja: 'Mikiki' } },
+  { id: 'spkzone', malls: ['spkzone'], label: { zh: '新蒲崗工廈區', en: 'San Po Kong', ko: '산포콩', ja: '新蒲崗' } },
+  { id: 'sync', malls: ['sync'], label: { zh: '自動收錄', en: 'Auto-added', ko: '자동 추가', ja: '自動追加' } },
   { id: 'other', malls: ['other'], label: { zh: '其他', en: 'Others', ko: '기타', ja: 'その他' } },
 ];
 // 菜式關鍵字：令「快餐」「茶餐廳」「CAFE」「拉麵」等常用字都搜尋得到
@@ -1508,7 +1506,7 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   const sub = [item.name.zh, item.name.en].filter((n) => n && n !== title)[0];
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
-      className="relative flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="relative flex flex-col rounded-xl bg-[var(--surface)] p-4">
       {isAdmin && !item.synced && (
         <div className="absolute right-2 top-2 flex gap-2">
           <button onClick={() => onEdit(item)} aria-label={t.edit} className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)]"><Pencil size={14} /></button>
@@ -1518,7 +1516,7 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       {/* 主標題：餐廳名稱 + 菜式 */}
       <div className={isAdmin && !item.synced ? 'pr-24' : ''}>
         {item.synced && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800"><RefreshCw size={10} />{t.syncedBadge}</span>}
-        <h3 className="text-lg font-bold leading-snug">{title}</h3>
+        <h4 className="text-[1.0625rem] font-bold leading-snug">{title}</h4>
         {sub && <p className="text-sm text-[var(--muted)]">{sub}</p>}
         {(() => {
           const g = groupOf(meta.cuisine);
@@ -1534,9 +1532,9 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
           );
         })()}
       </div>
-      <p className="mt-2.5 text-sm leading-relaxed">{tx(item.desc, lang)}</p>
+      <p className="mt-2.5 text-[0.9375rem] leading-relaxed">{tx(item.desc, lang)}</p>
       {/* 輔助資料：出口、商場及樓層 */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-sm text-[var(--muted)]">
         <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--surface-2)] py-0.5 pl-0.5 pr-2 font-semibold text-[var(--ink)]">
           <ExitPlate exit={item.exit} />{item.exit === 'KAT' ? t.concourse : `${t.exit} ${item.exit}`}
         </span>
@@ -1553,8 +1551,8 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       {etaTargetOf(item) && <TransitEtaBadges targetKey={etaTargetOf(item)} t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || `${item.name.zh} 啟德`)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
-          📍 {t.navigate}<ExternalLink size={14} />
+          className="-mx-1 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-1 text-sm font-semibold underline-offset-4 hover:underline" style={{ color: 'var(--link)' }}>
+          <Navigation size={15} />{t.navigate}
         </a>
         {item.meta && item.meta.source === 'fehd' && <p className="mt-1 text-right text-xs text-[var(--muted)]">{t.srcFehd}{item.meta.licence ? `（${item.meta.licence}）` : ''}</p>}
       </div>
@@ -1562,11 +1560,36 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   );
 }
 
+const GROUP_CAP = 6;
+const EXIT_ORDER = ['A', 'B1', 'B2', 'C', 'D', 'KAT'];
+const exitRank = (e) => { const i = EXIT_ORDER.indexOf(e); return i < 0 ? 99 : i; };
+
 function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRoute }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
   const [mallF, setMallF] = useState('all');
   const [groupF, setGroupF] = useState('all');
+  const [expanded, setExpanded] = useState({});
+  const exitGroups = (list) => {
+    const by = new Map();
+    list.forEach((it) => {
+      const e = String(it.exit || '').split('/')[0] || 'other';
+      if (!by.has(e)) by.set(e, []);
+      by.get(e).push(it);
+    });
+    return [...by.entries()]
+      .sort((a, b) => exitRank(a[0]) - exitRank(b[0]))
+      .map(([exit, its]) => {
+        // 同一出口最常見的步行提示只寫一次
+        const tipRaw = (l) => {
+          const c = new Map();
+          its.forEach((it) => { const v = it.category !== 'dining' && tx(it.tip, l); if (v) c.set(v, (c.get(v) || 0) + 1); });
+          const top = [...c.entries()].sort((a, b) => b[1] - a[1])[0];
+          return top && top[1] > 1 ? top[0] : null;
+        };
+        return { exit, items: its, tip: tipRaw(lang), tipRaw };
+      });
+  };
 
   const filtered = useMemo(() => {
     const k = q.trim().toLowerCase();
@@ -1624,7 +1647,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       </div>
 
       <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-1">
-        <div className="flex w-max gap-2">
+        <div className="flex w-max gap-2 pr-4">
           {CATS.map((c) => {
             const active = cat === c.id;
             return (
@@ -1632,7 +1655,6 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
                 className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-full border min-h-[44px] px-4 py-2 text-sm font-medium transition-colors ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink)]'}`}>
                 {active && <motion.span layoutId="catPill" className="absolute inset-0 rounded-full" style={{ background: 'var(--ink)' }} transition={{ type: 'spring', damping: 30, stiffness: 380 }} />}
                 <span className={`relative flex items-center gap-1.5 ${active ? 'text-[var(--surface)]' : ''}`}>
-                  {c.emoji ? <span aria-hidden>{c.emoji}</span> : <c.Icon size={14} />}
                   {tx(c.label, lang)}
                   <span className={`num text-xs ${active ? 'opacity-70' : 'text-[var(--muted)]'}`}>{counts[c.id] || 0}</span>
                 </span>
@@ -1681,15 +1703,43 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
           <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setGroupF('all'); }} className="mt-3 min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
         </div>
       ) : (
-        <motion.div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((it) => (
-              it.category === 'dining' && it.meta
-                ? <RestaurantCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} />
-                : <LandmarkCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        <div className="mt-4 space-y-10">
+          {exitGroups(filtered).map((g) => {
+            const open = expanded[g.exit] || filtered.length <= GROUP_CAP;
+            const shown = open ? g.items : g.items.slice(0, GROUP_CAP);
+            return (
+              <section key={g.exit} aria-labelledby={`exit-${g.exit}`}>
+                <div className="flex items-center gap-3">
+                  {g.exit === 'other' ? null : <ExitPlate exit={g.exit} size="lg" />}
+                  <div>
+                    <h3 id={`exit-${g.exit}`} className="text-xl font-bold leading-tight">{g.exit === 'other' ? t.concourse : g.exit === 'KAT' ? t.concourse : fmt(t.exitGroup, { exit: g.exit })}</h3>
+                    <p className="text-sm text-[var(--muted)]">{fmt(t.exitGroupN, { n: g.items.length })}</p>
+                  </div>
+                </div>
+                {g.tip && (
+                  <p className="mt-3 flex max-w-3xl gap-2 text-[0.9375rem] leading-relaxed">
+                    <Footprints size={17} className="mt-1 shrink-0" style={{ color: 'var(--tml)' }} />
+                    <span><b>{t.exitCommon}</b>　{g.tip}</span>
+                  </p>
+                )}
+                <div className="mt-4 grid items-start gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {shown.map((it) => (
+                    it.category === 'dining' && it.meta
+                      ? <RestaurantCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} />
+                      : <LandmarkCard key={it.id} item={it} lang={lang} t={t} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete} hideTip={tx(it.tip, lang) === g.tipRaw(lang)} />
+                  ))}
+                </div>
+                {g.items.length > GROUP_CAP && filtered.length > GROUP_CAP && (
+                  <button onClick={() => setExpanded((e) => ({ ...e, [g.exit]: !open }))}
+                    className="mt-3 flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[var(--surface-2)] px-4 py-2 text-sm font-semibold hover:bg-[var(--border)]">
+                    {open ? t.showLess : fmt(t.showAll, { n: g.items.length })}
+                    <ChevronDown size={16} className={open ? 'rotate-180' : ''} />
+                  </button>
+                )}
+              </section>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -1822,7 +1872,7 @@ function Arrivals({ t, lang }) {
       </div>
       {(status === 'empty' || (res && res.delay)) && (
         <p className="mb-3 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
-          ⚠️ {res && res.delay ? t.ntDelay : t.ntEmptyHint}{res && res.message ? `（${res.message}）` : ''}
+          {res && res.delay ? t.ntDelay : t.ntEmptyHint}{res && res.message ? `（${res.message}）` : ''}
         </p>
       )}
       <div className="grid gap-3 md:grid-cols-2">
@@ -1878,7 +1928,7 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
       <div role="tablist" aria-label={t.rfMode} className="mt-3 grid grid-cols-2 gap-1 rounded-2xl bg-[var(--surface-2)] p-1 text-sm font-semibold">
         {[['kat', t.rfModeKat], ['any', t.rfModeAny]].map(([m, label]) => (
           <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)}
-            className={`min-h-[44px] rounded-xl px-3 py-2 transition-colors ${mode === m ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>{label}</button>
+            className={`min-h-[44px] rounded-xl px-3 py-2 transition-colors ${mode === m ? 'bg-[var(--surface)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>{label}</button>
         ))}
       </div>
 
@@ -1891,7 +1941,7 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
               <button key={f[0]} onClick={() => setTarget(f[0])} aria-pressed={target === f[0]}
                 className={`min-w-0 rounded-xl border-2 px-3 py-2 text-left transition-colors ${target === f[0] ? '' : 'border-[var(--border)] hover:bg-[var(--surface-2)]'}`}
                 style={target === f[0] ? { borderColor: f[3] } : undefined}>
-                <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: f[3] }}>{f[1]}</span>
+                <span className="block text-sm font-semibold" style={{ color: f[3] }}>{f[1]}</span>
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate font-bold">{stName(f[2], lang)}</span><StationDots code={f[2]} />
                 </span>
@@ -2143,7 +2193,7 @@ function TicketZone({ t, lang }) {
         </div>
         <a href={TICKET_URL} target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white" style={{ background: '#16202B' }}>
-          🔗 {t.officialLink}<ExternalLink size={15} />
+          {t.officialLink}<ExternalLink size={15} />
         </a>
       </div>
     </section>
@@ -2261,7 +2311,7 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
       <div className="mt-4 flex gap-1 rounded-2xl bg-[var(--surface-2)] p-1">
         {LANGS.map((l) => (
           <button key={l.code} onClick={() => setTab(l.code)}
-            className={`min-h-[40px] flex-1 rounded-xl py-2 text-xs font-semibold ${tab === l.code ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}>
+            className={`min-h-[40px] flex-1 rounded-xl py-2 text-xs font-semibold ${tab === l.code ? 'bg-[var(--surface)]' : 'text-[var(--muted)]'}`}>
             {l.label}{l.code === 'zh' && ' *'}
           </button>
         ))}
@@ -2280,7 +2330,7 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm font-medium">{t.fCat}
             <select className={`${inputCls} mt-1`} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
-              {CATS.filter((c) => c.id !== 'all').map((c) => <option key={c.id} value={c.id}>{c.emoji} {tx(c.label, lang)}</option>)}
+              {CATS.filter((c) => c.id !== 'all').map((c) => <option key={c.id} value={c.id}>{tx(c.label, lang)}</option>)}
             </select>
           </label>
           <label className="block text-sm font-medium">{t.fExit} *
@@ -2467,7 +2517,7 @@ async function loadBusEtas(extraCtb = []) {
   return { routes, updated: now };
 }
 
-/* ---------- 🚏 點樣行去巴士站：最近出口、地圖、步行導航 ---------- */
+/* ---------- 點樣行去巴士站：最近出口、地圖、步行導航 ---------- */
 // 啟德站各出口位置（估算，可按實地情況微調）
 const EXIT_LATLNG = {
   A: { lat: 22.3316, lng: 114.2006 }, B1: { lat: 22.3315, lng: 114.1982 }, B2: { lat: 22.3311, lng: 114.1976 },
@@ -2575,7 +2625,7 @@ function BusStopGuide({ r, t, lang }) {
   );
 }
 
-/* ============================ 🛂 過境巴士／🏟️ 啟德體育園巴士（buses 表） ============================ */
+/* ============================ 過境巴士／啟德體育園巴士（buses 表） ============================ */
 // 人手核實的路線（is_curated）＋ Edge Function「sync-buses」由城巴／九巴開放數據自動同步的路線
 const SEED_BUSES = [
   {
@@ -2614,12 +2664,12 @@ const SEED_BUSES = [
 const useBuses = () => useLiveTable('buses', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_BUSES);
 
 const BUS_CAT = {
-  cross_boundary: { zh: '🛂 過境口岸', en: '🛂 Cross-boundary', ko: '🛂 국경 통과', ja: '🛂 越境' },
-  sports_park: { zh: '🏟️ 啟德體育園', en: '🏟️ Sports Park', ko: '🏟️ 스포츠파크', ja: '🏟️ スポーツパーク' },
-  hospital: { zh: '🏥 醫院', en: '🏥 Hospitals', ko: '🏥 병원', ja: '🏥 病院' },
-  runway: { zh: '🌊 跑道區', en: '🌊 Runway', ko: '🌊 활주로 지구', ja: '🌊 ランウェイ' },
-  airport: { zh: '✈️ 機場', en: '✈️ Airport', ko: '✈️ 공항', ja: '✈️ 空港' },
-  local: { zh: '🚌 區內', en: '🚌 Local', ko: '🚌 지역', ja: '🚌 地域' },
+  cross_boundary: { zh: '過境口岸', en: 'Cross-boundary', ko: '국경 통과', ja: '越境' },
+  sports_park: { zh: '啟德體育園', en: 'Sports Park', ko: '스포츠파크', ja: 'スポーツパーク' },
+  hospital: { zh: '醫院', en: 'Hospitals', ko: '병원', ja: '病院' },
+  runway: { zh: '跑道區', en: 'Runway', ko: '활주로 지구', ja: 'ランウェイ' },
+  airport: { zh: '機場', en: 'Airport', ko: '공항', ja: '空港' },
+  local: { zh: '區內', en: 'Local', ko: '지역', ja: '地域' },
 };
 const jsonArr = (v) => (Array.isArray(v) ? v : (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })());
 
@@ -2697,13 +2747,13 @@ function BusRouteCard({ row, t, lang }) {
           <p className="text-xs text-[var(--muted)]">{zh ? row.orig_tc : row.orig_en} ⇄ {zh ? row.dest_tc : row.dest_en}</p>
         </div>
         {row.fare && (
-          <span className="num shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-black shadow-sm" style={{ background: '#FFF4CC', borderColor: '#E0B100', color: '#6B4E00' }}>
-            💰 {fmt(t.gmbFareBadge, { fare: row.fare })}
+          <span className="num shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-black" style={{ background: '#FFF4CC', borderColor: '#E0B100', color: '#6B4E00' }}>
+            {fmt(t.gmbFareBadge, { fare: row.fare })}
           </span>
         )}
       </div>
 
-      {jx(row.service_hours, lang) && <p className="mt-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs">🕐 {jx(row.service_hours, lang)}</p>}
+      {jx(row.service_hours, lang) && <p className="mt-3 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs">{jx(row.service_hours, lang)}</p>}
 
       {(row.exit_code || jx(row.boarding_note, lang)) && (
         <div className="mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-sm font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
@@ -2721,11 +2771,11 @@ function BusRouteCard({ row, t, lang }) {
               const e = etas[`${d.dir}|${s.id}`];
               return (
                 <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                  <span className="font-semibold">📍 {zh ? s.zh : s.en}</span>
+                  <span className="font-semibold">{zh ? s.zh : s.en}</span>
                   <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{w.mins ? fmt(t.bxWalk, { m: w.mins }) : t.bgNav}</a>
                   {w.note && <span className="w-full text-xs text-[var(--muted)]">↳ {w.note}</span>}
                   <span className="ml-auto num">
-                    {e === undefined ? <span className="inline-block h-3 w-14 animate-pulse rounded-lg bg-[var(--surface-2)]" />
+                    {e === undefined ? <span className="inline-block h-3 w-14 rounded-lg bg-[var(--surface-2)]" />
                       : e === null ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
                       : e.length === 0 ? <span className="text-[var(--muted)]">{t.busNoEta}</span>
                       : <b style={{ color: 'var(--tml)' }}>{e.map((x) => etaMinLabel(x.at, now, t)).join(' | ')}</b>}
@@ -2739,11 +2789,11 @@ function BusRouteCard({ row, t, lang }) {
 
       {via.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
-          {via.map((v, i) => <React.Fragment key={i}>{i > 0 && <span className="text-[var(--muted)]">➔</span>}<span className="rounded-lg bg-[var(--surface-2)] px-1.5 py-0.5">{typeof v === 'string' ? v : jx(v, lang)}</span></React.Fragment>)}
+          {via.map((v, i) => <React.Fragment key={i}>{i > 0 && <span className="text-[var(--muted)]">→</span>}<span className="rounded-lg bg-[var(--surface-2)] px-1.5 py-0.5">{typeof v === 'string' ? v : jx(v, lang)}</span></React.Fragment>)}
         </div>
       )}
-      {hl.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{hl.map((h, i) => <span key={i} className="rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs">⚡ {jx(h, lang)}</span>)}</div>}
-      {jx(row.fare_note, lang) && <p className="mt-2 text-xs text-[var(--muted)]">💳 {jx(row.fare_note, lang)}</p>}
+      {hl.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{hl.map((h, i) => <span key={i} className="rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs">{jx(h, lang)}</span>)}</div>}
+      {jx(row.fare_note, lang) && <p className="mt-2 text-xs text-[var(--muted)]">{jx(row.fare_note, lang)}</p>}
 
       <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2 py-1 text-xs font-semibold"
         style={row.synced_at ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>
@@ -2761,7 +2811,7 @@ function FeaturedBuses({ rows, t, lang }) {
   if (!list.length) return null;
   return (
     <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-      <h3 className="flex items-center gap-2 text-base font-bold">🛂 {t.bxTitle}</h3>
+      <h3 className="flex items-center gap-2 text-base font-bold">{t.bxTitle}</h3>
       <p className="mt-1 text-xs text-[var(--muted)]">{t.bxIntro}</p>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {list.map((r) => <BusRouteCard key={r.id || `${r.operator}-${r.route_number}`} row={r} t={t} lang={lang} />)}
@@ -2770,23 +2820,23 @@ function FeaturedBuses({ rows, t, lang }) {
   );
 }
 
-/* ============================ 🌙 深夜／散場後往內地口岸指南 ============================ */
+/* ============================ 深夜／散場後往內地口岸指南 ============================ */
 // 資料：Supabase「border_guides」表優先（見 05_border_guides.sql）；未連線時用以下內置資料
 const SEED_BORDER = [
   { id: 'bg-huanggang', port_key: "huanggang", name: {"zh": "皇崗口岸", "en": "Huanggang Port", "ko": "황강 커우안", "ja": "皇崗口岸"}, hours: {"zh": "24 小時通關（2026-10-12 起）", "en": "24 hours (from 12 Oct 2026)", "ko": "24시간 (2026-10-12부터)", "ja": "24時間（2026-10-12〜）"}, is_24h: true, close_time: null, station: null,
     options: [{"mode": "bus", "tag": "event", "title": {"zh": "城巴 B14（直達）", "en": "Citybus B14 (direct)", "ja": "シティバスB14（直通）"}, "text": {"zh": "世運道總站、宋皇臺站 D 出口或沐泰街上車；全日服務試辦至 11 月 1 日：往皇崗每日 08:00–21:00（由皇崗開出至 23:00），啟德有大型活動時延長至散場。全程 $20.8。", "en": "Board at the Olympic Avenue terminus, Sung Wong Toi Exit D or Muk Tai Street. All-day trial service until 1 Nov: to Huanggang daily 08:00–21:00 (from Huanggang until 23:00); extended after major Kai Tak events. $20.8.", "ja": "世運道始発・宋皇臺駅D出口・沐泰街で乗車。11月1日まで終日運行を試行：皇崗行き毎日08:00〜21:00（皇崗発は23:00まで）、啓徳の大型イベント時は終演まで延長。$20.8。"}}, {"mode": "coach", "tag": "24h", "title": {"zh": "24 小時跨境巴士「觀塘線」", "en": "24-hour cross-boundary coach (Kwun Tong line)", "ja": "24時間越境バス「観塘線」"}, "text": {"zh": "乘屯馬綫一站到鑽石山站（或往九龍灣站）上車：由藍田站公共運輸交匯處開出，經觀塘（創紀之城）、九龍灣站、鑽石山站往皇崗。參考車費：日間 $55／通宵 $60。", "en": "Ride the Tuen Ma Line one stop to Diamond Hill (or go to Kowloon Bay) and board there. Runs from Lam Tin Station PTI via Kwun Tong (Millennium City), Kowloon Bay Station and Diamond Hill Station. Reference fare: $55 day / $60 overnight.", "ja": "屯馬線で1駅の鑽石山駅（または九龍灣駅）で乗車。藍田駅交通交匯処発、観塘（創紀之城）・九龍灣駅・鑽石山駅経由。参考運賃：昼$55／深夜$60。"}, "station": "DIH"}, {"mode": "gmb", "tag": "night", "title": {"zh": "通宵專線小巴 616S", "en": "Overnight green minibus 616S", "ja": "深夜ミニバス616S"}, "text": {"zh": "旺角（西洋菜南街）開出，經九龍塘往皇崗；約 22:25–05:30，參考車費 $28.5。", "en": "From Mong Kok (Sai Yeung Choi Street South) via Kowloon Tong; about 22:25–05:30, reference fare $28.5.", "ja": "旺角（西洋菜南街）発、九龍塘経由。約22:25〜05:30、参考運賃$28.5。"}, "station": "MOK"}, {"mode": "coach", "tag": "24h", "title": {"zh": "24 小時跨境巴士「旺角線」", "en": "24-hour cross-boundary coach (Mong Kok line)", "ja": "24時間越境バス「旺角線」"}, "text": {"zh": "旺角鴉蘭街（金都商場對開）上車，經長沙灣、荔枝角。參考車費：日間 $45／通宵 $50。", "en": "Board on Nga Lan Street, Mong Kok (outside Golden Plaza), via Cheung Sha Wan and Lai Chi Kok. Reference fare: $45 day / $50 overnight.", "ja": "旺角鴉蘭街（金都商場前）で乗車、長沙湾・茘枝角経由。参考運賃：昼$45／深夜$50。"}, "station": "PRE"}, {"mode": "bus", "tag": "night", "title": {"zh": "九巴 NB73（通宵）", "en": "KMB NB73 (overnight)", "ja": "KMB NB73（深夜）"}, "text": {"zh": "沙田市中心開出，經大埔（廣福）、上水站往皇崗；約 00:00–05:30，參考車費 $22.6。尾班車前可由啟德乘屯馬綫往大圍轉東鐵綫到沙田。", "en": "From Sha Tin Town Centre via Tai Po (Kwong Fuk) and Sheung Shui Station; about 00:00–05:30, reference fare $22.6. Before the last train, ride the Tuen Ma Line to Tai Wai and change to the East Rail Line for Sha Tin.", "ja": "沙田市中心発、大埔（広福）・上水駅経由。約00:00〜05:30、参考運賃$22.6。終電前に屯馬線で大圍→東鉄線で沙田へ。"}, "station": "SHT"}],
     note: {"zh": "跨境巴士及小巴車費、班次以營辦商公布為準。", "en": "Coach and minibus fares and times are set by the operators.", "ja": "越境バス・ミニバスの運賃・時刻は事業者の発表に従ってください。"}, source_url: "https://www.info.gov.hk/gia/general/202610/07/P2026100700238.htm", is_active: true, sort: 10 },
   { id: 'bg-hzmb', port_key: "hzmb", name: {"zh": "港珠澳大橋香港口岸（往澳門／珠海）", "en": "HZMB Hong Kong Port (Macao / Zhuhai)", "ko": "강주아오 대교 홍콩 커우안", "ja": "港珠澳大橋香港口岸（マカオ／珠海）"}, hours: {"zh": "24 小時", "en": "24 hours", "ko": "24시간", "ja": "24時間"}, is_24h: true, close_time: null, station: null,
-    options: [{"mode": "bus", "tag": "dawn", "title": {"zh": "城巴 NA29（清晨）", "en": "Citybus NA29 (early morning)", "ja": "シティバスNA29（早朝）"}, "text": {"zh": "寶琳開出，經九龍灣站（觀塘道）及鑽石山站（龍翔道）往機場／港珠澳大橋；往口岸方向只有寶琳 04:15、05:05 兩班，全程 $52。適合清晨出發，不適合散場後即時乘搭。", "en": "From Po Lam via Kowloon Bay Station (Kwun Tong Road) and Diamond Hill Station (Lung Cheung Road) to the Airport / HZMB. Only two departures towards the port (Po Lam 04:15 and 05:05), $52. Good for early mornings, not right after an event.", "ja": "寶琳発、九龍灣駅（観塘道）・鑽石山駅（龍翔道）経由で空港／港珠澳大橋へ。口岸方面は寶琳04:15・05:05の2本のみ、$52。早朝向けで、終演直後には不向き。"}, "station": "DIH"}, {"mode": "warn", "tag": "note", "title": {"zh": "⚠️ NA21 方向相反", "en": "⚠️ NA21 runs the other way", "ja": "⚠️ NA21は逆方向"}, "text": {"zh": "通宵機場巴士 NA21 只由港珠澳大橋／機場開往旺角，不能用來前往口岸。", "en": "Overnight route NA21 only runs from HZMB / Airport to Mong Kok — it cannot take you to the port.", "ja": "深夜空港バスNA21は港珠澳大橋／空港→旺角の片方向のみで、口岸へは行けません。"}}],
+    options: [{"mode": "bus", "tag": "dawn", "title": {"zh": "城巴 NA29（清晨）", "en": "Citybus NA29 (early morning)", "ja": "シティバスNA29（早朝）"}, "text": {"zh": "寶琳開出，經九龍灣站（觀塘道）及鑽石山站（龍翔道）往機場／港珠澳大橋；往口岸方向只有寶琳 04:15、05:05 兩班，全程 $52。適合清晨出發，不適合散場後即時乘搭。", "en": "From Po Lam via Kowloon Bay Station (Kwun Tong Road) and Diamond Hill Station (Lung Cheung Road) to the Airport / HZMB. Only two departures towards the port (Po Lam 04:15 and 05:05), $52. Good for early mornings, not right after an event.", "ja": "寶琳発、九龍灣駅（観塘道）・鑽石山駅（龍翔道）経由で空港／港珠澳大橋へ。口岸方面は寶琳04:15・05:05の2本のみ、$52。早朝向けで、終演直後には不向き。"}, "station": "DIH"}, {"mode": "warn", "tag": "note", "title": {"zh": "NA21 方向相反", "en": "NA21 runs the other way", "ja": "NA21は逆方向"}, "text": {"zh": "通宵機場巴士 NA21 只由港珠澳大橋／機場開往旺角，不能用來前往口岸。", "en": "Overnight route NA21 only runs from HZMB / Airport to Mong Kok — it cannot take you to the port.", "ja": "深夜空港バスNA21は港珠澳大橋／空港→旺角の片方向のみで、口岸へは行けません。"}}],
     note: {"zh": "散場後深夜前往，現時最直接的方法是的士。", "en": "Late at night after an event, a taxi is currently the most direct option.", "ja": "終演後の深夜はタクシーが最も直接的です。"}, source_url: "https://www.681busterminal.com/na29.html", is_active: true, sort: 20 },
   { id: 'bg-shenzhen_bay', port_key: "shenzhen_bay", name: {"zh": "深圳灣口岸", "en": "Shenzhen Bay Port", "ko": "선전만 커우안", "ja": "深圳湾口岸"}, hours: {"zh": "旅客 06:30–24:00", "en": "Passengers 06:30–24:00", "ko": "여객 06:30–24:00", "ja": "旅客 06:30〜24:00"}, is_24h: false, close_time: "24:00", station: "YUL",
-    options: [{"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 元朗站 ➔ B2", "en": "Tuen Ma Line ➔ Yuen Long ➔ B2", "ja": "屯馬線 ➔ 元朗駅 ➔ B2"}, "text": {"zh": "元朗港鐵站開出，參考車費 $15.8。", "en": "From Yuen Long Station, reference fare $15.8.", "ja": "元朗駅発、参考運賃$15.8。"}, "station": "YUL"}, {"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 天水圍站 ➔ B2P", "en": "Tuen Ma Line ➔ Tin Shui Wai ➔ B2P", "ja": "屯馬線 ➔ 天水圍駅 ➔ B2P"}, "text": {"zh": "B2P 由天水圍天慈邨開出（由天水圍站轉乘輕鐵或步行前往），參考車費 $11.3。", "en": "B2P starts at Tin Tsz Estate, Tin Shui Wai (Light Rail or walk from the station), reference fare $11.3.", "ja": "B2Pは天水圍天慈邨発（駅から輕鐵か徒歩）、参考運賃$11.3。"}, "station": "TIS"}, {"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 屯門站 ➔ B3X", "en": "Tuen Ma Line ➔ Tuen Mun ➔ B3X", "ja": "屯馬線 ➔ 屯門駅 ➔ B3X"}, "text": {"zh": "B3X 由屯門市中心開出，參考車費 $16.5。", "en": "B3X starts at Tuen Mun Town Centre, reference fare $16.5.", "ja": "B3Xは屯門市中心発、参考運賃$16.5。"}, "station": "TUM"}],
+    options: [{"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 → 元朗站 → B2", "en": "Tuen Ma Line → Yuen Long → B2", "ja": "屯馬線 → 元朗駅 → B2"}, "text": {"zh": "元朗港鐵站開出，參考車費 $15.8。", "en": "From Yuen Long Station, reference fare $15.8.", "ja": "元朗駅発、参考運賃$15.8。"}, "station": "YUL"}, {"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 → 天水圍站 → B2P", "en": "Tuen Ma Line → Tin Shui Wai → B2P", "ja": "屯馬線 → 天水圍駅 → B2P"}, "text": {"zh": "B2P 由天水圍天慈邨開出（由天水圍站轉乘輕鐵或步行前往），參考車費 $11.3。", "en": "B2P starts at Tin Tsz Estate, Tin Shui Wai (Light Rail or walk from the station), reference fare $11.3.", "ja": "B2Pは天水圍天慈邨発（駅から輕鐵か徒歩）、参考運賃$11.3。"}, "station": "TIS"}, {"mode": "bus", "tag": "rail", "title": {"zh": "屯馬綫 → 屯門站 → B3X", "en": "Tuen Ma Line → Tuen Mun → B3X", "ja": "屯馬線 → 屯門駅 → B3X"}, "text": {"zh": "B3X 由屯門市中心開出，參考車費 $16.5。", "en": "B3X starts at Tuen Mun Town Centre, reference fare $16.5.", "ja": "B3Xは屯門市中心発、参考運賃$16.5。"}, "station": "TUM"}],
     note: {"zh": "口岸 24:00 關閉，請預留排隊過關時間。", "en": "The port closes at midnight; allow time for immigration queues.", "ja": "口岸は24:00閉鎖。出入境の待ち時間を見込んでください。"}, source_url: "https://www.moneyhero.com.hk/zh/travel-insurance/blog/shenzhen-bay-port-transport", is_active: true, sort: 30 },
   { id: 'bg-lowu', port_key: "lowu", name: {"zh": "羅湖口岸", "en": "Lo Wu Control Point", "ko": "로우 커우안", "ja": "羅湖口岸"}, hours: {"zh": "06:30–24:00", "en": "06:30–24:00", "ko": "06:30–24:00", "ja": "06:30〜24:00"}, is_24h: false, close_time: "24:00", station: "LOW",
-    options: [{"mode": "rail", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 紅磡 ➔ 東鐵綫往羅湖", "en": "Tuen Ma Line ➔ Hung Hom ➔ East Rail Line to Lo Wu", "ja": "屯馬線 ➔ 紅磡 ➔ 東鉄線で羅湖"}, "text": {"zh": "東鐵綫往羅湖尾班車約 23:00 由金鐘開出（以港鐵公布為準）。", "en": "The last East Rail train to Lo Wu leaves Admiralty around 23:00 (check MTR notices).", "ja": "東鉄線羅湖行き終電は金鐘発23:00頃（MTR発表を確認）。"}, "station": "LOW"}],
+    options: [{"mode": "rail", "tag": "rail", "title": {"zh": "屯馬綫 → 紅磡 → 東鐵綫往羅湖", "en": "Tuen Ma Line → Hung Hom → East Rail Line to Lo Wu", "ja": "屯馬線 → 紅磡 → 東鉄線で羅湖"}, "text": {"zh": "東鐵綫往羅湖尾班車約 23:00 由金鐘開出（以港鐵公布為準）。", "en": "The last East Rail train to Lo Wu leaves Admiralty around 23:00 (check MTR notices).", "ja": "東鉄線羅湖行き終電は金鐘発23:00頃（MTR発表を確認）。"}, "station": "LOW"}],
     note: {"zh": "", "en": "", "ja": ""}, source_url: "https://hk.trip.com/guide/transport/luohu-port-opening-hours.html", is_active: true, sort: 40 },
   { id: 'bg-lmc', port_key: "lmc", name: {"zh": "落馬洲（福田）口岸", "en": "Lok Ma Chau (Futian) Control Point", "ko": "록마차우(푸톈) 커우안", "ja": "落馬洲（福田）口岸"}, hours: {"zh": "06:30–22:30", "en": "06:30–22:30", "ko": "06:30–22:30", "ja": "06:30〜22:30"}, is_24h: false, close_time: "22:30", station: "LMC",
-    options: [{"mode": "rail", "tag": "rail", "title": {"zh": "屯馬綫 ➔ 紅磡 ➔ 東鐵綫往落馬洲", "en": "Tuen Ma Line ➔ Hung Hom ➔ East Rail Line to Lok Ma Chau", "ja": "屯馬線 ➔ 紅磡 ➔ 東鉄線で落馬洲"}, "text": {"zh": "口岸 22:30 關閉，較羅湖早。", "en": "Closes at 22:30, earlier than Lo Wu.", "ja": "22:30閉鎖で羅湖より早い。"}, "station": "LMC"}],
+    options: [{"mode": "rail", "tag": "rail", "title": {"zh": "屯馬綫 → 紅磡 → 東鐵綫往落馬洲", "en": "Tuen Ma Line → Hung Hom → East Rail Line to Lok Ma Chau", "ja": "屯馬線 → 紅磡 → 東鉄線で落馬洲"}, "text": {"zh": "口岸 22:30 關閉，較羅湖早。", "en": "Closes at 22:30, earlier than Lo Wu.", "ja": "22:30閉鎖で羅湖より早い。"}, "station": "LMC"}],
     note: {"zh": "", "en": "", "ja": ""}, source_url: "https://hk.trip.com/guide/transport/luohu-port-opening-hours.html", is_active: true, sort: 50 },
 ];
 const useBorderGuides = () => useLiveTable('border_guides', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_BORDER);
@@ -2827,7 +2877,6 @@ function leaveStatus(by, now) {
   if (n < 6 * 60 + 30) return null;
   return by - n; // 正數 = 仲有幾多分鐘
 }
-const MODE_ICON = { bus: '🚌', coach: '🛂', gmb: '🚐', rail: '🚆', warn: '⚠️' };
 const TAG_STYLE = {
   '24h': { bg: '#E6F4EA', fg: '#0B6B3A', zh: '24 小時', en: '24 h', ko: '24시간', ja: '24時間' },
   night: { bg: '#E8E5FF', fg: '#3B2F9E', zh: '通宵', en: 'Overnight', ko: '심야', ja: '深夜' },
@@ -2871,7 +2920,7 @@ function LateNightBorderGuide({ t, lang }) {
     <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <button onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center justify-between gap-2 text-left">
         <span>
-          <span className="flex items-center gap-2 text-base font-bold">🌙 {t.blTitle}</span>
+          <span className="flex items-center gap-2 text-base font-bold">{t.blTitle}</span>
           <span className="mt-0.5 block text-xs text-[var(--muted)]">{t.blIntro}</span>
         </span>
         <ChevronDown size={18} className={`shrink-0 text-[var(--muted)] transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -2887,7 +2936,7 @@ function LateNightBorderGuide({ t, lang }) {
                 <button onClick={() => setPort(isOpen ? '' : p.port_key)} aria-expanded={isOpen} className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left">
                   <span className="flex flex-wrap items-center gap-2">
                     <b className="text-sm">{jx(p.name, lang)}</b>
-                    <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={p.is_24h ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>🕐 {jx(p.hours, lang)}</span>
+                    <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={p.is_24h ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>{jx(p.hours, lang)}</span>
                   </span>
                   <ChevronDown size={16} className={`shrink-0 text-[var(--muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -2896,14 +2945,14 @@ function LateNightBorderGuide({ t, lang }) {
                     {opts.map((o, i) => (
                       <div key={i} className={`rounded-lg px-3 py-2 ${o.mode === 'warn' ? 'bg-red-50 text-red-800' : 'bg-[var(--surface-2)]'}`}>
                         <p className="flex flex-wrap items-center gap-1.5 text-sm font-bold">
-                          <span aria-hidden>{MODE_ICON[o.mode] || '🚏'}</span>{jx(o.title, lang)}
+                          {jx(o.title, lang)}
                           {TAG_STYLE[o.tag] && <span className="rounded-lg px-1.5 py-0.5 text-xs font-bold" style={{ background: TAG_STYLE[o.tag].bg, color: TAG_STYLE[o.tag].fg }}>{tx(TAG_STYLE[o.tag], lang)}</span>}
                         </p>
                         <p className="mt-1 text-xs leading-relaxed">{jx(o.text, lang)}</p>
                         {o.station && o.station !== 'KAT' && ST[o.station] && <div className="mt-1.5 text-xs"><RouteChain code={o.station} lang={lang} t={t} /></div>}
                       </div>
                     ))}
-                    {jx(p.note, lang) && <p className="text-xs text-[var(--muted)]">ℹ️ {jx(p.note, lang)}</p>}
+                    {jx(p.note, lang) && <p className="text-xs text-[var(--muted)]">ℹ {jx(p.note, lang)}</p>}
                     {p.source_url && <a href={p.source_url} target="_blank" rel="noopener noreferrer" className="-my-1.5 inline-flex min-h-[36px] items-center gap-1 py-2 text-xs font-semibold underline"><ExternalLink size={12} />{t.bxSource}</a>}
                   </div>
                 )}
@@ -3086,7 +3135,7 @@ const HOSP_FROM_KAT = [
   { op: 'CTB', route: '22S', exit: 'C/D', zh: '於 AIRSIDE 公共運輸交匯處上車（經 C 或 D 出口）。啟德站 ↔ 啟德郵輪碼頭（循環線）；星期一至五 10:30–19:30 設短途班次，由啟德站直達啟德醫院及香港兒童醫院。', en: 'Board at the AIRSIDE public transport interchange (via Exit C or D). Kai Tak Station ↔ Kai Tak Cruise Terminal (circular). Mon–Fri 10:30–19:30 short trips run from Kai Tak Station to both hospitals.' },
   { op: 'CTB', route: '22M', exit: 'A', zh: '啟德郵輪碼頭 ↔ 土瓜灣（循環線），途經啟德站及兩間醫院。', en: 'Kai Tak Cruise Terminal ↔ To Kwa Wan (circular), via Kai Tak Station and both hospitals.' },
   { op: 'GMB', route: '88A', exit: null, zh: '黃大仙站 ↔ 啟德醫院（循環線），途經啟德站一帶。', en: 'Wong Tai Sin Station ↔ Kai Tak Hospital (circular), via the Kai Tak Station area.' },
-  { op: 'REHAB', route: '♿', exit: 'A', zh: '復康穿梭巴士站，供有需要人士往返兩間醫院。', en: 'Rehabus feeder stop to both hospitals for passengers who need it.' },
+  { op: 'REHAB', route: '', exit: 'A', zh: '復康穿梭巴士站，供有需要人士往返兩間醫院。', en: 'Rehabus feeder stop to both hospitals for passengers who need it.' },
 ];
 const HOSP_OTHER = {
   zh: '城巴 20A、20X、22；九巴 5R、X6C、15A，以及九巴 11A、17A 往啟德醫院特別班次；專線小巴 86（九龍灣站 A 出口，約 10 分鐘）、22A、68、90A、90B。',
@@ -3267,16 +3316,15 @@ function TransitEtaBadges({ targetKey, t, lang }) {
     <div className="mt-3 space-y-1.5 rounded-lg border border-[var(--border)] p-2.5">
       <p className="flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
         <span>{t.etaTitle}</span>
-        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.hospLive}</span>}
+        {status === 'live' && <span className="flex items-center gap-1 font-semibold" style={{ color: 'var(--ok)' }}><span className="h-1.5 w-1.5 kt-live-dot rounded-full" style={{ background: 'var(--ok)' }} />{t.hospLive}</span>}
       </p>
       {status === 'loading' && (
         <div className="space-y-1.5" aria-label={t.hospLoading}>
-          {[0, 1].map((i) => <div key={i} className="h-6 animate-pulse rounded-lg bg-[var(--surface-2)]" />)}
+          {[0, 1].map((i) => <div key={i} className="h-6 rounded-lg bg-[var(--surface-2)]" />)}
         </div>
       )}
       {status !== 'loading' && shown.length === 0 && <p className="text-xs text-[var(--muted)]">{t.etaNone}</p>}
       {status !== 'loading' && shown.map((r) => {
-        const icon = r.op === 'GMB' ? '🚐' : '🚌';
         const name = r.op === 'GMB' ? fmt(t.etaGmb, { r: r.route }) : fmt(t.etaCtb, { r: r.route });
         let body;
         if (status === 'offline' || !r.live || r.live.etas === null) body = <span className="text-[var(--muted)]">{t.etaFallback}</span>;
@@ -3284,7 +3332,7 @@ function TransitEtaBadges({ targetKey, t, lang }) {
         else body = <b className="num" style={{ color: 'var(--tml)' }}>{r.live.etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>;
         return (
           <div key={r.key} className="rounded-lg bg-[var(--surface-2)] px-2 py-1.5 text-xs">
-            <p className="flex flex-wrap items-baseline gap-x-1.5"><span>{icon} {name}:</span>{body}</p>
+            <p className="flex flex-wrap items-baseline gap-x-1.5"><span>{name}:</span>{body}</p>
             {r.live && r.live.stop && <p className="mt-0.5 text-xs text-[var(--muted)]">{fmt(t.hospAtStop, { stop: zh ? r.live.stop.zh : r.live.stop.en })}</p>}
           </div>
         );
@@ -3312,7 +3360,7 @@ function HospitalGuide({ t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
   const { data: live, status, now } = useTransitEta('hosp');
   const liveLine = (route) => {
-    if (status === 'loading') return <span className="inline-block h-4 w-24 animate-pulse rounded-lg bg-[var(--border)]" aria-label={t.hospLoading} />;
+    if (status === 'loading') return <span className="inline-block h-4 w-24 rounded-lg bg-[var(--border)]" aria-label={t.hospLoading} />;
     const op = route === '88A' ? 'GMB' : 'CTB';
     const r = live && live[`${op}|${route}`];
     if (status === 'offline' || !r || r.etas === null) return <span className="text-[var(--muted)]">{t.etaFallback}</span>;
@@ -3328,7 +3376,7 @@ function HospitalGuide({ t, lang }) {
       </div>
       <p className="flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
         <span>{t.hospFromKat}</span>
-        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.hospLive}</span>}
+        {status === 'live' && <span className="flex items-center gap-1 font-semibold" style={{ color: 'var(--ok)' }}><span className="h-1.5 w-1.5 kt-live-dot rounded-full" style={{ background: 'var(--ok)' }} />{t.hospLive}</span>}
       </p>
       <ul className="space-y-1.5">
         {HOSP_FROM_KAT.map((r) => {
@@ -3336,13 +3384,13 @@ function HospitalGuide({ t, lang }) {
           const stop = live && live[`${op}|${r.route}`] && live[`${op}|${r.route}`].stop;
           return (
             <li key={r.op + r.route} className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-2">
-              <span className="num shrink-0 rounded-lg px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
+              <span className="num shrink-0 rounded-lg px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.op === 'REHAB' ? <Accessibility size={16} aria-label={t.opREHAB} /> : r.route}</span>
               <span className="min-w-0 flex-1 text-xs leading-relaxed">
                 <b>{t['op' + r.op]}</b>　{zh ? r.zh : r.en}
                 <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
                   {r.exit ? <>{r.exit.split('/').map((e) => <ExitPlate key={e} exit={e} />)}{fmt(t.hospBoard, { exit: exitJoin(r.exit, lang) })}</> : (stop ? fmt(t.hospAtStop, { stop: zh ? stop.zh : stop.en }) : t.hospSign)}
                 </span>
-                {r.op !== 'REHAB' && <span className="mt-1 block">{r.op === 'GMB' ? '🚐' : '🚌'} {liveLine(r.route)}</span>}
+                {r.op !== 'REHAB' && <span className="mt-1 block">{r.op === 'GMB' ? '' : ''} {liveLine(r.route)}</span>}
               </span>
             </li>
           );
@@ -3367,7 +3415,7 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
   const local = FX_LOCAL_IDS.map((id) => items.find((x) => x.id === id)).filter(Boolean);
   return (
     <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-      <h2 className="flex items-center gap-2 text-lg font-bold"><Banknote size={19} />💱 {t.fxTitle}</h2>
+      <h2 className="flex items-center gap-2 text-lg font-bold"><Banknote size={19} />{t.fxTitle}</h2>
       <h3 className="mt-3 text-sm font-bold">{t.fxLocal}</h3>
       <p className="mt-1 text-xs text-[var(--muted)]">{t.fxLocalNote}</p>
       <ul className="mt-2 space-y-1.5">
@@ -3410,7 +3458,7 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
  *  v10：Supabase 直連資料（restaurants／industrial_buildings／route_videos）
  * ===================================================================== */
 
-// 🎥 醫院實景導航影片（優先次序：Supabase route_videos 表 > 環境變數 > 下面常數）
+// 醫院實景導航影片（優先次序：Supabase route_videos 表 > 環境變數 > 下面常數）
 const YOUTUBE_URL_EXIT_C = ENV.VITE_YOUTUBE_URL_EXIT_C || 'https://youtu.be/t8FljCGZ7V4';
 const YOUTUBE_URL_EXIT_D = ENV.VITE_YOUTUBE_URL_EXIT_D || 'https://youtu.be/_G5zDSUqBxo';
 
@@ -3530,7 +3578,7 @@ function mergeDining(items, rows) {
   return [...items, ...(rows || []).filter((r) => !dup(r)).map(rowToDiningItem)];
 }
 
-/* ============================ 🎥 YouTube 播放器 ============================ */
+/* ============================ YouTube 播放器 ============================ */
 function youtubeId(url) {
   if (!url) return null;
   const m = String(url).match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/);
@@ -3561,7 +3609,7 @@ function YouTubeModal({ video, onClose, t }) {
   );
 }
 
-/* ============================ 🏥 去啟德醫院／香港兒童醫院：實景導航 ============================ */
+/* ============================ 去啟德醫院／香港兒童醫院：實景導航 ============================ */
 const HOSP_VIDEO_ROUTES = [
   { key: 'hosp_exit_c', exit: 'C', btn: 'vidBtnC',
     steps: { zh: ['經 C 出口出站', '前往 AIRSIDE 公共運輸交匯處', '乘搭城巴 22S', '直達啟德醫院／香港兒童醫院'], en: ['Leave by Exit C', 'Go to the AIRSIDE public transport interchange', 'Take Citybus 22S', 'Straight to Kai Tak Hospital / HK Children\'s Hospital'] } },
@@ -3583,7 +3631,7 @@ function HospitalVideoRoutes({ t, lang, compact }) {
       <button disabled={!ok} onClick={() => setVideo({ url, title: t[r.btn] })}
         className={`flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition-opacity ${ok ? 'text-white hover:opacity-90' : 'cursor-not-allowed bg-[var(--surface-2)] text-[var(--muted)]'}`}
         style={ok ? { background: '#C8102E' } : undefined}>
-        🎥 {ok ? t[r.btn] : t.vidSoon}
+        {ok ? t[r.btn] : t.vidSoon}
       </button>
     );
   };
@@ -3622,7 +3670,7 @@ function HospitalVideoRoutes({ t, lang, compact }) {
   );
 }
 
-/* ============================ 🏭 新蒲崗工廈區 ============================ */
+/* ============================ 新蒲崗工廈區 ============================ */
 const SPK_EXIT_C = { lat: 22.3298, lng: 114.1979 }; // 啟德站 C 出口（估算）
 const HIGHLIGHT_TYPES = {
   canteen: { zh: '食堂', en: 'Canteen', ko: '구내식당', ja: '食堂' },
@@ -3663,7 +3711,7 @@ function SpkModule({ t, lang, q }) {
         <span>{t.spkFrom}</span><ExitPlate exit="C" /><ArrowRight size={16} /><span>{t.spkBridge}</span><ArrowRight size={16} /><Footprints size={16} /><span>{t.spkWalk}</span>
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">{t.spkNote}</p>
-      {status === 'loading' && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-[var(--surface)]" />)}</div>}
+      {status === 'loading' && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-36 rounded-2xl bg-[var(--surface)]" />)}</div>}
       {status !== 'loading' && list.length === 0 && <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.noResult}</p>}
       <motion.div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <AnimatePresence mode="popLayout">
@@ -3704,7 +3752,7 @@ function SpkModule({ t, lang, q }) {
                 </div>
                 <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
                   <a href={mapsUrl(`${b.name} 新蒲崗`)} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1 min-h-[44px] rounded-xl px-2 py-2.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>📍 {t.navigate}</a>
+                    className="flex items-center justify-center gap-1 min-h-[44px] rounded-xl px-2 py-2.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>{t.navigate}</a>
                   <a href={mapsUrl(`餐廳 ${b.name} 新蒲崗`)} target="_blank" rel="noopener noreferrer"
                     className="flex items-center justify-center gap-1 rounded-xl border border-[var(--border)] min-h-[44px] px-2 py-2.5 text-xs font-bold hover:border-[var(--ink)]"><UtensilsCrossed size={12} />{t.spkFindFood}</a>
                 </div>
@@ -3720,9 +3768,9 @@ function SpkModule({ t, lang, q }) {
 
 const UI_V13 = {
   zh: {
-    vidTitle: '去啟德醫院／香港兒童醫院：實景導航', vidRoute: '經 {exit} 出口 ➡️ 轉乘 22S 巴士', vidBtnC: '觀看 Exit C 實景導航影片', vidBtnD: '觀看 Exit D 實景導航影片',
+    vidTitle: '去啟德醫院／香港兒童醫院：實景導航', vidRoute: '經 {exit} 出口 → 轉乘 22S 巴士', vidBtnC: '觀看 Exit C 實景導航影片', vidBtnD: '觀看 Exit D 實景導航影片',
     vidSoon: '導航影片即將推出', vidOpenYt: '在 YouTube 開啟', vidNote: '22S 喺 AIRSIDE 公共運輸交匯處上車，可經 C 或 D 出口前往；星期一至五 10:30–19:30 設短途班次直達兩間醫院。AIRSIDE 公共運輸交匯處嘅巴士及小巴，均可經 C 或 D 出口前往。',
-    spkCat: '新蒲崗工廈區', spkSearchPh: '🔍 搜尋工廈名稱、地址、食堂、CAFE、開倉店…', spkFrom: '啟德站', spkBridge: '經太子道東行人天橋', spkWalk: '步行約 3–6 分鐘到達工廈區',
+    spkCat: '新蒲崗工廈區', spkSearchPh: '搜尋工廈名稱、地址、食堂、CAFE、開倉店…', spkFrom: '啟德站', spkBridge: '經太子道東行人天橋', spkWalk: '步行約 3–6 分鐘到達工廈區',
     spkNote: '3–6 分鐘為到達新蒲崗工廈區南面（太子道東一帶）的時間；北面大廈（如旺景、萬廸廣場）路程較遠，由鑽石山站前往更近。港鐵官方指南亦列明可經 B1／B2 出口行人天橋前往新蒲崗。',
     spkIndustrial: '工業大廈', spkCommercial: '商業大廈', spkAddrTbc: '地址待核實', spkWalkFrom: 'C 出口步行約 {m} 分鐘（估算）',
     spkInside: '大廈內：食堂／CAFE／工作室／開倉店', spkNoShops: '暫未收錄；每週會按食環署持牌食肆名單自動加入大廈內的食肆及工廠食堂，亦可撳「搵大廈內食肆」在 Google 地圖查看。', spkFindFood: '搵大廈內食肆',
@@ -3730,9 +3778,9 @@ const UI_V13 = {
     syncedBadge: '自動收錄', srcFehd: '資料來源：食環署持牌食肆名單', srcFehdShort: '食環署',
   },
   en: {
-    vidTitle: "To Kai Tak Hospital / HK Children's Hospital: video guide", vidRoute: 'Exit {exit} ➡️ Citybus 22S', vidBtnC: 'Watch the Exit C video guide', vidBtnD: 'Watch the Exit D video guide',
+    vidTitle: "To Kai Tak Hospital / HK Children's Hospital: video guide", vidRoute: 'Exit {exit} → Citybus 22S', vidBtnC: 'Watch the Exit C video guide', vidBtnD: 'Watch the Exit D video guide',
     vidSoon: 'Video coming soon', vidOpenYt: 'Open on YouTube', vidNote: 'Board 22S at the AIRSIDE public transport interchange, reached via Exit C or D. Mon–Fri 10:30–19:30 short trips go straight to both hospitals. All buses and minibuses at the AIRSIDE interchange can be reached via Exit C or D.',
-    spkCat: 'San Po Kong industrial area', spkSearchPh: '🔍 Search buildings, addresses, canteens, cafés, warehouse sales…', spkFrom: 'Kai Tak Station', spkBridge: 'Prince Edward Road East footbridge', spkWalk: 'about 3–6 min to the industrial area',
+    spkCat: 'San Po Kong industrial area', spkSearchPh: 'Search buildings, addresses, canteens, cafés, warehouse sales…', spkFrom: 'Kai Tak Station', spkBridge: 'Prince Edward Road East footbridge', spkWalk: 'about 3–6 min to the industrial area',
     spkNote: '3–6 min reaches the southern edge of the industrial area (Prince Edward Road East). Northern buildings (e.g. Wong King, Maxgrand Plaza) are farther and closer to Diamond Hill Station. The MTR leaflet also lists the footbridge from Exits B1/B2.',
     spkIndustrial: 'Industrial building', spkCommercial: 'Commercial building', spkAddrTbc: 'Address to be confirmed', spkWalkFrom: 'About {m} min walk from Exit C (estimate)',
     spkInside: 'Inside: canteens / cafés / studios / warehouse sales', spkNoShops: 'None listed yet. Eateries and factory canteens are added weekly from the FEHD licensed restaurant list; tap "Find food inside" to check Google Maps.', spkFindFood: 'Find food inside',
@@ -3740,9 +3788,9 @@ const UI_V13 = {
     syncedBadge: 'Auto-added', srcFehd: 'Source: FEHD licensed restaurants list', srcFehdShort: 'FEHD',
   },
   ko: {
-    vidTitle: '카이탁 병원·홍콩 아동병원 가는 길: 영상 안내', vidRoute: '{exit} 출구 ➡️ 시티버스 22S', vidBtnC: 'C 출구 영상 안내 보기', vidBtnD: 'D 출구 영상 안내 보기',
+    vidTitle: '카이탁 병원·홍콩 아동병원 가는 길: 영상 안내', vidRoute: '{exit} 출구 → 시티버스 22S', vidBtnC: 'C 출구 영상 안내 보기', vidBtnD: 'D 출구 영상 안내 보기',
     vidSoon: '영상 준비 중', vidOpenYt: 'YouTube에서 열기', vidNote: '22S는 AIRSIDE 대중교통 환승센터에서 승차하며 C 또는 D 출구로 갈 수 있습니다. 월–금 10:30–19:30 두 병원 직행 단거리 운행이 있습니다.',
-    spkCat: '산포콩 공업빌딩 지구', spkSearchPh: '🔍 빌딩 이름, 주소, 구내식당, 카페 검색…', spkFrom: '카이탁역', spkBridge: '프린스 에드워드 로드 이스트 육교', spkWalk: '도보 약 3–6분',
+    spkCat: '산포콩 공업빌딩 지구', spkSearchPh: '빌딩 이름, 주소, 구내식당, 카페 검색…', spkFrom: '카이탁역', spkBridge: '프린스 에드워드 로드 이스트 육교', spkWalk: '도보 약 3–6분',
     spkNote: '3–6분은 공업지구 남쪽 끝까지의 시간입니다. 북쪽 빌딩은 더 멀며 다이아몬드힐역에서 더 가깝습니다. MTR 안내에는 B1/B2 출구 육교 경로도 있습니다.',
     spkIndustrial: '공업빌딩', spkCommercial: '상업빌딩', spkAddrTbc: '주소 확인 필요', spkWalkFrom: 'C 출구에서 도보 약 {m}분 (추정)',
     spkInside: '빌딩 내: 구내식당·카페·스튜디오·창고 세일', spkNoShops: '아직 등록된 곳이 없습니다. 매주 자동 동기화로 추가됩니다.', spkFindFood: '빌딩 내 식당 찾기',
@@ -3750,9 +3798,9 @@ const UI_V13 = {
     syncedBadge: '자동 추가', srcFehd: '출처: 홍콩 식품환경위생서 허가 식당 목록', srcFehdShort: 'FEHD',
   },
   ja: {
-    vidTitle: '啓徳病院・香港小児病院への行き方：動画ガイド', vidRoute: '{exit}出口 ➡️ シティバス22S', vidBtnC: 'C出口の動画ガイドを見る', vidBtnD: 'D出口の動画ガイドを見る',
+    vidTitle: '啓徳病院・香港小児病院への行き方：動画ガイド', vidRoute: '{exit}出口 → シティバス22S', vidBtnC: 'C出口の動画ガイドを見る', vidBtnD: 'D出口の動画ガイドを見る',
     vidSoon: '動画は近日公開', vidOpenYt: 'YouTube で開く', vidNote: '22SはAIRSIDE公共交通ターミナルで乗車（C出口またはD出口から）。月–金10:30–19:30は両病院へ直行する区間便あり。',
-    spkCat: '新蒲崗工業ビル地区', spkSearchPh: '🔍 ビル名・住所・食堂・カフェで検索…', spkFrom: '啓徳駅', spkBridge: '太子道東の歩道橋経由', spkWalk: '徒歩約3–6分',
+    spkCat: '新蒲崗工業ビル地区', spkSearchPh: 'ビル名・住所・食堂・カフェで検索…', spkFrom: '啓徳駅', spkBridge: '太子道東の歩道橋経由', spkWalk: '徒歩約3–6分',
     spkNote: '3–6分は工業地区南端までの目安です。北側のビルは遠く、鑽石山駅からの方が近いです。MTR公式案内ではB1/B2出口の歩道橋ルートも記載されています。',
     spkIndustrial: '工業ビル', spkCommercial: '商業ビル', spkAddrTbc: '住所未確認', spkWalkFrom: 'C出口から徒歩約{m}分（目安）',
     spkInside: 'ビル内：食堂・カフェ・スタジオ・倉庫セール', spkNoShops: '未登録です。毎週の自動同期で追加されます。', spkFindFood: 'ビル内の飲食店を探す',
@@ -3762,7 +3810,7 @@ const UI_V13 = {
 };
 Object.keys(UI_V13).forEach((l) => Object.assign(UI[l], UI_V13[l]));
 
-/* ============================ 🚐 綠色專線小巴 ============================ */
+/* ============================ 綠色專線小巴 ============================ */
 // Supabase 連線失敗或未設定時使用的備用資料（與 02_minibuses.sql 初始資料一致）
 // 啟德一帶全部綠色專線小巴（2026-10-09 根據運輸署專線小巴開放數據逐站核對；車費來自運輸署交通通告）
 // exit_code 為 null = 不經啟德站（例如只在醫院一帶上落的路線）
@@ -3854,12 +3902,12 @@ const useMinibuses = () => useLiveTable('minibuses', (q) => q.select('*').eq('is
 
 // 篩選標籤
 const GMB_CAT_LABEL = {
-  'AIRSIDE/協調道': { zh: '🛍️ AIRSIDE／協調道', en: '🛍️ AIRSIDE / Concorde Rd', ko: '🛍️ AIRSIDE·콩코드 로드', ja: '🛍️ AIRSIDE／協調道' },
-  '啟德體育園': { zh: '🏟️ 啟德體育園', en: '🏟️ Kai Tak Sports Park', ko: '🏟️ 카이탁 스포츠 파크', ja: '🏟️ 啓徳スポーツパーク' },
-  '醫院': { zh: '🏥 啟德／兒童醫院', en: '🏥 Kai Tak / Children\'s Hospital', ko: '🏥 카이탁·아동병원', ja: '🏥 啓徳病院／小児病院' },
-  '跑道區/承豐道': { zh: '🌊 跑道區／承豐道', en: '🌊 Runway / Shing Fung Rd', ko: '🌊 활주로 지구·싱풍 로드', ja: '🌊 ランウェイ／承豊道' },
-  '新蒲崗工廈區': { zh: '🏭 新蒲崗工廈區', en: '🏭 San Po Kong industrial area', ko: '🏭 산포콩 공업지구', ja: '🏭 新蒲崗工場区' },
-  '區內接駁': { zh: '🔁 區內接駁', en: '🔁 Local feeder', ko: '🔁 지역 연계', ja: '🔁 地区内連絡' },
+  'AIRSIDE/協調道': { zh: 'AIRSIDE／協調道', en: 'AIRSIDE / Concorde Rd', ko: 'AIRSIDE·콩코드 로드', ja: 'AIRSIDE／協調道' },
+  '啟德體育園': { zh: '啟德體育園', en: 'Kai Tak Sports Park', ko: '카이탁 스포츠 파크', ja: '啓徳スポーツパーク' },
+  '醫院': { zh: '啟德／兒童醫院', en: 'Kai Tak / Children\'s Hospital', ko: '카이탁·아동병원', ja: '啓徳病院／小児病院' },
+  '跑道區/承豐道': { zh: '跑道區／承豐道', en: 'Runway / Shing Fung Rd', ko: '활주로 지구·싱풍 로드', ja: 'ランウェイ／承豊道' },
+  '新蒲崗工廈區': { zh: '新蒲崗工廈區', en: 'San Po Kong industrial area', ko: '산포콩 공업지구', ja: '新蒲崗工場区' },
+  '區內接駁': { zh: '區內接駁', en: 'Local feeder', ko: '지역 연계', ja: '地区内連絡' },
 };
 // 舊版分類名稱（v11）兼容
 const GMB_CAT_ALIAS = { '醫院專線': '醫院', '郵輪碼頭/跑道區': '跑道區/承豐道' };
@@ -3959,10 +4007,10 @@ function GmbFareBox({ m, t }) {
   const sections = gmbSections(m);
   const st = m.fare_status || 'unverified';
   const verify = st === 'verified'
-    ? { icon: '🌐', text: fmt(t.gmbVerified, { ym: m.last_fare_updated || '' }), bg: '#E6F4EA', ink: '#0B6B3A' }
+    ? { text: fmt(t.gmbVerified, { ym: m.last_fare_updated || '' }), bg: '#E6F4EA', ink: '#0B6B3A' }
     : st === 'partial'
-      ? { icon: '⚠️', text: fmt(t.gmbPartial, { ym: m.last_fare_updated || '' }), bg: 'var(--warn-bg)', ink: 'var(--warn-ink)' }
-      : { icon: 'ℹ️', text: t.gmbUnverified, bg: 'var(--surface-2)', ink: 'var(--muted)' };
+      ? { text: fmt(t.gmbPartial, { ym: m.last_fare_updated || '' }), bg: 'var(--warn-bg)', ink: 'var(--warn-ink)' }
+      : { text: t.gmbUnverified, bg: 'var(--surface-2)', ink: 'var(--muted)' };
   return (
     <div className="mt-2 rounded-lg border border-[var(--border)] px-2.5 py-2 text-xs">
       <p className="flex items-center justify-between gap-2">
@@ -3975,9 +4023,9 @@ function GmbFareBox({ m, t }) {
           <li key={i} className="flex justify-between gap-2 text-[var(--muted)]"><span>{x.section || x.label}</span><b className="num text-[var(--ink)]">{x.fare}</b></li>
         ))}
       </ul>
-      {m.interchange_note && <p className="mt-1.5 text-xs">💳 <b>{t.gmbOctopus}</b>：{m.interchange_note}</p>}
+      {m.interchange_note && <p className="mt-1.5 text-xs"><b>{t.gmbOctopus}</b>：{m.interchange_note}</p>}
       <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2 py-1 text-xs font-semibold" style={{ background: verify.bg, color: verify.ink }}>
-        <span>{verify.icon} {verify.text}</span>
+        <span>{verify.text}</span>
         {m.fare_source_url && <a href={m.fare_source_url} target="_blank" rel="noopener noreferrer" className="-my-3 inline-flex min-h-[44px] items-center underline">{t.gmbSource}</a>}
       </p>
     </div>
@@ -4011,9 +4059,9 @@ function MinibusCard({ m, t, lang }) {
           <h3 className="font-bold leading-snug">{m.origin} {m.is_circular ? '↺' : '⇄'} {m.destination}</h3>
           <p className="mt-0.5 text-xs text-[var(--muted)]">{m.is_circular ? t.gmbCircular : t.gmbTwoWay} · {tx(GMB_CAT_LABEL[gmbCats(m)[0]], lang) || m.category}</p>
         </div>
-        <span className="num shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-black shadow-sm"
+        <span className="num shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-black"
           style={m.fare ? { background: '#FFF4CC', borderColor: '#E0B100', color: '#6B4E00' } : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--muted)' }}>
-          💰 {m.fare ? fmt(t.gmbFareBadge, { fare: m.fare }) : t.gmbFareNa}
+          {m.fare ? fmt(t.gmbFareBadge, { fare: m.fare }) : t.gmbFareNa}
         </span>
       </div>
 
@@ -4029,7 +4077,7 @@ function MinibusCard({ m, t, lang }) {
         </div>
       ) : (
         <div className="mt-3 rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm">
-          <p className="font-semibold">🚫 {t.gmbNoStation}</p>
+          <p className="font-semibold">{t.gmbNoStation}</p>
           {m.boarding_location && <p className="mt-0.5 text-xs text-[var(--muted)]">{fmt(t.gmbBoardAt, { place: m.boarding_location })}</p>}
         </div>
       )}
@@ -4039,7 +4087,7 @@ function MinibusCard({ m, t, lang }) {
       <div className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
         {chain.map((c, i) => (
           <React.Fragment key={`${c}-${i}`}>
-            {i > 0 && <span className="text-[var(--muted)]">➔</span>}
+            {i > 0 && <span className="text-[var(--muted)]">→</span>}
             <span className={`rounded-lg px-1.5 py-0.5 ${i === 0 || i === chain.length - 1 ? 'bg-[var(--surface-2)] font-bold' : ''}`}>{c}</span>
           </React.Fragment>
         ))}
@@ -4061,19 +4109,19 @@ function MinibusCard({ m, t, lang }) {
         <div className="mt-1.5 rounded-lg border border-[var(--border)] px-2.5 py-2 text-xs">
           <p className="flex items-center justify-between text-xs text-[var(--muted)]">
             <span>{stop ? fmt(t.gmbEtaAt, { stop: zh ? stop.zh : stop.en }) : t.gmbEtaTitle}</span>
-            {status === 'live' && etas && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.hospLive}</span>}
+            {status === 'live' && etas && <span className="flex items-center gap-1 font-semibold" style={{ color: 'var(--ok)' }}><span className="h-1.5 w-1.5 kt-live-dot rounded-full" style={{ background: 'var(--ok)' }} />{t.hospLive}</span>}
           </p>
           <p className="mt-0.5">
             {status === 'loading' || (status === 'live' && stop && etas === null)
-              ? <span className="inline-block h-4 w-24 animate-pulse rounded-lg bg-[var(--surface-2)]" />
+              ? <span className="inline-block h-4 w-24 rounded-lg bg-[var(--surface-2)]" />
               : status === 'offline' || !stop ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
               : etas.length === 0 ? <span className="text-[var(--muted)]">{t.busNoEta}</span>
-              : <b className="num text-sm" style={{ color: 'var(--tml)' }}>🚐 {etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>}
+              : <b className="num text-sm" style={{ color: 'var(--tml)' }}>{etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>}
           </p>
         </div>
       )}
       <GmbFareBox m={m} t={t} />
-      {m.note && <p className="mt-2 text-xs text-[var(--muted)]">ℹ️ {m.note}</p>}
+      {m.note && <p className="mt-2 text-xs text-[var(--muted)]">ℹ {m.note}</p>}
 
       <div className="mt-auto pt-3">
         <a href={navUrl} target="_blank" rel="noopener noreferrer"
@@ -4108,7 +4156,7 @@ function MinibusPanel({ t, lang }) {
   return (
     <section className="space-y-4">
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden>🚐</span>{t.gmbTitle}</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold">{t.gmbTitle}</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.gmbIntro}</p>
         <label className="relative mt-3 block">
           <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
@@ -4129,7 +4177,7 @@ function MinibusPanel({ t, lang }) {
 
       {status !== 'loading' && <p className="px-1 text-xs font-semibold text-[var(--muted)]">{fmt(t.gmbCount, { n: list.length })}</p>}
       {status === 'loading' ? (
-        <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 rounded-2xl bg-[var(--surface)]" />)}</div>
       ) : list.length === 0 ? (
         <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.gmbNone}</p>
       ) : (
@@ -4151,7 +4199,7 @@ const UI_V15 = {
     gmbVerified: '已用網上搜尋核實最新官方車費（{ym}）', gmbPartial: '部分核實（{ym}）：未找到最新車費通告，請以車廂公布為準', gmbUnverified: '車費未經核實，請以車廂公布為準',
     gmbSource: '運輸署通告',
     tabGmb: '專線小巴', gmbTitle: '綠色專線小巴：啟德一帶全部路線', gmbIntro: '最後一公里接駁：撳「步行導航去上車點」可由建議出口直接導航到小巴站。',
-    gmbSearchPh: '🔍 搜尋路線號碼或途經地點（例如：88、AIRSIDE、醫院、承豐道、新蒲崗）', gmbBadge: '綠小', gmbCircular: '循環線', gmbTwoWay: '雙向',
+    gmbSearchPh: '搜尋路線號碼或途經地點（例如：88、AIRSIDE、醫院、承豐道、新蒲崗）', gmbBadge: '綠小', gmbCircular: '循環線', gmbTwoWay: '雙向',
     gmbFare: '全程車費', gmbExitLine: '啟德站 Exit {exit} 出站', gmbWalkMin: '，步行約 {m} 分鐘', gmbTo: '至「{place}」上車',
     gmbVia: '沿途主要站點', gmbHeadway: '班次', gmbHours: '服務時間', gmbEvery: '約 {n} 分鐘一班', gmbEtaTitle: '實時到站',
     gmbEtaAt: '「{stop}」實時到站', gmbNav: '步行導航去上車點', gmbNone: '找不到相符路線。試試輸入路線號碼或地區名稱。',
@@ -4164,7 +4212,7 @@ const UI_V15 = {
     gmbVerified: 'Latest official fare checked by web search ({ym})', gmbPartial: 'Partly checked ({ym}): no recent fare notice found, check the fare on board', gmbUnverified: 'Fare not yet verified. Check on board',
     gmbSource: 'TD notice',
     tabGmb: 'Green minibus', gmbTitle: 'All green minibuses around Kai Tak', gmbIntro: 'Last-mile connections. Tap "Walk to the boarding point" for directions from the suggested exit.',
-    gmbSearchPh: '🔍 Search route number or destination (e.g. 88, Kowloon City, hospital)', gmbBadge: 'GMB', gmbCircular: 'Circular', gmbTwoWay: 'Two-way',
+    gmbSearchPh: 'Search route number or destination (e.g. 88, Kowloon City, hospital)', gmbBadge: 'GMB', gmbCircular: 'Circular', gmbTwoWay: 'Two-way',
     gmbFare: 'Full fare', gmbExitLine: 'Leave Kai Tak Station by Exit {exit}', gmbWalkMin: ', about {m} min walk', gmbTo: ' to board at "{place}"',
     gmbVia: 'Main stops', gmbHeadway: 'Frequency', gmbHours: 'Service hours', gmbEvery: 'every {n} min', gmbEtaTitle: 'Live arrivals',
     gmbEtaAt: 'Live arrivals at "{stop}"', gmbNav: 'Walk to the boarding point', gmbNone: 'No matching routes. Try a route number or place name.',
@@ -4177,7 +4225,7 @@ const UI_V15 = {
     gmbVerified: '웹 검색으로 최신 공식 요금 확인 ({ym})', gmbPartial: '일부 확인 ({ym}): 최신 요금 공지 없음, 차내 안내 확인', gmbUnverified: '요금 미확인, 차내 안내를 확인하세요',
     gmbSource: '운수서 공지',
     tabGmb: '그린 미니버스', gmbTitle: '그린 미니버스: 카이탁 일대 전 노선', gmbIntro: '라스트 마일 연계. "승차 지점까지 도보 길찾기"로 추천 출구에서 바로 안내받으세요.',
-    gmbSearchPh: '🔍 노선 번호 또는 목적지 검색 (예: 88, 구룡성, 병원)', gmbBadge: '미니', gmbCircular: '순환', gmbTwoWay: '양방향',
+    gmbSearchPh: '노선 번호 또는 목적지 검색 (예: 88, 구룡성, 병원)', gmbBadge: '미니', gmbCircular: '순환', gmbTwoWay: '양방향',
     gmbFare: '전 구간 요금', gmbExitLine: '카이탁역 {exit} 출구로 나와', gmbWalkMin: ' 도보 약 {m}분', gmbTo: ' "{place}"에서 승차',
     gmbVia: '주요 경유지', gmbHeadway: '배차 간격', gmbHours: '운행 시간', gmbEvery: '약 {n}분 간격', gmbEtaTitle: '실시간 도착',
     gmbEtaAt: '"{stop}" 실시간 도착', gmbNav: '승차 지점까지 도보 길찾기', gmbNone: '일치하는 노선이 없습니다.',
@@ -4190,7 +4238,7 @@ const UI_V15 = {
     gmbVerified: 'Web検索により最新公式運賃を確認済み（{ym}）', gmbPartial: '一部確認済み（{ym}）：最新の運賃通告が見つからないため、車内表示をご確認ください', gmbUnverified: '運賃未確認。車内表示をご確認ください',
     gmbSource: '運輸署の通告',
     tabGmb: 'ミニバス', gmbTitle: 'グリーンミニバス：啓徳エリア全路線', gmbIntro: 'ラストワンマイルの移動に。「乗車地点まで徒歩ナビ」でおすすめ出口から案内します。',
-    gmbSearchPh: '🔍 路線番号・経由地で検索（例：88、AIRSIDE、病院、新蒲崗）', gmbBadge: '緑小', gmbCircular: '循環線', gmbTwoWay: '往復',
+    gmbSearchPh: '路線番号・経由地で検索（例：88、AIRSIDE、病院、新蒲崗）', gmbBadge: '緑小', gmbCircular: '循環線', gmbTwoWay: '往復',
     gmbFare: '全区間運賃', gmbExitLine: '啓徳駅 {exit}出口から', gmbWalkMin: '徒歩約{m}分', gmbTo: '「{place}」で乗車',
     gmbVia: '主な経由地', gmbHeadway: '運行間隔', gmbHours: '運行時間', gmbEvery: '約{n}分間隔', gmbEtaTitle: 'リアルタイム到着',
     gmbEtaAt: '「{stop}」リアルタイム到着', gmbNav: '乗車地点まで徒歩ナビ', gmbNone: '該当する路線がありません。',
@@ -4200,7 +4248,7 @@ const UI_V15 = {
 };
 Object.keys(UI_V15).forEach((l) => Object.assign(UI[l], UI_V15[l]));
 
-/* ============================ 🎡 香港熱門景點（由啟德出發） ============================ */
+/* ============================ 香港熱門景點（由啟德出發） ============================ */
 // 景點資料：Supabase「attractions」表優先；未連線時用以下內置資料（與 03_attractions.sql 一致）
 // 港鐵部分由內置路線引擎 routeTo() 自動計算；last_mile 為出站後的最後一程（時間為估算）
 const SEED_ATTRACTIONS = [
@@ -4292,23 +4340,23 @@ const SEED_ATTRACTIONS = [
 const useAttractions = () => useLiveTable('attractions', (q) => q.select('*').eq('is_active', true).order('sort'), SEED_ATTRACTIONS);
 
 const ATT_CATS = {
-  theme: { zh: '🎢 主題樂園', en: '🎢 Theme parks', ko: '🎢 테마파크', ja: '🎢 テーマパーク' },
-  culture: { zh: '🏛️ 文化藝術', en: '🏛️ Culture & art', ko: '🏛️ 문화·예술', ja: '🏛️ 文化／アート' },
-  scenic: { zh: '🌄 景觀', en: '🌄 Sights & views', ko: '🌄 명소·전망', ja: '🌄 景勝地' },
-  island: { zh: '⛴️ 離島／渡輪', en: '⛴️ Islands & ferries', ko: '⛴️ 섬·페리', ja: '⛴️ 離島／フェリー' },
-  shopping: { zh: '🛍️ 購物', en: '🛍️ Shopping', ko: '🛍️ 쇼핑', ja: '🛍️ ショッピング' },
-  market: { zh: '🏮 夜市／街市', en: '🏮 Markets', ko: '🏮 야시장·시장', ja: '🏮 ナイトマーケット' },
-  temple: { zh: '🛕 廟宇／園林', en: '🛕 Temples & gardens', ko: '🛕 사원·정원', ja: '🛕 寺院／庭園' },
-  hiking: { zh: '🥾 郊遊行山', en: '🥾 Outdoors & hiking', ko: '🥾 하이킹', ja: '🥾 ハイキング' },
+  theme: { zh: '主題樂園', en: 'Theme parks', ko: '테마파크', ja: 'テーマパーク' },
+  culture: { zh: '文化藝術', en: 'Culture & art', ko: '문화·예술', ja: '文化／アート' },
+  scenic: { zh: '景觀', en: 'Sights & views', ko: '명소·전망', ja: '景勝地' },
+  island: { zh: '離島／渡輪', en: 'Islands & ferries', ko: '섬·페리', ja: '離島／フェリー' },
+  shopping: { zh: '購物', en: 'Shopping', ko: '쇼핑', ja: 'ショッピング' },
+  market: { zh: '夜市／街市', en: 'Markets', ko: '야시장·시장', ja: 'ナイトマーケット' },
+  temple: { zh: '廟宇／園林', en: 'Temples & gardens', ko: '사원·정원', ja: '寺院／庭園' },
+  hiking: { zh: '郊遊行山', en: 'Outdoors & hiking', ko: '하이킹', ja: 'ハイキング' },
 };
 const MODE_META = {
-  MTR: { i: '🚇', zh: '港鐵', en: 'MTR', ko: 'MTR', ja: 'MTR' },
-  WALK: { i: '🚶', zh: '步行', en: 'Walk', ko: '도보', ja: '徒歩' },
-  BUS: { i: '🚌', zh: '巴士', en: 'Bus', ko: '버스', ja: 'バス' },
-  GMB: { i: '🚐', zh: '小巴', en: 'Minibus', ko: '미니버스', ja: 'ミニバス' },
-  FERRY: { i: '⛴️', zh: '渡輪', en: 'Ferry', ko: '페리', ja: 'フェリー' },
-  TRAM: { i: '🚃', zh: '電車', en: 'Tram', ko: '트램', ja: 'トラム' },
-  CABLE: { i: '🚡', zh: '纜車', en: 'Cable car', ko: '케이블카', ja: 'ケーブルカー' },
+  MTR: { zh: '港鐵', en: 'MTR', ko: 'MTR', ja: 'MTR' },
+  WALK: { zh: '步行', en: 'Walk', ko: '도보', ja: '徒歩' },
+  BUS: { zh: '巴士', en: 'Bus', ko: '버스', ja: 'バス' },
+  GMB: { zh: '小巴', en: 'Minibus', ko: '미니버스', ja: 'ミニバス' },
+  FERRY: { zh: '渡輪', en: 'Ferry', ko: '페리', ja: 'フェリー' },
+  TRAM: { zh: '電車', en: 'Tram', ko: '트램', ja: 'トラム' },
+  CABLE: { zh: '纜車', en: 'Cable car', ko: '케이블카', ja: 'ケーブルカー' },
 };
 // 多語言 JSON 欄位（Supabase 回傳可能為物件或字串）
 const jx = (v, lang) => {
@@ -4329,9 +4377,9 @@ function RouteChain({ code, lang, t }) {
         <React.Fragment key={i}>
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
             style={{ background: LINES[lg.line].color }}>
-            {lg.kind === 'walk' ? '🚶' : '🚇'} {tx(LINES[lg.line].name, lang)}
+            {lg.kind === 'walk' ? '' : ''} {tx(LINES[lg.line].name, lang)}
           </span>
-          <span className="text-[var(--muted)]">➔</span>
+          <span className="text-[var(--muted)]">→</span>
           <b>{stName(lg.to, lang)}</b>
         </React.Fragment>
       ))}
@@ -4413,8 +4461,8 @@ function TripLive({ code, lastMile, t, lang }) {
   return (
     <div ref={box} className="mt-2 rounded-lg border border-[var(--border)] px-3 py-2">
       <p className="mb-1.5 flex items-center justify-between text-xs font-bold text-[var(--muted)]">
-        <span>🕐 {t.tlTitle}</span>
-        {Object.keys(data).length > 0 && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.live}</span>}
+        <span>{t.tlTitle}</span>
+        {Object.keys(data).length > 0 && <span className="flex items-center gap-1 font-semibold" style={{ color: 'var(--ok)' }}><span className="h-1.5 w-1.5 kt-live-dot rounded-full" style={{ background: 'var(--ok)' }} />{t.live}</span>}
       </p>
       <ul className="space-y-1.5">
         {rows.filter((r) => !r.walk).map((r, i) => {
@@ -4425,7 +4473,7 @@ function TripLive({ code, lastMile, t, lang }) {
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: lineBg(r.l.line), color: lineInk(r.l.line) }}>{tx(LINES[r.l.line].name, lang)}</span>
               <span className="font-semibold">{fmt(t.tlAt, { sta: stName(r.l.from, lang), to: stName(r.l.toward, lang) })}</span>
               <span className="ml-auto num tabular-nums">
-                {r.loading && !vis ? '—' : r.loading ? <span className="inline-block h-3 w-16 animate-pulse rounded-lg bg-[var(--surface-2)]" />
+                {r.loading && !vis ? '—' : r.loading ? <span className="inline-block h-3 w-16 rounded-lg bg-[var(--surface-2)]" />
                   : !r.list ? <span className="text-[var(--muted)]">{t.tlNoData}</span>
                   : first ? (next.length ? next.map((x, k) => <b key={k} className={k === 0 ? 'text-sm' : 'ml-2 font-normal text-[var(--muted)]'} style={k === 0 ? { color: 'var(--tml)' } : undefined}>{countdown(x.at, now) || t.arriving}</b>) : <span className="text-[var(--muted)]">{t.ntNone}</span>)
                   : r.catchT ? <span>{fmt(t.tlCatch, { time: hhmmHK(r.catchT.at), wait: Math.max(0, Math.round((r.catchT.at - r.need) / 60000)) })}</span>
@@ -4435,7 +4483,7 @@ function TripLive({ code, lastMile, t, lang }) {
           );
         })}
       </ul>
-      {eta && <p className="mt-1.5 text-xs font-bold">🏁 {fmt(t.tlEta, { time: hhmmHK(eta) })}</p>}
+      {eta && <p className="mt-1.5 text-xs font-bold">{fmt(t.tlEta, { time: hhmmHK(eta) })}</p>}
     </div>
   );
 }
@@ -4456,7 +4504,7 @@ function AttractionCard({ a, t, lang, onRoute }) {
           {alt && alt !== name && <p className="text-xs text-[var(--muted)]">{alt}</p>}
         </div>
         <span className="num shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>
-          ⏱ {fmt(t.attAbout, { n: total })}
+          {fmt(t.attAbout, { n: total })}
         </span>
       </div>
 
@@ -4467,7 +4515,7 @@ function AttractionCard({ a, t, lang, onRoute }) {
       <TripLive code={a.station} lastMile={a.last_mile_minutes} t={t} lang={lang} />
 
       <div className="mt-2 flex items-start gap-2 text-sm">
-        {a.exit ? <ExitPlate exit={a.exit} /> : <span className="mt-0.5 text-base" aria-hidden>📍</span>}
+        {a.exit ? <ExitPlate exit={a.exit} /> : <MapPin size={18} className="mt-0.5 shrink-0 text-[var(--muted)]" aria-hidden />}
         <div className="min-w-0">
           <p>{jx(a.last_mile, lang)}</p>
           {a.last_mile_minutes ? <p className="mt-0.5 text-xs text-[var(--muted)]">{fmt(t.attLastMile, { n: a.last_mile_minutes })}</p> : null}
@@ -4477,11 +4525,11 @@ function AttractionCard({ a, t, lang, onRoute }) {
       {modes.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {modes.map((m) => MODE_META[m] && (
-            <span key={m} className="rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs">{MODE_META[m].i} {tx(MODE_META[m], lang)}</span>
+            <span key={m} className="rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs">{tx(MODE_META[m], lang)}</span>
           ))}
         </div>
       )}
-      {jx(a.tip, lang) && <p className="mt-2 text-xs text-[var(--muted)]">💡 {jx(a.tip, lang)}</p>}
+      {jx(a.tip, lang) && <p className="mt-2 text-xs text-[var(--muted)]">{jx(a.tip, lang)}</p>}
 
       <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
         {r && (
@@ -4505,7 +4553,7 @@ function AttractionCard({ a, t, lang, onRoute }) {
   );
 }
 
-/* ---------- 🚃 香港電車（叮叮） ---------- */
+/* ---------- 香港電車（叮叮） ---------- */
 // 路線及車費：香港電車官網（2026-10-09 查閱）
 const TRAM_ROUTES = [
   { zh: '上環（西港城）↔ 筲箕灣', en: 'Sheung Wan (Western Market) ↔ Shau Kei Wan' },
@@ -4525,16 +4573,16 @@ function TramGuide({ t, lang }) {
   return (
     <section className="space-y-3">
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-        <h3 className="flex items-center gap-2 text-base font-bold">🚃 {t.tramTitle}</h3>
+        <h3 className="flex items-center gap-2 text-base font-bold">{t.tramTitle}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.tramIntro}</p>
-        <div className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>⚠️ {t.tramNoExc}</div>
+        <div className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>{t.tramNoExc}</div>
         <h4 className="mt-4 text-xs font-bold text-[var(--muted)]">{t.tramFrom}</h4>
         <div className="mt-2 grid gap-2 md:grid-cols-2">
           {TRAM_TRANSFERS.map((x) => {
             const r = routeTo(x.code);
             return (
               <div key={x.code} className="rounded-xl border border-[var(--border)] p-3">
-                <p className="flex items-center justify-between text-sm font-bold"><span>🚉 {stName(x.code, lang)}</span>{r && <span className="num text-xs text-[var(--muted)]">⏱ {fmt(t.attAbout, { n: r.mins })}</span>}</p>
+                <p className="flex items-center justify-between text-sm font-bold"><span>{stName(x.code, lang)}</span>{r && <span className="num text-xs text-[var(--muted)]">{fmt(t.attAbout, { n: r.mins })}</span>}</p>
                 <div className="mt-1.5"><RouteChain code={x.code} lang={lang} t={t} /></div>
                 <p className="mt-1.5 text-xs">{tx(x.note, lang)}</p>
               </div>
@@ -4558,9 +4606,9 @@ function TramGuide({ t, lang }) {
           ))}
         </div>
         <ul className="mt-3 space-y-1 text-xs text-[var(--muted)]">
-          <li>💳 {t.tramPay}</li>
-          <li>🚪 {t.tramHow}</li>
-          <li>🕐 {t.tramHours}</li>
+          <li>{t.tramPay}</li>
+          <li>{t.tramHow}</li>
+          <li>{t.tramHours}</li>
         </ul>
         <a href="https://www.hktramways.com/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-semibold hover:border-[var(--ink)]"><ExternalLink size={14} />{t.tramSite}</a>
       </div>
@@ -4568,7 +4616,7 @@ function TramGuide({ t, lang }) {
   );
 }
 
-/* ---------- ⛴️ 渡輪 ---------- */
+/* ---------- 渡輪 ---------- */
 const CENTRAL_PIERS = [
   { pier: '3', zh: '愉景灣', en: 'Discovery Bay' },
   { pier: '4', zh: '南丫島（榕樹灣／索罟灣）', en: 'Lamma Island (Yung Shue Wan / Sok Kwu Wan)' },
@@ -4582,23 +4630,23 @@ function FerryGuide({ t, lang }) {
   return (
     <section className="space-y-3">
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-        <h3 className="flex items-center gap-2 text-base font-bold">⭐ {t.starTitle}</h3>
+        <h3 className="flex items-center gap-2 text-base font-bold">{t.starTitle}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.starIntro}</p>
         <div className="mt-3 rounded-xl border border-[var(--border)] p-3">
-          <p className="flex items-center justify-between text-sm font-bold"><span>🚉 {stName('ETS', lang)}</span>{rE && <span className="num text-xs text-[var(--muted)]">⏱ {fmt(t.attAbout, { n: rE.mins })}</span>}</p>
+          <p className="flex items-center justify-between text-sm font-bold"><span>{stName('ETS', lang)}</span>{rE && <span className="num text-xs text-[var(--muted)]">{fmt(t.attAbout, { n: rE.mins })}</span>}</p>
           <div className="mt-1.5"><RouteChain code="ETS" lang={lang} t={t} /></div>
           <p className="mt-2 flex items-start gap-2 text-sm"><ExitPlate exit="L6" /><span>{t.starWalk}</span></p>
         </div>
         <ul className="mt-3 space-y-1 text-sm">
-          <li>⛴️ {t.starR1}</li>
-          <li>⛴️ {t.starR2}</li>
+          <li>{t.starR1}</li>
+          <li>{t.starR2}</li>
         </ul>
         <a href="https://www.starferry.com.hk/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-semibold hover:border-[var(--ink)]"><ExternalLink size={14} />{t.starSite}</a>
       </div>
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-        <h3 className="flex items-center gap-2 text-base font-bold">🏝️ {t.cpTitle}</h3>
+        <h3 className="flex items-center gap-2 text-base font-bold">{t.cpTitle}</h3>
         <div className="mt-3 rounded-xl border border-[var(--border)] p-3">
-          <p className="flex items-center justify-between text-sm font-bold"><span>🚉 {stName('HOK', lang)}／{stName('CEN', lang)}</span>{rH && <span className="num text-xs text-[var(--muted)]">⏱ {fmt(t.attAbout, { n: rH.mins })}</span>}</p>
+          <p className="flex items-center justify-between text-sm font-bold"><span>{stName('HOK', lang)}／{stName('CEN', lang)}</span>{rH && <span className="num text-xs text-[var(--muted)]">{fmt(t.attAbout, { n: rH.mins })}</span>}</p>
           <div className="mt-1.5"><RouteChain code="HOK" lang={lang} t={t} /></div>
           <p className="mt-2 flex items-start gap-2 text-sm"><span className="flex gap-1"><ExitPlate exit="A2" /></span><span>{t.cpWalk}</span></p>
         </div>
@@ -4637,12 +4685,12 @@ function ExplorePanel({ t, lang, onRoute }) {
   return (
     <section className="space-y-4">
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden>🎡</span>{t.expTitle}</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold">{t.expTitle}</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.expIntro}</p>
         <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-[var(--surface-2)] p-1">
           {VIEWS.map(([id, label]) => (
             <button key={id} onClick={() => setView(id)}
-              className={`min-h-[44px] rounded-xl py-2 text-sm font-bold transition-colors ${view === id ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}>{label}</button>
+              className={`min-h-[44px] rounded-xl py-2 text-sm font-bold transition-colors ${view === id ? 'bg-[var(--surface)]' : 'text-[var(--muted)]'}`}>{label}</button>
           ))}
         </div>
         {view === 'spots' && (
@@ -4668,7 +4716,7 @@ function ExplorePanel({ t, lang, onRoute }) {
         <>
           <p className="px-1 text-xs font-semibold text-[var(--muted)]">{fmt(t.expCount, { n: list.length })}</p>
           {status === 'loading' ? (
-            <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />)}</div>
+            <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 rounded-2xl bg-[var(--surface)]" />)}</div>
           ) : list.length === 0 ? (
             <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.expNone}</p>
           ) : (
@@ -4686,7 +4734,7 @@ function ExplorePanel({ t, lang, onRoute }) {
     </section>
   );
 }
-/* ============================ 🗺️ 港鐵全綫路綫圖（包括輕鐵） ============================ */
+/* ============================ 港鐵全綫路綫圖（包括輕鐵） ============================ */
 // 官方原圖：港鐵官網「港鐵路綫圖」及「輕鐵路綫圖」PDF（經 Vercel 轉發後以 pdf.js 轉為高解像度圖片）
 // 未能載入 PDF 時，改用港鐵官網的官方預覽圖（JPG）
 const MTR_OFFICIAL = (kind, lang) => {
@@ -4935,7 +4983,7 @@ function LrStrips({ lang, t }) {
     return () => { alive = false; };
   }, []);
   const zh = lang === 'zh' || lang === 'ja';
-  if (status === 'loading') return <div className="space-y-3 p-4">{[0, 1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-neutral-200" />)}</div>;
+  if (status === 'loading') return <div className="space-y-3 p-4">{[0, 1, 2].map((i) => <div key={i} className="h-16 rounded-lg bg-neutral-200" />)}</div>;
   if (status === 'fail') {
     return (
       <div className="p-6 text-center text-sm text-neutral-800">
@@ -5005,9 +5053,9 @@ function MapThumb({ kind, label, lang, onOpen }) {
     <button onClick={() => onOpen(kind)} className="group overflow-hidden rounded-xl border border-[var(--border)] bg-white text-left">
       <div className="flex h-24 items-center justify-center overflow-hidden sm:h-32">
         {ok ? <img src={MTR_OFFICIAL(kind, lang).jpg} alt="" loading="lazy" className="h-full w-full object-cover object-center transition-transform group-hover:scale-105" onError={() => setOk(false)} />
-          : <span className="text-3xl" aria-hidden>{kind === 'lr' ? '🚈' : '🚇'}</span>}
+          : <TrainFront size={32} className="text-[var(--muted)]" aria-hidden />}
       </div>
-      <p className="flex items-center justify-between bg-[var(--surface)] px-2 py-1.5 text-xs font-bold"><span>{kind === 'lr' ? '🚈' : '🚇'} {label}</span><Maximize2 size={13} /></p>
+      <p className="flex items-center justify-between bg-[var(--surface)] px-2 py-1.5 text-xs font-bold"><span>{label}</span><Maximize2 size={13} /></p>
     </button>
   );
 }
@@ -5017,7 +5065,7 @@ function RailMapCard({ t, lang }) {
   const [open, setOpen] = useState(null);
   return (
     <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-      <p className="flex items-center gap-2 text-sm font-bold">🗺️ {t.mapCardTitle}</p>
+      <p className="flex items-center gap-2 text-sm font-bold">{t.mapCardTitle}</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <MapThumb kind="mtr" label={t.mapMtr} lang={lang} onOpen={setOpen} />
         <MapThumb kind="lr" label={t.mapLr} lang={lang} onOpen={setOpen} />
@@ -5031,10 +5079,10 @@ const UI_V16 = {
   zh: {
     tabExplore: '香港景點',
     expTitle: '香港熱門景點：由啟德站出發', expIntro: '港鐵路線由內置路線引擎即時計算；出站後的最後一程（步行、巴士、渡輪、纜車）時間為估算。',
-    expSpots: '🎡 景點', expTram: '🚃 電車', expFerry: '⛴️ 渡輪',
-    expSearchPh: '🔍 搜尋景點、地區或車站（例如：迪士尼、大館、長洲、旺角）', expCount: '共 {n} 個景點', expNone: '找不到相符景點。',
+    expSpots: '景點', expTram: '電車', expFerry: '渡輪',
+    expSearchPh: '搜尋景點、地區或車站（例如：迪士尼、大館、長洲、旺角）', expCount: '共 {n} 個景點', expNone: '找不到相符景點。',
     expSrc: '景點名單參考 2026 年旅遊網站熱門排行整理；交通資料參考港鐵、香港電車、天星小輪及政府公布。最後一程時間為估算，請以現場指示為準。',
-    attAbout: '約 {n} 分鐘', attMtrPart: '🚇 港鐵部分（約 {n} 分鐘）', attLastMile: '最後一程約 {n} 分鐘（估算）', attAtKat: '就在啟德站附近。',
+    attAbout: '約 {n} 分鐘', attMtrPart: '港鐵部分（約 {n} 分鐘）', attLastMile: '最後一程約 {n} 分鐘（估算）', attAtKat: '就在啟德站附近。',
     attFare: '車費及詳細路線', attMap: '地圖', attSite: '官方網站',
     tramTitle: '香港電車（叮叮）', tramIntro: '電車只行走港島北岸，由啟德可先乘港鐵到港島再轉乘。',
     tramNoExc: '屯馬綫不經會展站：往會展或金鐘要先在紅磡轉乘東鐵綫（下面路線已自動計算）。',
@@ -5057,10 +5105,10 @@ const UI_V16 = {
   en: {
     tabExplore: 'Explore HK',
     expTitle: 'Top Hong Kong sights from Kai Tak', expIntro: 'MTR routes are calculated live by the built-in planner; last-leg times (walk, bus, ferry, cable car) are estimates.',
-    expSpots: '🎡 Sights', expTram: '🚃 Tram', expFerry: '⛴️ Ferry',
-    expSearchPh: '🔍 Search sights, areas or stations (e.g. Disneyland, Tai Kwun, Cheung Chau)', expCount: '{n} sights', expNone: 'No matching sights.',
+    expSpots: 'Sights', expTram: 'Tram', expFerry: 'Ferry',
+    expSearchPh: 'Search sights, areas or stations (e.g. Disneyland, Tai Kwun, Cheung Chau)', expCount: '{n} sights', expNone: 'No matching sights.',
     expSrc: 'List compiled from 2026 travel-site rankings; transport info from MTR, HK Tramways, Star Ferry and government notices. Last-leg times are estimates.',
-    attAbout: 'about {n} min', attMtrPart: '🚇 MTR part (about {n} min)', attLastMile: 'Last leg about {n} min (estimate)', attAtKat: 'Right by Kai Tak Station.',
+    attAbout: 'about {n} min', attMtrPart: 'MTR part (about {n} min)', attLastMile: 'Last leg about {n} min (estimate)', attAtKat: 'Right by Kai Tak Station.',
     attFare: 'Fare & full route', attMap: 'Map', attSite: 'Official site',
     tramTitle: 'Hong Kong Tramways (Ding Ding)', tramIntro: 'Trams run along the north shore of Hong Kong Island. Take the MTR to the island first.',
     tramNoExc: 'The Tuen Ma Line does not serve Exhibition Centre: change to the East Rail Line at Hung Hom (routes below are calculated for you).',
@@ -5083,10 +5131,10 @@ const UI_V16 = {
   ko: {
     tabExplore: '홍콩 명소',
     expTitle: '카이탁역에서 가는 홍콩 인기 명소', expIntro: 'MTR 경로는 내장 플래너가 계산하며, 마지막 구간(도보·버스·페리·케이블카) 시간은 추정치입니다.',
-    expSpots: '🎡 명소', expTram: '🚃 트램', expFerry: '⛴️ 페리',
-    expSearchPh: '🔍 명소·지역·역 검색 (예: 디즈니랜드, 대관, 청차우)', expCount: '총 {n}곳', expNone: '일치하는 명소가 없습니다.',
+    expSpots: '명소', expTram: '트램', expFerry: '페리',
+    expSearchPh: '명소·지역·역 검색 (예: 디즈니랜드, 대관, 청차우)', expCount: '총 {n}곳', expNone: '일치하는 명소가 없습니다.',
     expSrc: '2026년 여행 사이트 인기 순위를 참고했으며, 교통 정보는 MTR·트램·스타페리·정부 공지 기준입니다. 마지막 구간 시간은 추정치입니다.',
-    attAbout: '약 {n}분', attMtrPart: '🚇 MTR 구간 (약 {n}분)', attLastMile: '마지막 구간 약 {n}분 (추정)', attAtKat: '카이탁역 바로 근처입니다.',
+    attAbout: '약 {n}분', attMtrPart: 'MTR 구간 (약 {n}분)', attLastMile: '마지막 구간 약 {n}분 (추정)', attAtKat: '카이탁역 바로 근처입니다.',
     attFare: '요금·상세 경로', attMap: '지도', attSite: '공식 사이트',
     tramTitle: '홍콩 트램 (딩딩)', tramIntro: '트램은 홍콩섬 북쪽만 운행합니다. MTR로 홍콩섬까지 이동 후 환승하세요.',
     tramNoExc: '툰마선은 컨벤션센터역에 가지 않습니다. 홍함에서 이스트레일선으로 환승하세요(아래 경로 자동 계산).',
@@ -5109,10 +5157,10 @@ const UI_V16 = {
   ja: {
     tabExplore: '香港観光',
     expTitle: '香港の人気スポット：啓徳駅から', expIntro: 'MTRの経路は内蔵の経路エンジンで自動計算。駅からの最後の区間（徒歩・バス・フェリー・ロープウェイ）の時間は目安です。',
-    expSpots: '🎡 スポット', expTram: '🚃 トラム', expFerry: '⛴️ フェリー',
-    expSearchPh: '🔍 スポット・エリア・駅で検索（例：ディズニー、大館、長洲）', expCount: '全{n}件', expNone: '該当するスポットがありません。',
+    expSpots: 'スポット', expTram: 'トラム', expFerry: 'フェリー',
+    expSearchPh: 'スポット・エリア・駅で検索（例：ディズニー、大館、長洲）', expCount: '全{n}件', expNone: '該当するスポットがありません。',
     expSrc: '2026年の旅行サイト人気ランキングを参考に作成。交通情報はMTR・香港トラム・スターフェリー・政府発表に基づきます。最後の区間の時間は目安です。',
-    attAbout: '約{n}分', attMtrPart: '🚇 MTR区間（約{n}分）', attLastMile: '最後の区間 約{n}分（目安）', attAtKat: '啓徳駅のすぐ近くです。',
+    attAbout: '約{n}分', attMtrPart: 'MTR区間（約{n}分）', attLastMile: '最後の区間 約{n}分（目安）', attAtKat: '啓徳駅のすぐ近くです。',
     attFare: '運賃・詳細ルート', attMap: '地図', attSite: '公式サイト',
     tramTitle: '香港トラム（ディンディン）', tramIntro: 'トラムは香港島北岸のみ運行。まずMTRで香港島へ。',
     tramNoExc: '屯馬線は会展駅を通りません。紅磡で東鉄線に乗り換えてください（下の経路は自動計算）。',
@@ -5181,30 +5229,30 @@ const UI_V18 = {
   zh: {
     bxSuw: '或乘屯馬綫一站到宋皇臺站，D 出口即達',
     bxTitle: '過境口岸及啟德體育園巴士', bxIntro: '包括 2026 年 10 月 12 日開辦的城巴 B14（啟德 ↔ 新皇崗口岸）。實時到站來自城巴開放數據。',
-    bxBoard: '啟德一帶上車站', bxWalk: '約 {m} 分鐘', bxManual: '📋 人手核實資料（運輸署及城巴公布）', bxSource: '資料來源',
-    bxSyncedCtb: '🌐 城巴開放數據 API 自動同步（{time}）', bxSyncedKmb: '🌐 九巴開放數據 API 自動同步（{time}）',
-    bxSyncFooter: '🌐 {n} 條途經啟德的路線已由城巴／九巴開放數據 API 自動同步（最近：{time}）', bxSyncPending: '⏳ 尚未執行自動同步；目前使用內置路線清單',
+    bxBoard: '啟德一帶上車站', bxWalk: '約 {m} 分鐘', bxManual: '人手核實資料（運輸署及城巴公布）', bxSource: '資料來源',
+    bxSyncedCtb: '城巴開放數據 API 自動同步（{time}）', bxSyncedKmb: '九巴開放數據 API 自動同步（{time}）',
+    bxSyncFooter: '{n} 條途經啟德的路線已由城巴／九巴開放數據 API 自動同步（最近：{time}）', bxSyncPending: '尚未執行自動同步；目前使用內置路線清單',
   },
   en: {
     bxSuw: 'or ride the Tuen Ma Line one stop to Sung Wong Toi, Exit D',
     bxTitle: 'Cross-boundary & Sports Park buses', bxIntro: 'Includes Citybus B14 (Kai Tak ↔ new Huanggang Port), launched 12 Oct 2026. Live arrivals from Citybus open data.',
-    bxBoard: 'boarding stops around Kai Tak', bxWalk: 'about {m} min', bxManual: '📋 Manually verified (TD & Citybus notices)', bxSource: 'Source',
-    bxSyncedCtb: '🌐 Auto-synced from Citybus open data API ({time})', bxSyncedKmb: '🌐 Auto-synced from KMB open data API ({time})',
-    bxSyncFooter: '🌐 {n} Kai Tak routes auto-synced from Citybus/KMB open data (latest: {time})', bxSyncPending: '⏳ Auto-sync has not run yet; using the built-in route list',
+    bxBoard: 'boarding stops around Kai Tak', bxWalk: 'about {m} min', bxManual: 'Manually verified (TD & Citybus notices)', bxSource: 'Source',
+    bxSyncedCtb: 'Auto-synced from Citybus open data API ({time})', bxSyncedKmb: 'Auto-synced from KMB open data API ({time})',
+    bxSyncFooter: '{n} Kai Tak routes auto-synced from Citybus/KMB open data (latest: {time})', bxSyncPending: 'Auto-sync has not run yet; using the built-in route list',
   },
   ko: {
     bxSuw: '또는 툰마선 한 정거장 송웡토이역 D 출구',
     bxTitle: '국경 통과·스포츠파크 버스', bxIntro: '2026년 10월 12일 개통한 시티버스 B14(카이탁 ↔ 신 황강 커우안) 포함. 실시간 도착은 시티버스 오픈 데이터.',
-    bxBoard: '카이탁 일대 승차 정류장', bxWalk: '약 {m}분', bxManual: '📋 수동 확인 정보 (운수서·시티버스 공지)', bxSource: '출처',
-    bxSyncedCtb: '🌐 시티버스 오픈 데이터 API 자동 동기화 ({time})', bxSyncedKmb: '🌐 KMB 오픈 데이터 API 자동 동기화 ({time})',
-    bxSyncFooter: '🌐 카이탁 경유 {n}개 노선 자동 동기화 (최근: {time})', bxSyncPending: '⏳ 자동 동기화 미실행, 내장 노선 목록 사용 중',
+    bxBoard: '카이탁 일대 승차 정류장', bxWalk: '약 {m}분', bxManual: '수동 확인 정보 (운수서·시티버스 공지)', bxSource: '출처',
+    bxSyncedCtb: '시티버스 오픈 데이터 API 자동 동기화 ({time})', bxSyncedKmb: 'KMB 오픈 데이터 API 자동 동기화 ({time})',
+    bxSyncFooter: '카이탁 경유 {n}개 노선 자동 동기화 (최근: {time})', bxSyncPending: '자동 동기화 미실행, 내장 노선 목록 사용 중',
   },
   ja: {
     bxSuw: 'または屯馬線で1駅の宋皇臺駅D出口すぐ',
     bxTitle: '越境バス・啓徳スポーツパーク', bxIntro: '2026年10月12日開業のシティバスB14（啓徳 ↔ 新皇崗口岸）を含みます。リアルタイム到着はシティバスのオープンデータ。',
-    bxBoard: '啓徳エリアの乗り場', bxWalk: '約{m}分', bxManual: '📋 手動で確認した情報（運輸署・シティバス発表）', bxSource: '出典',
-    bxSyncedCtb: '🌐 城巴オープンデータAPI自動同期済み（{time}）', bxSyncedKmb: '🌐 九巴オープンデータAPI自動同期済み（{time}）',
-    bxSyncFooter: '🌐 啓徳経由の{n}路線を城巴／九巴オープンデータAPIで自動同期（最終：{time}）', bxSyncPending: '⏳ 自動同期は未実行。内蔵の路線リストを使用中',
+    bxBoard: '啓徳エリアの乗り場', bxWalk: '約{m}分', bxManual: '手動で確認した情報（運輸署・シティバス発表）', bxSource: '出典',
+    bxSyncedCtb: '城巴オープンデータAPI自動同期済み（{time}）', bxSyncedKmb: '九巴オープンデータAPI自動同期済み（{time}）',
+    bxSyncFooter: '啓徳経由の{n}路線を城巴／九巴オープンデータAPIで自動同期（最終：{time}）', bxSyncPending: '自動同期は未実行。内蔵の路線リストを使用中',
   },
 };
 Object.keys(UI_V18).forEach((l) => Object.assign(UI[l], UI_V18[l]));
@@ -5212,42 +5260,49 @@ const UI_V19 = {
   zh: {
     ovLph: '經啟德車站廣場往世運道方向，步行約 10 分鐘', ovSuw: '經啟德車站廣場（體育園／青年運動場一帶行人區）步行到宋皇臺站 D 出口，約 15 分鐘（估算）；亦可乘屯馬綫一站',
     blTitle: '尾班車後的過境（內地口岸）交通指南', blIntro: '體育園散場後趕唔切羅湖／落馬洲？改往 24 小時的皇崗口岸或港珠澳大橋。',
-    blWarnTitle: '⚠️ 體育園散場注意：最遲喺啟德站上車時間（估算）', blBy: '{time} 前', blLeft: '仲有約 {n} 分鐘', blMissed: '已趕唔切 → 改往皇崗口岸（24 小時）',
+    blWarnTitle: '體育園散場注意：最遲喺啟德站上車時間（估算）', blBy: '{time} 前', blLeft: '仲有約 {n} 分鐘', blMissed: '已趕唔切 → 改往皇崗口岸（24 小時）',
     blWarnNote: '按口岸關閉時間、港鐵行車時間及過關預留 10 分鐘估算；東鐵綫往羅湖尾班車約 23:00 由金鐘開出，實際以港鐵公布為準。',
     blSrc: '資料：政府新聞公報（2026-10-07）、運輸署及營辦商資料；「參考車費」來自第三方整理，以營辦商公布為準。',
   },
   en: {
     ovLph: 'via Kai Tak Station Square towards Olympic Avenue, about 10 min', ovSuw: 'walk through Kai Tak Station Square (pedestrian area by the Sports Park / Youth Sports Ground) to Sung Wong Toi Exit D, about 15 min (estimate); or ride the Tuen Ma Line one stop',
     blTitle: 'After the last train: getting to Mainland border ports', blIntro: 'Missed Lo Wu / Lok Ma Chau after an event? Use the 24-hour Huanggang Port or HZMB.',
-    blWarnTitle: '⚠️ Sports Park events: latest time to board at Kai Tak (estimate)', blBy: 'by {time}', blLeft: 'about {n} min left', blMissed: 'Too late → go to Huanggang Port (24 h)',
+    blWarnTitle: 'Sports Park events: latest time to board at Kai Tak (estimate)', blBy: 'by {time}', blLeft: 'about {n} min left', blMissed: 'Too late → go to Huanggang Port (24 h)',
     blWarnNote: 'Estimated from port closing times, MTR journey time and 10 min for immigration. The last East Rail train to Lo Wu leaves Admiralty around 23:00 — check MTR notices.',
     blSrc: 'Sources: government press release (7 Oct 2026), Transport Department and operators. "Reference fares" come from third-party summaries; operators’ notices prevail.',
   },
   ko: {
     ovLph: '카이탁 역광장을 지나 세운도 방향, 도보 약 10분', ovSuw: '카이탁 역광장(스포츠파크·청년운동장 보행자 구역)을 지나 송웡토이역 D 출구까지 약 15분(추정), 또는 툰마선 한 정거장',
     blTitle: '막차 이후 본토 커우안 가는 법', blIntro: '행사 후 로우·록마차우를 놓쳤다면 24시간 황강 커우안 또는 강주아오 대교로.',
-    blWarnTitle: '⚠️ 스포츠파크 행사: 카이탁역 최종 탑승 시각(추정)', blBy: '{time}까지', blLeft: '약 {n}분 남음', blMissed: '늦음 → 황강 커우안(24시간)으로',
+    blWarnTitle: '스포츠파크 행사: 카이탁역 최종 탑승 시각(추정)', blBy: '{time}까지', blLeft: '약 {n}분 남음', blMissed: '늦음 → 황강 커우안(24시간)으로',
     blWarnNote: '커우안 마감 시각, MTR 소요 시간, 출입국 10분을 기준으로 추정. 로우행 막차는 애드미럴티 약 23:00 출발(MTR 공지 확인).',
     blSrc: '출처: 정부 보도자료(2026-10-07), 운수서 및 운영사. 참고 요금은 제3자 자료이며 운영사 공지가 우선입니다.',
   },
   ja: {
     ovLph: '啓徳車站廣場を通って世運道方面へ徒歩約10分', ovSuw: '啓徳車站廣場（スポーツパーク／青年運動場の歩行者エリア）経由で宋皇臺駅D出口まで徒歩約15分（目安）。屯馬線で1駅も可',
     blTitle: '終電後の過境（內地口岸）交通指南', blIntro: '終演後に羅湖／落馬洲に間に合わない場合は、24時間の皇崗口岸や港珠澳大橋へ。',
-    blWarnTitle: '⚠️ スポーツパーク終演後の注意：啓徳駅の最終乗車時刻（目安）', blBy: '{time}まで', blLeft: 'あと約{n}分', blMissed: '間に合いません → 皇崗口岸（24時間）へ',
+    blWarnTitle: 'スポーツパーク終演後の注意：啓徳駅の最終乗車時刻（目安）', blBy: '{time}まで', blLeft: 'あと約{n}分', blMissed: '間に合いません → 皇崗口岸（24時間）へ',
     blWarnNote: '口岸の閉鎖時刻・MTR所要時間・出入境10分から推計。東鉄線羅湖行き終電は金鐘発23:00頃（MTR発表を確認）。',
     blSrc: '出典：政府プレスリリース（2026-10-07）、運輸署・事業者。「参考運賃」は第三者の整理によるもので、事業者の発表が優先します。',
   },
 };
 Object.keys(UI_V19).forEach((l) => Object.assign(UI[l], UI_V19[l]));
 const UI_V20 = {
-  zh: { exitAudit: '⚠️ 按地點應為 {exit} 出口，請核對' },
-  en: { exitAudit: '⚠️ By location this should be Exit {exit} — please check' },
-  ko: { exitAudit: '⚠️ 위치상 {exit} 출구로 보입니다 — 확인하세요' },
-  ja: { exitAudit: '⚠️ 位置からは{exit}出口のはずです。確認してください' },
+  zh: { exitAudit: '按地點應為 {exit} 出口，請核對' },
+  en: { exitAudit: 'By location this should be Exit {exit} — please check' },
+  ko: { exitAudit: '위치상 {exit} 출구로 보입니다 — 확인하세요' },
+  ja: { exitAudit: '位置からは{exit}出口のはずです。確認してください' },
 };
 Object.keys(UI_V20).forEach((l) => Object.assign(UI[l], UI_V20[l]));
+const UI_V22 = {
+  zh: { exitGroup: '{exit} 出口', exitGroupN: '{n} 個地點', showAll: '顯示全部 {n} 個', showLess: '收起', exitCommon: '出站後' },
+  en: { exitGroup: 'Exit {exit}', exitGroupN: '{n} places', showAll: 'Show all {n}', showLess: 'Show fewer', exitCommon: 'From the exit' },
+  ko: { exitGroup: '{exit} 출구', exitGroupN: '{n}곳', showAll: '{n}곳 모두 보기', showLess: '접기', exitCommon: '출구에서' },
+  ja: { exitGroup: '{exit}出口', exitGroupN: '{n}件', showAll: '全{n}件を表示', showLess: '閉じる', exitCommon: '出口から' },
+};
+Object.keys(UI_V22).forEach((l) => Object.assign(UI[l], UI_V22[l]));
 
-/* ============================ 💬 問答助手：免費智能搜尋 ＋ AI 後備 ============================ */
+/* ============================ 問答助手：免費智能搜尋 ＋ AI 後備 ============================ */
 // ① 先用網站內的資料（地標、巴士、小巴、景點、過境指南、港鐵站、常見問題）即時搜尋 —— 免費、答案準確
 // ② 搵唔到答案時，提供「轉交外部 AI」掣（ChatGPT／Google AI 模式／Perplexity），自動填好問題並開新分頁 —— 毋須任何帳戶或金鑰
 const FAQ = [
@@ -5305,32 +5360,32 @@ function useAssistantDocs({ items, lang, t }) {
   return useMemo(() => {
     const docs = [];
     for (const x of items || []) {
-      docs.push({ type: 'place', go: 'land', exit: x.exit, icon: catById(x.category).emoji || '📍',
+      docs.push({ type: 'place', go: 'land', exit: x.exit,
         title: tx(x.name, lang), sub: tx(x.tip, lang),
         hay: `${x.name.zh} ${x.name.en} ${tx(x.desc, 'zh')} ${tx(x.desc, 'en')} ${tx(x.tip, 'zh')} ${catById(x.category).label.zh} ${catById(x.category).label.en}` });
     }
     for (const m of gmb || []) {
-      docs.push({ type: 'gmb', go: 'gmb', exit: m.exit_code, icon: '🚐', title: `${t.gmbBadge} ${m.route_number}：${m.origin} ⇄ ${m.destination}`,
+      docs.push({ type: 'gmb', go: 'gmb', exit: m.exit_code, title: `${t.gmbBadge} ${m.route_number}：${m.origin} ⇄ ${m.destination}`,
         sub: m.boarding_location || m.note || '', hay: `${m.route_number} 小巴 minibus ${m.origin} ${m.destination} ${gmbVia(m).join(' ')} ${m.boarding_location || ''} ${m.category}` });
     }
     for (const r of buses || []) {
       if (!r.is_curated && r.category === 'local') continue; // 自動同步的一般路線太多，交給巴士頁實時清單
-      docs.push({ type: 'bus', go: 'bus', exit: r.exit_code, icon: '🚌', title: `${jx(r.name, lang) || r.route_number}：${r.orig_tc || ''} ⇄ ${r.dest_tc || ''}`,
+      docs.push({ type: 'bus', go: 'bus', exit: r.exit_code, title: `${jx(r.name, lang) || r.route_number}：${r.orig_tc || ''} ⇄ ${r.dest_tc || ''}`,
         sub: jx(r.service_hours, lang) || jx(r.boarding_note, lang) || '', hay: `${r.route_number} bus 巴士 ${r.orig_tc} ${r.dest_tc} ${r.orig_en} ${r.dest_en} ${jsonArr(r.via).join(' ')} ${tx(BUS_CAT[r.category] || {}, 'zh')}` });
     }
     for (const a of atts || []) {
       const r = a.station ? routeTo(a.station) : null;
-      docs.push({ type: 'spot', go: 'explore', exit: null, icon: '🎡', title: jx(a.name, lang),
+      docs.push({ type: 'spot', go: 'explore', exit: null, title: jx(a.name, lang),
         sub: `${r ? fmt(t.attAbout, { n: r.mins + (Number(a.last_mile_minutes) || 0) }) + ' · ' : ''}${jx(a.last_mile, lang)}`,
         hay: `${jx(a.name, 'zh')} ${jx(a.name, 'en')} ${jx(a.name, 'ja')} ${jx(a.area, 'zh')} ${jx(a.last_mile, 'zh')} ${tx(ATT_CATS[a.category] || {}, 'zh')}` });
     }
     for (const p of ports || []) {
-      docs.push({ type: 'port', go: 'bus', exit: null, icon: '🛂', title: `${jx(p.name, lang)}（${jx(p.hours, lang)}）`,
+      docs.push({ type: 'port', go: 'bus', exit: null, title: `${jx(p.name, lang)}（${jx(p.hours, lang)}）`,
         sub: jsonArr(p.options).map((o) => jx(o.title, lang)).join('／'), hay: `${jx(p.name, 'zh')} ${jx(p.name, 'en')} 口岸 border port ${jsonArr(p.options).map((o) => `${jx(o.title, 'zh')} ${jx(o.text, 'zh')}`).join(' ')}` });
     }
     for (const code of ALL_STATIONS) {
       if (code === 'KAT') continue;
-      docs.push({ type: 'station', code, go: 'mtr', exit: null, icon: '🚇', title: fmt(t.qaToStation, { st: stName(code, lang) }),
+      docs.push({ type: 'station', code, go: 'mtr', exit: null, title: fmt(t.qaToStation, { st: stName(code, lang) }),
         sub: '', hay: `${ST[code][0]} ${ST[code][1]}` });
     }
     return docs;
@@ -5365,7 +5420,7 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
       <button onClick={() => setOpen(true)} aria-label={t.qaTitle}
         className="fixed bottom-5 right-4 z-[55] flex items-center gap-2 rounded-full px-4 py-3 text-sm font-bold text-white shadow-xl"
         style={{ background: LINES.TML.color, marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <span aria-hidden>💬</span><span className="hidden sm:inline">{t.qaTitle}</span>
+        <MessageCircle size={18} aria-hidden /><span className="hidden sm:inline">{t.qaTitle}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -5376,7 +5431,7 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
               {...sheet.motionProps}>
               {sheet.handle}
               <div onPointerDown={sheet.startDrag} className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 sm:py-3">
-                <h2 className="flex items-center gap-2 text-base font-bold">💬 {t.qaTitle}</h2>
+                <h2 className="flex items-center gap-2 text-base font-bold">{t.qaTitle}</h2>
                 <button onClick={() => setOpen(false)} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><X size={18} /></button>
               </div>
               <div className="border-b border-[var(--border)] p-3">
@@ -5395,14 +5450,14 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
               <div className="flex-1 space-y-2 overflow-y-auto p-3">
                 {faq.map(({ f }, i) => (
                   <div key={i} className="rounded-xl px-3 py-2.5 text-sm" style={{ background: 'var(--tml-soft)' }}>
-                    <p className="text-xs font-bold" style={{ color: 'var(--tml)' }}>💡 {t.qaAnswer}</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--tml)' }}>{t.qaAnswer}</p>
                     <p className="mt-0.5 leading-relaxed">{tx(f.a, lang)}</p>
                     <button onClick={() => { onGo(f.go); setOpen(false); }} className="mt-0.5 inline-flex min-h-[40px] items-center text-xs font-bold underline">{t.qaOpen}</button>
                   </div>
                 ))}
                 {results.map((d, i) => (
                   <button key={i} onClick={() => go(d)} className="flex w-full items-start gap-2.5 rounded-xl border border-[var(--border)] px-3 py-2 text-left hover:border-[var(--ink)]">
-                    {d.exit ? <span className="flex shrink-0 gap-0.5">{String(d.exit).split('/').slice(0, 2).map((e) => <ExitPlate key={e} exit={e} />)}</span> : <span className="w-7 shrink-0 text-center text-lg">{d.icon}</span>}
+                    {d.exit ? <span className="flex shrink-0 gap-0.5">{String(d.exit).split('/').slice(0, 2).map((e) => <ExitPlate key={e} exit={e} />)}</span> : <span className="w-7 shrink-0" aria-hidden />}
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold">{d.title}</span>
                       {d.sub && <span className="line-clamp-2 block text-xs text-[var(--muted)]">{d.sub}</span>}
@@ -5412,7 +5467,7 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
                 {nothing && <p className="px-1 text-sm text-[var(--muted)]">{t.qaNothing}</p>}
                 {q.trim() && (
                   <div className="rounded-xl border border-dashed border-[var(--border)] p-3">
-                    <p className="text-xs font-bold">🤖 {nothing ? t.qaExtTitle : t.qaExtTitleMore}</p>
+                    <p className="text-xs font-bold">{nothing ? t.qaExtTitle : t.qaExtTitleMore}</p>
                     <div className="mt-2 grid grid-cols-3 gap-1.5">
                       {EXT_AI.map((x) => (
                         <a key={x.id} href={x.url(extPrompt(q, lang))} target="_blank" rel="noopener noreferrer"

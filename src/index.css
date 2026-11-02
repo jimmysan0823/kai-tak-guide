@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* 細字加大：最細 13px、內文 15px，減少過細文字 */
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+}
