@@ -1,13 +1,13 @@
 /**
- * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v20（🧭 路線查詢：由啟德出發／自選上車站至下車站，顯示車費及車程）
+ * 啟德站周邊地標與交通轉乘指南 (Kai Tak Transit & Landmark Guide)  v21（🍎 Apple 設計審查修正：44pt 撳位、即時按壓回饋、不回彈 spring、可下拉關閉面板、對比度、圓角及字級統一）
  * （食環署持牌食肆每週自動更新、醫院實景導航影片、新蒲崗工廈區；毋須 Google Places API）
  * React + Tailwind CSS + lucide-react + framer-motion + Supabase
  * 依賴：npm i framer-motion lucide-react @supabase/supabase-js
  * 環境變數：VITE_SUPABASE_URL、VITE_SUPABASE_ANON_KEY、VITE_ADMIN_EMAIL
  *          （可選）VITE_YOUTUBE_URL_EXIT_C、VITE_YOUTUBE_URL_EXIT_D
  */
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import { motion, AnimatePresence, MotionConfig, useDragControls, animate as motionAnimate } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { AlertTriangle, ArrowLeftRight, ArrowRight, Banknote, UtensilsCrossed, Play, Bus, CheckCircle2, ChevronDown, Clock, Database, ExternalLink, Factory, Footprints, Globe, GraduationCap, HeartPulse, Home, Info, Landmark, LayoutGrid, Lock, LogOut, MapPin, Navigation, Pencil, Plus, RefreshCw, Search, Ship, ShoppingBag, Ticket, Train, Trash2, Unlock, Wallet, X, Compass, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -847,6 +847,16 @@ const LINES = {
   AEL: { color: '#00888A', name: { zh: '機場快綫', en: 'Airport Express', ko: '공항철도', ja: 'エアポート・エクスプレス' } },
   WALK: { color: '#8A939E', name: { zh: '步行', en: 'Walk', ko: '도보', ja: '徒歩' } },
 };
+// 路綫標籤文字顏色：按 WCAG 對比度自動揀白字或深色字（最少 4.5:1）
+const lum = (hex) => {
+  const c = hex.replace('#', '').match(/../g).map((x) => parseInt(x, 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+// 機場快綫官方色配白字或深色字都只有約 4.3:1，標籤底色略為加深
+const LINE_CHIP_BG = { AEL: '#007A7C' };
+const lineBg = (code) => LINE_CHIP_BG[code] || LINES[code].color;
+const lineInk = (code) => (contrast(lineBg(code), '#FFFFFF') >= contrast(lineBg(code), '#111418') ? '#FFFFFF' : '#111418');
 const LINE_ORDER = ['TML', 'KTL', 'TWL', 'ISL', 'EAL', 'TKL', 'TCL', 'SIL', 'DRL', 'AEL'];
 
 // 車站代號 → [中文, 英文]（英文名稱須與港鐵開放數據車費表一致）
@@ -1112,21 +1122,34 @@ const GLOBAL_CSS = `
   --bg:#EDF0F3; --surface:#FFFFFF; --surface-2:#F4F6F8; --ink:#16202B; --muted:#5A6573;
   --border:#D9DFE5; --tml:#9A3B26; --tml-soft:#F4E6E1; --sign:#FFCC00; --sign-ink:#111418;
   --ok:#0F7B4F; --warn-bg:#FFF4D6; --warn-ink:#7A4B00;
-  font-family:'Noto Sans HK','Noto Sans TC','Noto Sans KR','Noto Sans JP',system-ui,-apple-system,'PingFang HK','Microsoft JhengHei',sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang HK','Noto Sans HK','Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
 }
+/* 系統字型優先（Apple 裝置用 SF + 對應語言的系統中日韓字型），其他平台用 Noto */
+:root:lang(ja){ font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic',system-ui,sans-serif; }
+:root:lang(ko){ font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif; }
+:root:lang(en){ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans HK',system-ui,sans-serif; }
+/* 大字收窄字距、細字保持 0（尺寸相關字距） */
+h1,h2{ letter-spacing:-0.01em; }
+.text-2xl,.text-3xl,.text-4xl{ letter-spacing:-0.02em; }
+/* 撳落即時回饋：手指一按就縮細少少及變暗（放手先執行動作）；用獨立 scale 屬性，唔會蓋過 Tailwind 的 translate */
+:where(button, a, [role="tab"], summary, label:has(> select)){ -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+:where(button:not(:disabled), a[href], [role="tab"], summary):active{ scale:0.97; filter:brightness(0.92); transition:scale 80ms ease-out, filter 80ms ease-out; }
+/* 實時圓點：載入完成時閃一次，之後保持靜止 */
+@keyframes kt-live-once{ 0%{ transform:scale(1); opacity:1; } 40%{ transform:scale(1.8); opacity:.35; } 100%{ transform:scale(1); opacity:1; } }
+.kt-live-dot{ animation:kt-live-once 700ms ease-out 1; }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0E141A; --surface:#172029; --surface-2:#1E2933; --ink:#E7ECF1; --muted:#9AA6B2;
-    --border:#2C3946; --tml:#D0745A; --tml-soft:#3A2520; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C;
+    --border:#2C3946; --tml:#E08A70; --tml-soft:#3A2520; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0E141A; --surface:#172029; --surface-2:#1E2933; --ink:#E7ECF1; --muted:#9AA6B2;
-  --border:#2C3946; --tml:#D0745A; --tml-soft:#3A2520; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C;
+  --border:#2C3946; --tml:#E08A70; --tml-soft:#3A2520; --warn-bg:#3A2F12; --warn-ink:#FFD98A; --ok:#4FC28C;
 }
 body{ background:var(--bg); color:var(--ink); margin:0; }
 .num{ font-family:'Barlow Semi Condensed','Noto Sans HK',sans-serif; font-feature-settings:'tnum'; }
-:focus-visible{ outline:3px solid var(--sign); outline-offset:2px; border-radius:6px; }
+:focus-visible{ outline:3px solid var(--sign); outline-offset:2px; }
 /* Google 翻譯：改用原生下拉選單，由手機／瀏覽器自行顯示選項，不會超出畫面 */
 #google_translate_element .goog-te-gadget{ font-size:0 !important; line-height:0; color:transparent !important; white-space:nowrap; }
 #google_translate_element .goog-te-gadget > span, #google_translate_element .goog-logo-link{ display:none !important; }
@@ -1135,7 +1158,8 @@ body{ background:var(--bg); color:var(--ink); margin:0; }
 /* 隱藏 Google 翻譯頂部橫額及懸浮提示，避免頁面被推低或遮擋 */
 .goog-te-banner-frame, iframe.skiptranslate, #goog-gt-tt, .goog-te-balloon-frame, .VIpgJd-ZVi9od-ORHb-OEVmcd, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-yAWNEb-L7lbkb{ display:none !important; }
 body{ top:0 !important; position:static !important; }
-@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+@media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } :where(button:not(:disabled), a[href], [role="tab"], summary):active{ scale:1; filter:brightness(0.88); } }
+@media (prefers-contrast: more){ :root{ --muted:#3E4752; --border:#9AA6B2; } }
 `;
 
 /* ============================ 共用小元件 ============================ */
@@ -1143,7 +1167,7 @@ function ExitPlate({ exit, size = 'md' }) {
   const big = size === 'lg';
   return (
     <div
-      className={`num flex shrink-0 items-center justify-center rounded-md font-bold leading-none ${big ? 'h-14 min-w-[3.5rem] px-2 text-3xl' : 'h-7 min-w-[1.9rem] px-1.5 text-base'}`}
+      className={`num flex shrink-0 items-center justify-center rounded-lg font-bold leading-none ${big ? 'h-14 min-w-[3.5rem] px-2 text-3xl' : 'h-7 min-w-[1.9rem] px-1.5 text-base'}`}
       style={{ background: 'var(--sign)', color: 'var(--sign-ink)', boxShadow: 'inset 0 -3px 0 rgba(0,0,0,.18)' }}
       aria-label={`Exit ${exit}`}
     >
@@ -1156,14 +1180,76 @@ function LineChip({ code, lang }) {
   const l = LINES[code];
   const label = tx(l.name, lang);
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white" style={{ background: l.color }}>
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: lineBg(code), color: lineInk(code) }}>
       {code === 'WALK' ? <Footprints size={12} /> : <Train size={12} />}
       {label}
     </span>
   );
 }
 
+/* ===================== 動態效果（Apple 式：預設不回彈的 spring） ===================== */
+// 全站預設：臨界阻尼（不回彈），0.35 秒左右到位；只有甩動等帶動量的手勢才回彈
+const UI_SPRING = { type: 'spring', bounce: 0, duration: 0.35 };
+// Apple《Designing Fluid Interfaces》的動量投射：按放手速度推算最終停留位置
+const projectMomentum = (v, d = 0.998) => (v / 1000) * d / (1 - d);
+// 橡皮筋阻力：越拉越難拉
+const rubberband = (over, dim, c = 0.55) => (over * dim * c) / (dim + c * Math.abs(over));
+
+function useMedia(query) {
+  const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false);
+  const [m, setM] = useState(get);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia(query);
+    const f = () => setM(mq.matches);
+    f();
+    if (mq.addEventListener) { mq.addEventListener('change', f); return () => mq.removeEventListener('change', f); }
+    mq.addListener(f); return () => mq.removeListener(f);
+  }, [query]);
+  return m;
+}
+
+// 手機：由底部彈出、可向下拉關閉的面板；電腦：置中視窗。進出走同一條路徑
+function useSheet(onClose) {
+  const isSheet = useMedia('(max-width: 639px)');
+  const controls = useDragControls();
+  const startDrag = (e) => { if (isSheet && e.pointerType !== 'mouse') controls.start(e); };
+  const motionProps = isSheet ? {
+    initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' }, transition: UI_SPRING,
+    drag: 'y', dragListener: false, dragControls: controls,
+    dragConstraints: { top: 0, bottom: 0 }, dragElastic: { top: 0.05, bottom: 1 },
+    dragTransition: { bounceStiffness: 400, bounceDamping: 32 }, // 彈回原位：阻尼比約 0.8（因為有手勢動量）
+    onDragEnd: (e, info) => { if (info.offset.y + projectMomentum(info.velocity.y) > 160) onClose(); },
+  } : {
+    initial: { y: 24, opacity: 0, scale: 0.98 }, animate: { y: 0, opacity: 1, scale: 1 }, exit: { y: 24, opacity: 0, scale: 0.98 }, transition: UI_SPRING,
+  };
+  const handle = isSheet ? (
+    <div onPointerDown={(e) => controls.start(e)} className="-mx-5 flex cursor-grab touch-none justify-center pb-2 pt-2.5" aria-hidden="true">
+      <span className="h-1.5 w-10 rounded-full bg-[var(--border)]" />
+    </div>
+  ) : null;
+  return { motionProps, handle, startDrag };
+}
+
+// 重新整理掣：44×44 撳位，載入期間圖示轉動
+function RefreshButton({ onRefresh, label = 'Refresh' }) {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (busy) return;
+    setBusy(true);
+    const t0 = Date.now();
+    try { await onRefresh(); } finally { setTimeout(() => setBusy(false), Math.max(0, 500 - (Date.now() - t0))); }
+  };
+  return (
+    <button onClick={run} aria-label={label} aria-busy={busy}
+      className="-m-1.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]">
+      <RefreshCw size={16} className={busy ? 'animate-spin' : ''} />
+    </button>
+  );
+}
+
 function Modal({ open, onClose, children, wide }) {
+  const sheet = useSheet(onClose);
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -1173,12 +1259,12 @@ function Modal({ open, onClose, children, wide }) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={onClose}>
+        <motion.div className="fixed inset-0 z-[66] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={onClose}>
           <motion.div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}
-            className={`max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl sm:rounded-2xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-sm'}`}
-            initial={{ y: 40, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 30, opacity: 0 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}>
+            className={`max-h-[92vh] w-full overflow-y-auto rounded-t-3xl border border-[var(--border)] bg-[var(--surface)] p-5 pt-0 shadow-2xl sm:rounded-3xl sm:pt-5 ${wide ? 'sm:max-w-2xl' : 'sm:max-w-sm'}`}
+            {...sheet.motionProps}>
+            {sheet.handle}
             {children}
           </motion.div>
         </motion.div>
@@ -1224,7 +1310,7 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
               <Train size={22} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-[15px] font-bold leading-snug sm:text-lg">{t.title}</h1>
+              <h1 className="text-[0.9375rem] font-bold leading-snug sm:text-lg">{t.title}</h1>
               <p className="text-xs leading-snug text-white/60">Kai Tak Transit &amp; Landmark Guide</p>
             </div>
           </div>
@@ -1232,23 +1318,23 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
           {/* 管理員按鈕：手機貼右上角，電腦放最右 */}
           <div className="order-2 shrink-0 self-start md:order-3 md:self-center">
             {isAdmin ? (
-              <button onClick={onLogout} className="flex items-center gap-1 rounded-md bg-[var(--sign)] px-2 py-1 text-xs font-semibold text-[#111418]">
+              <button onClick={onLogout} className="flex min-h-[40px] items-center gap-1 rounded-xl bg-[var(--sign)] px-3 py-2 text-xs font-semibold text-[#111418]">
                 <LogOut size={14} />{t.logout}
               </button>
             ) : (
-              <button onClick={onAdminClick} aria-label={t.admin} title={t.admin} className="rounded-md p-1.5 text-white/35 transition-colors hover:bg-white/10 hover:text-white/80">
-                <Lock size={15} />
+              <button onClick={onAdminClick} aria-label={t.admin} title={t.admin} className="-m-1.5 grid h-11 w-11 place-items-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+                <Lock size={16} />
               </button>
             )}
           </div>
 
           {/* 語言選項：手機佔滿整行，電腦跟標題同一行 */}
           <div className="order-3 flex w-full items-center gap-2 md:order-2 md:w-auto">
-            <div className="grid flex-1 grid-cols-4 rounded-lg bg-white/10 p-0.5 md:flex md:flex-none" role="group" aria-label="Language">
+            <div className="grid flex-1 grid-cols-4 rounded-[14px] bg-white/10 p-0.5 md:flex md:flex-none" role="group" aria-label="Language">
               {LANGS.map((l) => (
                 <button key={l.code} onClick={() => setLang(l.code)}
-                  className={`relative whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors md:py-1 ${lang === l.code ? 'text-[#16202B]' : 'text-white/75 hover:text-white'}`}>
-                  {lang === l.code && <motion.span layoutId="langPill" className="absolute inset-0 rounded-md bg-white" transition={{ type: 'spring', damping: 30, stiffness: 400 }} />}
+                  className={`relative min-h-[44px] whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors md:min-h-[32px] ${lang === l.code ? 'text-[#16202B]' : 'text-white/75 hover:text-white'}`}>
+                  {lang === l.code && <motion.span layoutId="langPill" className="absolute inset-0 rounded-xl bg-white" transition={UI_SPRING} />}
                   <span className="relative">{l.label}</span>
                 </button>
               ))}
@@ -1256,7 +1342,7 @@ function Header({ lang, setLang, t, isAdmin, onAdminClick, onLogout }) {
             <div className="flex shrink-0 items-center gap-1" title={gt === 'error' ? t.gtFail : 'Google Translate'}>
               <Globe size={16} className="shrink-0 text-white/60" />
               <div id="google_translate_element" className={gt === 'ready' ? 'min-w-0' : 'hidden'} />
-              {gt !== 'ready' && <span className="hidden text-[11px] text-white/45 lg:inline">{gt === 'error' ? 'Google' : '…'}</span>}
+              {gt !== 'ready' && <span className="hidden text-xs text-white/60 lg:inline">{gt === 'error' ? 'Google' : '…'}</span>}
             </div>
           </div>
         </div>
@@ -1271,7 +1357,7 @@ function StationBoard({ t, lang }) {
   return (
     <section className="mx-auto max-w-6xl px-4 pt-6">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]">
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 pb-4 pt-5 sm:px-7">
           <div>
             <div className="flex items-baseline gap-3">
@@ -1279,7 +1365,7 @@ function StationBoard({ t, lang }) {
               <span className="text-xl font-medium text-[var(--muted)] sm:text-2xl">{t.stationAlt}</span>
             </div>
             <div className="mt-2 flex items-center gap-2 text-sm text-[var(--muted)]">
-              <span className="num rounded border border-[var(--border)] px-1.5 py-0.5 text-xs font-bold text-[var(--ink)]">KAT</span>
+              <span className="num rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs font-bold text-[var(--ink)]">KAT</span>
               <span>{t.line}</span>
             </div>
           </div>
@@ -1310,27 +1396,27 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="relative flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       {isAdmin && (
-        <div className="absolute right-2 top-2 flex gap-1">
-          <button onClick={() => onEdit(item)} className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-xs font-medium hover:bg-[var(--border)]"><Pencil size={12} />{t.edit}</button>
-          <button onClick={() => onDelete(item)} className="flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"><Trash2 size={12} />{t.del}</button>
+        <div className="absolute right-2 top-2 flex gap-2">
+          <button onClick={() => onEdit(item)} className="flex min-h-[40px] items-center gap-1 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-xs font-medium hover:bg-[var(--border)]"><Pencil size={13} />{t.edit}</button>
+          <button onClick={() => onDelete(item)} className="flex min-h-[40px] items-center gap-1 rounded-xl bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"><Trash2 size={13} />{t.del}</button>
         </div>
       )}
       <div className="flex items-start gap-3">
         <ExitPlate exit={item.exit} size="lg" />
         <div className={`min-w-0 flex-1 ${isAdmin ? 'pr-28 sm:pr-0 sm:pt-7' : ''}`}>
           <h3 className="text-base font-bold leading-snug">{tx(item.name, lang)}</h3>
-          {isAdmin && exitAudit(item) && <p className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-900">{fmt(t.exitAudit, { exit: exitAudit(item) })}</p>}
+          {isAdmin && exitAudit(item) && <p className="mt-0.5 inline-block rounded-lg bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-900">{fmt(t.exitAudit, { exit: exitAudit(item) })}</p>}
           {lang !== 'zh' && item.name.zh !== tx(item.name, lang) && <p className="text-xs text-[var(--muted)]">{item.name.zh}</p>}
-          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--muted)]">
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--muted)]">
             <cat.Icon size={11} />{tx(cat.label, lang)}
           </span>
         </div>
       </div>
       <p className="mt-3 text-sm leading-relaxed text-[var(--ink)]/90">{tx(item.desc, lang)}</p>
       {tx(item.tip, lang) && (
-        <div className="mt-3 flex gap-2 rounded-lg px-3 py-2 text-[13px] leading-relaxed" style={{ background: 'var(--tml-soft)' }}>
+        <div className="mt-3 flex gap-2 rounded-lg px-3 py-2 text-[0.8125rem] leading-relaxed" style={{ background: 'var(--tml-soft)' }}>
           <Footprints size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--tml)' }} />
           <span><span className="sr-only">{t.tip}: </span>{tx(item.tip, lang)}</span>
         </div>
@@ -1339,7 +1425,7 @@ function LandmarkCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       {!HOSPITAL_IDS.has(item.id) && etaTargetOf(item) && <TransitEtaBadges targetKey={etaTargetOf(item)} t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || item.name.zh)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--ink)]">
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] min-h-[44px] px-3 py-2.5 text-sm font-semibold transition-colors hover:border-[var(--ink)]">
           <Navigation size={15} />{t.navigate}
         </a>
       </div>
@@ -1422,16 +1508,16 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
   const sub = [item.name.zh, item.name.en].filter((n) => n && n !== title)[0];
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }}
-      className="relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="relative flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       {isAdmin && !item.synced && (
-        <div className="absolute right-2 top-2 flex gap-1">
-          <button onClick={() => onEdit(item)} aria-label={t.edit} className="rounded-md bg-[var(--surface-2)] p-1.5 hover:bg-[var(--border)]"><Pencil size={12} /></button>
-          <button onClick={() => onDelete(item)} aria-label={t.del} className="rounded-md bg-red-600 p-1.5 text-white hover:bg-red-700"><Trash2 size={12} /></button>
+        <div className="absolute right-2 top-2 flex gap-2">
+          <button onClick={() => onEdit(item)} aria-label={t.edit} className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)]"><Pencil size={14} /></button>
+          <button onClick={() => onDelete(item)} aria-label={t.del} className="grid h-10 w-10 place-items-center rounded-xl bg-red-600 text-white hover:bg-red-700"><Trash2 size={14} /></button>
         </div>
       )}
       {/* 主標題：餐廳名稱 + 菜式 */}
-      <div className={isAdmin && !item.synced ? 'pr-16' : ''}>
-        {item.synced && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800"><RefreshCw size={10} />{t.syncedBadge}</span>}
+      <div className={isAdmin && !item.synced ? 'pr-24' : ''}>
+        {item.synced && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800"><RefreshCw size={10} />{t.syncedBadge}</span>}
         <h3 className="text-lg font-bold leading-snug">{title}</h3>
         {sub && <p className="text-sm text-[var(--muted)]">{sub}</p>}
         {(() => {
@@ -1450,16 +1536,16 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       </div>
       <p className="mt-2.5 text-sm leading-relaxed">{tx(item.desc, lang)}</p>
       {/* 輔助資料：出口、商場及樓層 */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-3 text-[11px] text-[var(--muted)]">
-        <span className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] py-0.5 pl-0.5 pr-2 font-semibold text-[var(--ink)]">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--surface-2)] py-0.5 pl-0.5 pr-2 font-semibold text-[var(--ink)]">
           <ExitPlate exit={item.exit} />{item.exit === 'KAT' ? t.concourse : `${t.exit} ${item.exit}`}
         </span>
-        <span className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 font-semibold text-[var(--ink)]">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--surface-2)] px-2 py-1 font-semibold text-[var(--ink)]">
           <MapPin size={11} />{tx(mall.label, lang)}{floor ? ` · ${floor}` : ''}
         </span>
         {walk && <span className="inline-flex items-center gap-1 px-1"><Footprints size={11} />{walk}</span>}
         {transfer && (
-          <span className="flex w-full items-start gap-1.5 rounded-md px-2 py-1.5 font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
+          <span className="flex w-full items-start gap-1.5 rounded-lg px-2 py-1.5 font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>
             <Bus size={12} className="mt-0.5 shrink-0" />{transfer}
           </span>
         )}
@@ -1467,10 +1553,10 @@ function RestaurantCard({ item, lang, t, isAdmin, onEdit, onDelete }) {
       {etaTargetOf(item) && <TransitEtaBadges targetKey={etaTargetOf(item)} t={t} lang={lang} />}
       <div className="mt-auto pt-3.5">
         <a href={mapsUrl(item.mapQuery || `${item.name.zh} 啟德`)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
+          className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: LINES.TML.color }}>
           📍 {t.navigate}<ExternalLink size={14} />
         </a>
-        {item.meta && item.meta.source === 'fehd' && <p className="mt-1 text-right text-[10px] text-[var(--muted)]">{t.srcFehd}{item.meta.licence ? `（${item.meta.licence}）` : ''}</p>}
+        {item.meta && item.meta.source === 'fehd' && <p className="mt-1 text-right text-xs text-[var(--muted)]">{t.srcFehd}{item.meta.licence ? `（${item.meta.licence}）` : ''}</p>}
       </div>
     </motion.article>
   );
@@ -1527,8 +1613,8 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
         <label className="relative flex-1">
           <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={cat === 'dining' ? t.searchDining : cat === 'spk' ? t.spkSearchPh : t.searchPh}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-3 pl-10 pr-10 text-[15px] outline-none focus:border-[var(--ink)]" />
-          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={16} /></button>}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-3 pl-10 pr-10 text-[0.9375rem] outline-none focus:border-[var(--ink)]" />
+          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"><X size={16} /></button>}
         </label>
         {isAdmin && (
           <button onClick={onAdd} className="flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>
@@ -1543,7 +1629,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
             const active = cat === c.id;
             return (
               <button key={c.id} onClick={() => setCat(c.id)}
-                className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink)]'}`}>
+                className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-full border min-h-[44px] px-4 py-2 text-sm font-medium transition-colors ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink)]'}`}>
                 {active && <motion.span layoutId="catPill" className="absolute inset-0 rounded-full" style={{ background: 'var(--ink)' }} transition={{ type: 'spring', damping: 30, stiffness: 380 }} />}
                 <span className={`relative flex items-center gap-1.5 ${active ? 'text-[var(--surface)]' : ''}`}>
                   {c.emoji ? <span aria-hidden>{c.emoji}</span> : <c.Icon size={14} />}
@@ -1564,7 +1650,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
         const groupCount = (g) => dining.filter((x) => g.cuisines.includes((x.meta || {}).cuisine)).length;
         const areaCount = (a) => dining.filter((x) => a.malls.includes((x.meta || {}).mall)).length;
         const Chip = ({ active, onClick, children, big }) => (
-          <button onClick={onClick} className={`whitespace-nowrap rounded-full border font-semibold transition-colors ${big ? 'px-3.5 py-1.5 text-sm' : 'px-3 py-1 text-xs'} ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink)]'}`}
+          <button onClick={onClick} className={`whitespace-nowrap rounded-full border font-semibold transition-colors ${big ? 'min-h-[44px] px-4 py-2 text-sm' : 'min-h-[40px] px-3.5 py-2 text-xs'} ${active ? 'border-transparent text-white' : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink)]'}`}
             style={active ? { background: LINES.TML.color } : undefined}>{children}</button>
         );
         return (
@@ -1583,7 +1669,7 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
                 <Chip key={a.id} active={mallF === a.id} onClick={() => setMallF(a.id)}>{tx(a.label, lang)} <span className="opacity-70">{areaCount(a)}</span></Chip>
               ))}
             </div>
-            <p className="text-[11px] text-[var(--muted)]">{t.walkNote}</p>
+            <p className="text-xs text-[var(--muted)]">{t.walkNote}</p>
           </motion.div>
         );
       })()}
@@ -1592,10 +1678,10 @@ function LandmarkPortal({ items, lang, t, isAdmin, onAdd, onEdit, onDelete, onRo
       {cat === 'spk' ? null : filtered.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] p-8 text-center">
           <p className="text-sm text-[var(--muted)]">{t.noResult}</p>
-          <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setGroupF('all'); }} className="mt-3 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
+          <button onClick={() => { setQ(''); setCat('all'); setMallF('all'); setGroupF('all'); }} className="mt-3 min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium hover:border-[var(--ink)]">{t.clear}</button>
         </div>
       ) : (
-        <motion.div layout className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <motion.div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {filtered.map((it) => (
               it.category === 'dining' && it.meta
@@ -1706,7 +1792,7 @@ function Arrivals({ t, lang }) {
                 <span className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: LINES.TML.color }} />
                   <span className="text-sm">{destName(tr.dest, lang)}</span>
-                  <span className="text-[11px] text-white/50">{t.plat} {tr.plat}</span>
+                  <span className="text-xs text-white/50">{t.plat} {tr.plat}</span>
                 </span>
                 {left ? (
                   <span className={`num tabular-nums ${i === 0 ? 'text-2xl font-bold text-[var(--sign)]' : 'text-lg text-white/80'}`}>{left}</span>
@@ -1723,7 +1809,7 @@ function Arrivals({ t, lang }) {
 
   const badge = status === 'live' ? t.live : status === 'empty' ? t.ntEmptyBadge : status === 'sim' ? t.sim : '…';
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+    <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-lg font-bold"><Clock size={19} />{t.arrivals}</h2>
         <div className="flex items-center gap-2 text-xs">
@@ -1731,7 +1817,7 @@ function Arrivals({ t, lang }) {
             <span className={`h-2 w-2 rounded-full ${status === 'live' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {badge}
           </span>
-          <button onClick={() => load(true)} aria-label="Refresh" className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><RefreshCw size={14} /></button>
+          <RefreshButton onRefresh={() => load(true)} />
         </div>
       </div>
       {(status === 'empty' || (res && res.delay)) && (
@@ -1743,7 +1829,7 @@ function Arrivals({ t, lang }) {
         {renderCol(t.toWKS, up)}
         {renderCol(t.toTUM, down)}
       </div>
-      {res && res.updated && <p className="mt-2 text-right text-[11px] text-[var(--muted)]">{t.updated} {hhmmHK(res.updated)}</p>}
+      {res && res.updated && <p className="mt-2 text-right text-xs text-[var(--muted)]">{t.updated} {hhmmHK(res.updated)}</p>}
     </section>
   );
 }
@@ -1785,14 +1871,14 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
   const fare = plan && plan.fare;
 
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+    <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Wallet size={19} />{t.fareCalc}</h2>
       <RailMapCard t={t} lang={lang} />
 
-      <div role="tablist" aria-label={t.rfMode} className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-2)] p-1 text-sm font-semibold">
+      <div role="tablist" aria-label={t.rfMode} className="mt-3 grid grid-cols-2 gap-1 rounded-2xl bg-[var(--surface-2)] p-1 text-sm font-semibold">
         {[['kat', t.rfModeKat], ['any', t.rfModeAny]].map(([m, label]) => (
           <button key={m} role="tab" aria-selected={mode === m} onClick={() => switchMode(m)}
-            className={`rounded-lg px-3 py-2 transition-colors ${mode === m ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>{label}</button>
+            className={`min-h-[44px] rounded-xl px-3 py-2 transition-colors ${mode === m ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>{label}</button>
         ))}
       </div>
 
@@ -1805,14 +1891,14 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
               <button key={f[0]} onClick={() => setTarget(f[0])} aria-pressed={target === f[0]}
                 className={`min-w-0 rounded-xl border-2 px-3 py-2 text-left transition-colors ${target === f[0] ? '' : 'border-[var(--border)] hover:bg-[var(--surface-2)]'}`}
                 style={target === f[0] ? { borderColor: f[3] } : undefined}>
-                <span className="block text-[11px] font-semibold uppercase tracking-wide" style={{ color: f[3] }}>{f[1]}</span>
+                <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: f[3] }}>{f[1]}</span>
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate font-bold">{stName(f[2], lang)}</span><StationDots code={f[2]} />
                 </span>
               </button>
             ) : (
               <button key="swap" onClick={swap} aria-label={t.rfSwap} title={t.rfSwap}
-                className="self-center rounded-full border border-[var(--border)] p-2 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]">
+                className="self-center rounded-full border border-[var(--border)] grid h-11 w-11 place-items-center text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]">
                 <ArrowLeftRight size={16} />
               </button>
             )))}
@@ -1825,7 +1911,7 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
         <label className="relative">
           <span className="sr-only">{t.allLines}</span>
           <select value={line} onChange={(e) => setLine(e.target.value)}
-            className="w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-3 pr-9 text-sm font-semibold outline-none focus:border-[var(--ink)]">
+            className="w-full appearance-none rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-3 pr-9 text-sm font-semibold outline-none focus:border-[var(--ink)]">
             <option value="ALL">{t.allLines}</option>
             {LINE_ORDER.map((l) => <option key={l} value={l}>{tx(LINES[l].name, lang)}</option>)}
           </select>
@@ -1834,8 +1920,8 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
         <label className="relative">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.stationSearch}
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-9 pr-9 text-sm outline-none focus:border-[var(--ink)]" />
-          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-9 pr-9 text-sm outline-none focus:border-[var(--ink)]" />
+          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
         </label>
       </div>
 
@@ -1853,11 +1939,11 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
               const active = selected === c;
               return (
                 <button key={c} onClick={() => pick(c)} aria-pressed={active}
-                  className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${active ? 'text-white' : 'hover:bg-[var(--surface-2)]'}`}
+                  className={`flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-sm transition-colors ${active ? 'text-white' : 'hover:bg-[var(--surface-2)]'}`}
                   style={active ? { background: pickColor } : undefined}>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">{stName(c, lang)}</span>
-                    <span className={`block truncate text-[11px] ${active ? 'text-white/75' : 'text-[var(--muted)]'}`}>{lang === 'zh' || lang === 'ja' ? ST[c][1] : ST[c][0]}</span>
+                    <span className={`block truncate text-xs ${active ? 'text-white/90' : 'text-[var(--muted)]'}`}>{lang === 'zh' || lang === 'ja' ? ST[c][1] : ST[c][0]}</span>
                   </span>
                   <StationDots code={c} />
                 </button>
@@ -1867,8 +1953,7 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
         )}
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div key={`${from}>${dest}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="mt-5">
+      <motion.div key={`${from}>${dest}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12, ease: 'easeOut' }} className="mt-5">
           {!plan ? (
             <p className="rounded-lg bg-[var(--surface-2)] p-4 text-sm">{from === 'KAT' ? t.atKat : t.rfSame}</p>
           ) : (
@@ -1937,7 +2022,7 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
                   </table>
                 </div>
                 <div className="flex items-baseline justify-between rounded-lg bg-[var(--surface-2)] px-4 py-3">
-                  <span className="text-sm text-[var(--muted)]">{t.time}<span className="block text-[11px]">{t.timeNote}</span></span>
+                  <span className="text-sm text-[var(--muted)]">{t.time}<span className="block text-xs">{t.timeNote}</span></span>
                   <span className="num text-xl font-bold">{plan.mins} {t.mins}</span>
                 </div>
                 <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${fare && fare.source === 'official' ? 'bg-emerald-100 text-emerald-800' : ''}`}
@@ -1957,8 +2042,7 @@ function StationRouteFinder({ t, lang, fares, fareStatus, initialDest }) {
               </div>
             </div>
           )}
-        </motion.div>
-      </AnimatePresence>
+      </motion.div>
     </section>
   );
 }
@@ -2009,7 +2093,7 @@ const TICKETS = {
 function TicketZone({ t, lang }) {
   const list = TICKETS[lang] || TICKETS.en;
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+    <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Ticket size={19} />{t.tickets}</h2>
       <div className="mt-3 flex items-start gap-2 rounded-xl border-2 px-4 py-3 text-sm font-bold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)', borderColor: 'var(--sign)' }}>
         <AlertTriangle size={18} className="mt-0.5 shrink-0" />{t.octBanner}
@@ -2058,7 +2142,7 @@ function TicketZone({ t, lang }) {
           <p className="mt-2 flex items-start gap-2 text-sm"><Info size={16} className="mt-0.5 shrink-0 text-[var(--muted)]" /><span>{t.csc}</span></p>
         </div>
         <a href={TICKET_URL} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold text-white" style={{ background: '#16202B' }}>
+          className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white" style={{ background: '#16202B' }}>
           🔗 {t.officialLink}<ExternalLink size={15} />
         </a>
       </div>
@@ -2119,9 +2203,9 @@ function LoginModal({ open, onClose, onSuccess, t }) {
     <Modal open={open} onClose={onClose}>
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-bold"><Lock size={18} />{t.admin}</h2>
-        <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+        <button onClick={onClose} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><X size={18} /></button>
       </div>
-      <motion.div animate={err ? { x: [0, -8, 8, -5, 5, 0] } : {}} transition={{ duration: 0.35 }} className="mt-4 space-y-2">
+      <motion.div animate={err ? { x: [0, -8, 8, -5, 5, 0] } : {}} transition={{ type: 'tween', duration: 0.35 }} className="mt-4 space-y-2">
         {supabase && !ADMIN_EMAIL && (
           <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(false); }} placeholder={t.email}
             className={`${inputCls} border-[var(--border)] focus:border-[var(--ink)]`} />
@@ -2131,7 +2215,7 @@ function LoginModal({ open, onClose, onSuccess, t }) {
           className={`${inputCls} ${err ? 'border-red-500' : 'border-[var(--border)] focus:border-[var(--ink)]'}`} />
       </motion.div>
       {err && <p className="mt-2 text-sm text-red-600">{t.pwWrong}</p>}
-      <button onClick={submit} disabled={busy} className="mt-4 w-full rounded-lg py-2.5 font-bold text-white disabled:opacity-60" style={{ background: LINES.TML.color }}>
+      <button onClick={submit} disabled={busy} className="mt-4 w-full rounded-xl py-2.5 font-bold text-white disabled:opacity-60" style={{ background: LINES.TML.color }}>
         {busy ? t.signingIn : t.login}
       </button>
     </Modal>
@@ -2171,13 +2255,13 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
     <Modal open={open} onClose={onClose} wide>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">{initial ? t.formEdit : t.formAdd}</h2>
-        <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+        <button onClick={onClose} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><X size={18} /></button>
       </div>
 
-      <div className="mt-4 flex gap-1 rounded-lg bg-[var(--surface-2)] p-1">
+      <div className="mt-4 flex gap-1 rounded-2xl bg-[var(--surface-2)] p-1">
         {LANGS.map((l) => (
           <button key={l.code} onClick={() => setTab(l.code)}
-            className={`flex-1 rounded-md py-1.5 text-xs font-semibold ${tab === l.code ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}>
+            className={`min-h-[40px] flex-1 rounded-xl py-2 text-xs font-semibold ${tab === l.code ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}>
             {l.label}{l.code === 'zh' && ' *'}
           </button>
         ))}
@@ -2203,7 +2287,7 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
             <div className="mt-1 flex flex-wrap gap-1.5">
               {EXITS.map((e) => (
                 <button type="button" key={e} onClick={() => setF({ ...f, exit: e })}
-                  className={`num rounded-md px-2.5 py-1.5 text-sm font-bold ${f.exit === e ? 'bg-[var(--sign)] text-[#111418]' : 'border border-[var(--border)] text-[var(--muted)]'}`}>{e}</button>
+                  className={`num rounded-xl min-h-[44px] min-w-[44px] px-2.5 py-2 text-sm font-bold ${f.exit === e ? 'bg-[var(--sign)] text-[#111418]' : 'border border-[var(--border)] text-[var(--muted)]'}`}>{e}</button>
               ))}
             </div>
           </label>
@@ -2235,8 +2319,8 @@ function LandmarkForm({ open, onClose, initial, onSave, t, lang }) {
 
       {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
       <div className="mt-5 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
-        <button onClick={submit} className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-white" style={{ background: LINES.TML.color }}><Database size={15} />{t.save}</button>
+        <button onClick={onClose} className="min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
+        <button onClick={submit} className="min-h-[44px] flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: LINES.TML.color }}><Database size={15} />{t.save}</button>
       </div>
     </Modal>
   );
@@ -2252,8 +2336,8 @@ function ConfirmModal({ request, onClose, t }) {
             <p className="text-sm leading-relaxed">{request.message}</p>
           </div>
           <div className="mt-5 flex justify-end gap-2">
-            <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
-            <button onClick={request.action} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">{request.label}</button>
+            <button onClick={onClose} className="min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
+            <button onClick={request.action} className="min-h-[44px] rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white">{request.label}</button>
           </div>
         </>
       )}
@@ -2466,10 +2550,10 @@ function BusStopGuide({ r, t, lang }) {
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 overflow-hidden border-t border-[var(--border)] pt-3">
       <h4 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} />{t.bgTitle}</h4>
       <ol className="mt-2 space-y-1.5 text-sm">
-        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{ov ? `（${t[ov.note]}）` : plan && plan.why === 'pti' ? `（${t.bgAirside}）` : ''}</span></li>}
-        <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 2 : 1}</span>
+        {ex && <li className="flex items-center gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-xs font-bold text-[var(--surface)]">1</span>{(fixed || [ex.code]).map((c) => <ExitPlate key={c} exit={c} />)}<span>{fmt(t.bgExit, { exit: fixed ? exitJoin(fixed.join('/'), lang) : ex.code })}{ov ? `（${t[ov.note]}）` : plan && plan.why === 'pti' ? `（${t.bgAirside}）` : ''}</span></li>}
+        <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-xs font-bold text-[var(--surface)]">{ex ? 2 : 1}</span>
           <span>{mins ? fmt(t.bgWalk, { m: mins, stop: stopName }) : fmt(t.bgWalkNoTime, { stop: stopName })}</span></li>
-        <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--surface)]">{ex ? 3 : 2}</span>
+        <li className="flex items-start gap-2"><span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-xs font-bold text-[var(--surface)]">{ex ? 3 : 2}</span>
           <span>{fmt(t.bgWait, { route: r.route })}{dest ? `（${fmt(t.busTo, { dest })}）` : ''}</span></li>
       </ol>
       {has && (
@@ -2479,14 +2563,14 @@ function BusStopGuide({ r, t, lang }) {
         </div>
       )}
       <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-        <a href={walkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>
+        <a href={walkUrl} target="_blank" rel="noopener noreferrer" className="min-h-[44px] flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>
           <Footprints size={15} />{t.bgNav}
         </a>
-        <a href={official.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-bold hover:border-[var(--ink)]">
+        <a href={official.url} target="_blank" rel="noopener noreferrer" className="min-h-[44px] flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-bold hover:border-[var(--ink)]">
           {tx(official.name, lang)}<ExternalLink size={14} />
         </a>
       </div>
-      <p className="mt-2 text-[11px] text-[var(--muted)]">{t.bgNote}</p>
+      <p className="mt-2 text-xs text-[var(--muted)]">{t.bgNote}</p>
     </motion.div>
   );
 }
@@ -2604,11 +2688,11 @@ function BusRouteCard({ row, t, lang }) {
   };
   return (
     <motion.article layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="flex items-start gap-3">
-        <span className="num shrink-0 rounded-md px-2.5 py-1.5 text-xl font-black leading-none" style={{ background: isCtb ? '#F2B705' : '#C8102E', color: isCtb ? '#111' : '#fff' }}>{row.route_number}</span>
+        <span className="num shrink-0 rounded-lg px-2.5 py-1.5 text-xl font-black leading-none" style={{ background: isCtb ? '#F2B705' : '#C8102E', color: isCtb ? '#111' : '#fff' }}>{row.route_number}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-[var(--muted)]">{tx(BUS_CAT[row.category] || BUS_CAT.local, lang)}{isNew && <span className="ml-1.5 rounded bg-[var(--sign)] px-1.5 py-0.5 text-[10px] font-bold text-[#111418]">{t.busNew}</span>}</p>
+          <p className="text-xs font-semibold text-[var(--muted)]">{tx(BUS_CAT[row.category] || BUS_CAT.local, lang)}{isNew && <span className="ml-1.5 rounded-lg bg-[var(--sign)] px-1.5 py-0.5 text-xs font-bold text-[#111418]">{t.busNew}</span>}</p>
           <h3 className="font-bold leading-snug">{name}</h3>
           <p className="text-xs text-[var(--muted)]">{zh ? row.orig_tc : row.orig_en} ⇄ {zh ? row.dest_tc : row.dest_en}</p>
         </div>
@@ -2630,7 +2714,7 @@ function BusRouteCard({ row, t, lang }) {
 
       {deps.map((d) => (
         <div key={d.dir} className="mt-2 rounded-lg border border-[var(--border)] px-3 py-2">
-          <p className="text-[11px] font-bold text-[var(--muted)]">{fmt(t.busTo, { dest: zh ? d.dest.zh : d.dest.en })} · {t.bxBoard}</p>
+          <p className="text-xs font-bold text-[var(--muted)]">{fmt(t.busTo, { dest: zh ? d.dest.zh : d.dest.en })} · {t.bxBoard}</p>
           <ul className="mt-1 space-y-1.5">
             {d.stops.slice(0, 3).map((s) => {
               const w = walk(s);
@@ -2638,10 +2722,10 @@ function BusRouteCard({ row, t, lang }) {
               return (
                 <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                   <span className="font-semibold">📍 {zh ? s.zh : s.en}</span>
-                  <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{w.mins ? fmt(t.bxWalk, { m: w.mins }) : t.bgNav}</a>
-                  {w.note && <span className="w-full text-[11px] text-[var(--muted)]">↳ {w.note}</span>}
+                  <a href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center gap-1 text-[var(--muted)] underline"><ExitPlate exit={w.exit} />{w.mins ? fmt(t.bxWalk, { m: w.mins }) : t.bgNav}</a>
+                  {w.note && <span className="w-full text-xs text-[var(--muted)]">↳ {w.note}</span>}
                   <span className="ml-auto num">
-                    {e === undefined ? <span className="inline-block h-3 w-14 animate-pulse rounded bg-[var(--surface-2)]" />
+                    {e === undefined ? <span className="inline-block h-3 w-14 animate-pulse rounded-lg bg-[var(--surface-2)]" />
                       : e === null ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
                       : e.length === 0 ? <span className="text-[var(--muted)]">{t.busNoEta}</span>
                       : <b style={{ color: 'var(--tml)' }}>{e.map((x) => etaMinLabel(x.at, now, t)).join(' | ')}</b>}
@@ -2655,16 +2739,16 @@ function BusRouteCard({ row, t, lang }) {
 
       {via.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
-          {via.map((v, i) => <React.Fragment key={i}>{i > 0 && <span className="text-[var(--muted)]">➔</span>}<span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">{typeof v === 'string' ? v : jx(v, lang)}</span></React.Fragment>)}
+          {via.map((v, i) => <React.Fragment key={i}>{i > 0 && <span className="text-[var(--muted)]">➔</span>}<span className="rounded-lg bg-[var(--surface-2)] px-1.5 py-0.5">{typeof v === 'string' ? v : jx(v, lang)}</span></React.Fragment>)}
         </div>
       )}
-      {hl.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{hl.map((h, i) => <span key={i} className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-[11px]">⚡ {jx(h, lang)}</span>)}</div>}
+      {hl.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{hl.map((h, i) => <span key={i} className="rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs">⚡ {jx(h, lang)}</span>)}</div>}
       {jx(row.fare_note, lang) && <p className="mt-2 text-xs text-[var(--muted)]">💳 {jx(row.fare_note, lang)}</p>}
 
-      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+      <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2 py-1 text-xs font-semibold"
         style={row.synced_at ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>
         <span>{row.synced_at ? fmt(isCtb ? t.bxSyncedCtb : t.bxSyncedKmb, { time: new Date(row.synced_at).toLocaleString(lang === 'en' ? 'en-GB' : 'zh-HK', { timeZone: 'Asia/Hong_Kong', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }) : t.bxManual}</span>
-        {row.source_url && <a href={row.source_url} target="_blank" rel="noopener noreferrer" className="underline">{t.bxSource}</a>}
+        {row.source_url && <a href={row.source_url} target="_blank" rel="noopener noreferrer" className="-my-3 inline-flex min-h-[44px] items-center underline">{t.bxSource}</a>}
       </p>
     </motion.article>
   );
@@ -2676,7 +2760,7 @@ function FeaturedBuses({ rows, t, lang }) {
     .sort((a, b) => (a.sort || 100) - (b.sort || 100) || a.route_number.localeCompare(b.route_number, 'en', { numeric: true }));
   if (!list.length) return null;
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+    <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h3 className="flex items-center gap-2 text-base font-bold">🛂 {t.bxTitle}</h3>
       <p className="mt-1 text-xs text-[var(--muted)]">{t.bxIntro}</p>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
@@ -2765,12 +2849,12 @@ function BorderDeadlineBadge({ ports, t, lang, now }) {
             <li key={p.port_key} className={`rounded-lg px-2.5 py-1.5 text-xs ${late ? 'bg-red-100 text-red-800' : 'bg-white/70'}`}>
               <b>{jx(p.name, lang)}</b>
               <span className="num ml-1 font-black">{fmt(t.blBy, { time: mm2hhmm(by) })}</span>
-              {left != null && <span className="block text-[11px]">{late ? t.blMissed : fmt(t.blLeft, { n: left })}</span>}
+              {left != null && <span className="block text-xs">{late ? t.blMissed : fmt(t.blLeft, { n: left })}</span>}
             </li>
           );
         })}
       </ul>
-      <p className="mt-1.5 text-[11px]">{t.blWarnNote}</p>
+      <p className="mt-1.5 text-xs">{t.blWarnNote}</p>
     </div>
   );
 }
@@ -2784,7 +2868,7 @@ function LateNightBorderGuide({ t, lang }) {
   const [port, setPort] = useState(null);
   const ports = (data || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+    <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <button onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center justify-between gap-2 text-left">
         <span>
           <span className="flex items-center gap-2 text-base font-bold">🌙 {t.blTitle}</span>
@@ -2803,7 +2887,7 @@ function LateNightBorderGuide({ t, lang }) {
                 <button onClick={() => setPort(isOpen ? '' : p.port_key)} aria-expanded={isOpen} className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left">
                   <span className="flex flex-wrap items-center gap-2">
                     <b className="text-sm">{jx(p.name, lang)}</b>
-                    <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={p.is_24h ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>🕐 {jx(p.hours, lang)}</span>
+                    <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={p.is_24h ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>🕐 {jx(p.hours, lang)}</span>
                   </span>
                   <ChevronDown size={16} className={`shrink-0 text-[var(--muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -2813,20 +2897,20 @@ function LateNightBorderGuide({ t, lang }) {
                       <div key={i} className={`rounded-lg px-3 py-2 ${o.mode === 'warn' ? 'bg-red-50 text-red-800' : 'bg-[var(--surface-2)]'}`}>
                         <p className="flex flex-wrap items-center gap-1.5 text-sm font-bold">
                           <span aria-hidden>{MODE_ICON[o.mode] || '🚏'}</span>{jx(o.title, lang)}
-                          {TAG_STYLE[o.tag] && <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ background: TAG_STYLE[o.tag].bg, color: TAG_STYLE[o.tag].fg }}>{tx(TAG_STYLE[o.tag], lang)}</span>}
+                          {TAG_STYLE[o.tag] && <span className="rounded-lg px-1.5 py-0.5 text-xs font-bold" style={{ background: TAG_STYLE[o.tag].bg, color: TAG_STYLE[o.tag].fg }}>{tx(TAG_STYLE[o.tag], lang)}</span>}
                         </p>
                         <p className="mt-1 text-xs leading-relaxed">{jx(o.text, lang)}</p>
                         {o.station && o.station !== 'KAT' && ST[o.station] && <div className="mt-1.5 text-xs"><RouteChain code={o.station} lang={lang} t={t} /></div>}
                       </div>
                     ))}
                     {jx(p.note, lang) && <p className="text-xs text-[var(--muted)]">ℹ️ {jx(p.note, lang)}</p>}
-                    {p.source_url && <a href={p.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold underline"><ExternalLink size={11} />{t.bxSource}</a>}
+                    {p.source_url && <a href={p.source_url} target="_blank" rel="noopener noreferrer" className="-my-1.5 inline-flex min-h-[36px] items-center gap-1 py-2 text-xs font-semibold underline"><ExternalLink size={12} />{t.bxSource}</a>}
                   </div>
                 )}
               </div>
             );
           })}
-          <p className="text-[11px] leading-relaxed text-[var(--muted)]">{t.blSrc}</p>
+          <p className="text-xs leading-relaxed text-[var(--muted)]">{t.blSrc}</p>
         </div>
       )}
     </div>
@@ -2867,7 +2951,7 @@ function BusPanel({ t, lang, items }) {
     <section className="space-y-4">
       <FeaturedBuses rows={busRows} t={t} lang={lang} />
       <LateNightBorderGuide t={t} lang={lang} />
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-lg font-bold"><Bus size={19} />{t.busTitle}</h2>
           <div className="flex items-center gap-2 text-xs">
@@ -2875,14 +2959,14 @@ function BusPanel({ t, lang, items }) {
               <span className={`h-2 w-2 rounded-full ${status === 'live' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
               {status === 'loading' ? t.busLoading : status === 'live' ? t.busLive : t.busOfflineShort}
             </span>
-            <button onClick={load} aria-label="Refresh" className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><RefreshCw size={14} /></button>
+            <RefreshButton onRefresh={load} />
           </div>
         </div>
 
         <div className="mt-3 flex gap-2">
           {[{ id: 'key', label: t.busKey }, { id: 'all', label: t.busAll }].map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`rounded-full border px-3.5 py-1.5 text-sm font-medium ${filter === f.id ? 'border-transparent bg-[var(--ink)] text-[var(--surface)]' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}>
+              className={`rounded-full border min-h-[44px] px-4 py-2 text-sm font-medium ${filter === f.id ? 'border-transparent bg-[var(--ink)] text-[var(--surface)]' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}>
               {f.label}
             </button>
           ))}
@@ -2895,7 +2979,7 @@ function BusPanel({ t, lang, items }) {
           routes.length === 0 ? (
             <p className="mt-4 text-sm text-[var(--muted)]">{t.busNone}</p>
           ) : (
-            <motion.div layout className="mt-4 grid gap-2 sm:grid-cols-2">
+            <motion.div className="mt-4 grid gap-2 sm:grid-cols-2">
               <AnimatePresence mode="popLayout">
                 {routes.map((r) => (
                   <motion.article key={r.key} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -2903,16 +2987,16 @@ function BusPanel({ t, lang, items }) {
                     <button onClick={() => setOpen(open === r.key ? null : r.key)} aria-expanded={open === r.key}
                       className="flex w-full items-center gap-3 text-left">
                     <div className="flex w-16 shrink-0 flex-col items-center">
-                      <span className="num rounded-md px-2 py-1 text-xl font-bold leading-none text-white" style={{ background: r.co === 'KMB' ? '#C8102E' : '#F2B705', color: r.co === 'KMB' ? '#fff' : '#111' }}>{r.route}</span>
-                      <span className="mt-1 text-[10px] text-[var(--muted)]">{r.co === 'KMB' ? t.busKmb : t.busCtb}</span>
+                      <span className="num rounded-lg px-2 py-1 text-xl font-bold leading-none text-white" style={{ background: r.co === 'KMB' ? '#C8102E' : '#F2B705', color: r.co === 'KMB' ? '#fff' : '#111' }}>{r.route}</span>
+                      <span className="mt-1 text-xs text-[var(--muted)]">{r.co === 'KMB' ? t.busKmb : t.busCtb}</span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">
                         {(zhLike ? r.destZh : r.destEn) ? fmt(t.busTo, { dest: zhLike ? r.destZh : r.destEn }) : `${r.co === 'KMB' ? t.busKmb : t.busCtb} ${r.route}`}
-                        {r.isNew && <span className="ml-1.5 rounded bg-[var(--sign)] px-1.5 py-0.5 text-[10px] font-bold text-[#111418]">{t.busNew}</span>}
+                        {r.isNew && <span className="ml-1.5 rounded-lg bg-[var(--sign)] px-1.5 py-0.5 text-xs font-bold text-[#111418]">{t.busNew}</span>}
                       </p>
                       <p className="truncate text-xs text-[var(--muted)]">{zhLike ? r.stop.zh : r.stop.en} · {fmt(t.busDist, { m: r.stop.d })}</p>
-                      {r.etas[0] && (zhLike ? r.etas[0].rmkZh : r.etas[0].rmkEn) && <p className="truncate text-[11px] text-[var(--muted)]">{zhLike ? r.etas[0].rmkZh : r.etas[0].rmkEn}</p>}
+                      {r.etas[0] && (zhLike ? r.etas[0].rmkZh : r.etas[0].rmkEn) && <p className="truncate text-xs text-[var(--muted)]">{zhLike ? r.etas[0].rmkZh : r.etas[0].rmkEn}</p>}
                     </div>
                     <div className="shrink-0 text-right">
                       {r.etas.length === 0 ? (
@@ -2920,7 +3004,7 @@ function BusPanel({ t, lang, items }) {
                       ) : (
                         <>
                           <span className="num block text-lg font-bold" style={{ color: 'var(--tml)' }}>{etaLabel(r.etas[0].at)}</span>
-                          <span className="num block text-[11px] text-[var(--muted)]">{r.etas.slice(1).map((e) => etaLabel(e.at)).join(' · ')}</span>
+                          <span className="num block text-xs text-[var(--muted)]">{r.etas.slice(1).map((e) => etaLabel(e.at)).join(' · ')}</span>
                         </>
                       )}
                     </div>
@@ -2933,15 +3017,15 @@ function BusPanel({ t, lang, items }) {
             </motion.div>
           )
         )}
-        <p className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-          <span className="rounded-md px-2 py-1" style={synced.length ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>
+        <p className="mt-4 flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+          <span className="rounded-lg px-2 py-1" style={synced.length ? { background: '#E6F4EA', color: '#0B6B3A' } : { background: 'var(--surface-2)', color: 'var(--muted)' }}>
             {synced.length ? fmt(t.bxSyncFooter, { n: synced.length, time: new Date(lastSync).toLocaleString(lang === 'en' ? 'en-GB' : 'zh-HK', { timeZone: 'Asia/Hong_Kong', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }) : t.bxSyncPending}
           </span>
         </p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{t.busSource}</p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="flex items-center gap-2 text-base font-bold"><MapPin size={17} />{t.busLeaflet}</h3>
         <ul className="mt-3 space-y-2">
           {staticRoutes.map((x) => (
@@ -2966,7 +3050,7 @@ function SyncModal({ open, diff, onClose, onApply, t, lang, busy }) {
     <Modal open={open} onClose={onClose} wide>
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-bold"><RefreshCw size={18} />{t.syncReview}</h2>
-        <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+        <button onClick={onClose} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><X size={18} /></button>
       </div>
       <p className="mt-1 text-xs text-[var(--muted)]">{fmt(t.dataVersion, { v: DATA_VERSION })}</p>
       {diff && diff.total === 0 ? (
@@ -2985,9 +3069,9 @@ function SyncModal({ open, diff, onClose, onApply, t, lang, busy }) {
         </div>
       )}
       <div className="mt-5 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
+        <button onClick={onClose} className="min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium">{t.cancel}</button>
         {diff && diff.total > 0 && (
-          <button onClick={onApply} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60" style={{ background: LINES.TML.color }}>{t.syncApply}</button>
+          <button onClick={onApply} disabled={busy} className="min-h-[44px] rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-60" style={{ background: LINES.TML.color }}>{t.syncApply}</button>
         )}
       </div>
     </Modal>
@@ -3181,13 +3265,13 @@ function TransitEtaBadges({ targetKey, t, lang }) {
   const shown = status === 'live' ? rows.filter((r) => r.live) : rows;
   return (
     <div className="mt-3 space-y-1.5 rounded-lg border border-[var(--border)] p-2.5">
-      <p className="flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]">
+      <p className="flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
         <span>{t.etaTitle}</span>
-        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.hospLive}</span>}
+        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.hospLive}</span>}
       </p>
       {status === 'loading' && (
         <div className="space-y-1.5" aria-label={t.hospLoading}>
-          {[0, 1].map((i) => <div key={i} className="h-6 animate-pulse rounded-md bg-[var(--surface-2)]" />)}
+          {[0, 1].map((i) => <div key={i} className="h-6 animate-pulse rounded-lg bg-[var(--surface-2)]" />)}
         </div>
       )}
       {status !== 'loading' && shown.length === 0 && <p className="text-xs text-[var(--muted)]">{t.etaNone}</p>}
@@ -3199,9 +3283,9 @@ function TransitEtaBadges({ targetKey, t, lang }) {
         else if (!r.live.etas.length) body = <span className="text-[var(--muted)]">{t.busNoEta}</span>;
         else body = <b className="num" style={{ color: 'var(--tml)' }}>{r.live.etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>;
         return (
-          <div key={r.key} className="rounded-md bg-[var(--surface-2)] px-2 py-1.5 text-xs">
+          <div key={r.key} className="rounded-lg bg-[var(--surface-2)] px-2 py-1.5 text-xs">
             <p className="flex flex-wrap items-baseline gap-x-1.5"><span>{icon} {name}:</span>{body}</p>
-            {r.live && r.live.stop && <p className="mt-0.5 text-[10px] text-[var(--muted)]">{fmt(t.hospAtStop, { stop: zh ? r.live.stop.zh : r.live.stop.en })}</p>}
+            {r.live && r.live.stop && <p className="mt-0.5 text-xs text-[var(--muted)]">{fmt(t.hospAtStop, { stop: zh ? r.live.stop.zh : r.live.stop.en })}</p>}
           </div>
         );
       })}
@@ -3228,7 +3312,7 @@ function HospitalGuide({ t, lang }) {
   const zh = lang === 'zh' || lang === 'ja';
   const { data: live, status, now } = useTransitEta('hosp');
   const liveLine = (route) => {
-    if (status === 'loading') return <span className="inline-block h-4 w-24 animate-pulse rounded bg-[var(--border)]" aria-label={t.hospLoading} />;
+    if (status === 'loading') return <span className="inline-block h-4 w-24 animate-pulse rounded-lg bg-[var(--border)]" aria-label={t.hospLoading} />;
     const op = route === '88A' ? 'GMB' : 'CTB';
     const r = live && live[`${op}|${route}`];
     if (status === 'offline' || !r || r.etas === null) return <span className="text-[var(--muted)]">{t.etaFallback}</span>;
@@ -3239,12 +3323,12 @@ function HospitalGuide({ t, lang }) {
   return (
     <div className="mt-3 space-y-2">
       <HospitalVideoRoutes t={t} lang={lang} compact />
-      <div className="flex gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-[13px] font-bold leading-relaxed text-red-700">
+      <div className="flex gap-2 rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-[0.8125rem] font-bold leading-relaxed text-red-700">
         <AlertTriangle size={16} className="mt-0.5 shrink-0" />{t.hospWarn}
       </div>
       <p className="flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
         <span>{t.hospFromKat}</span>
-        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.hospLive}</span>}
+        {status === 'live' && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.hospLive}</span>}
       </p>
       <ul className="space-y-1.5">
         {HOSP_FROM_KAT.map((r) => {
@@ -3252,10 +3336,10 @@ function HospitalGuide({ t, lang }) {
           const stop = live && live[`${op}|${r.route}`] && live[`${op}|${r.route}`].stop;
           return (
             <li key={r.op + r.route} className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-2">
-              <span className="num shrink-0 rounded px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
+              <span className="num shrink-0 rounded-lg px-1.5 py-0.5 text-sm font-bold" style={{ background: OP_STYLE[r.op].bg, color: OP_STYLE[r.op].fg }}>{r.route}</span>
               <span className="min-w-0 flex-1 text-xs leading-relaxed">
                 <b>{t['op' + r.op]}</b>　{zh ? r.zh : r.en}
-                <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
+                <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
                   {r.exit ? <>{r.exit.split('/').map((e) => <ExitPlate key={e} exit={e} />)}{fmt(t.hospBoard, { exit: exitJoin(r.exit, lang) })}</> : (stop ? fmt(t.hospAtStop, { stop: zh ? stop.zh : stop.en }) : t.hospSign)}
                 </span>
                 {r.op !== 'REHAB' && <span className="mt-1 block">{r.op === 'GMB' ? '🚐' : '🚌'} {liveLine(r.route)}</span>}
@@ -3282,7 +3366,7 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
   const zh = lang === 'zh' || lang === 'ja';
   const local = FX_LOCAL_IDS.map((id) => items.find((x) => x.id === id)).filter(Boolean);
   return (
-    <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+    <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
       <h2 className="flex items-center gap-2 text-lg font-bold"><Banknote size={19} />💱 {t.fxTitle}</h2>
       <h3 className="mt-3 text-sm font-bold">{t.fxLocal}</h3>
       <p className="mt-1 text-xs text-[var(--muted)]">{t.fxLocalNote}</p>
@@ -3291,7 +3375,7 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
           <li key={x.id} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] p-2">
             <ExitPlate exit={x.exit} />
             <span className="min-w-0 flex-1 truncate text-sm">{tx(x.name, lang)}</span>
-            <a href={mapsUrl(x.mapQuery || x.name.zh)} target="_blank" rel="noopener noreferrer" aria-label={t.navigate} className="rounded-md p-1.5 hover:bg-[var(--surface)]"><Navigation size={15} /></a>
+            <a href={mapsUrl(x.mapQuery || x.name.zh)} target="_blank" rel="noopener noreferrer" aria-label={t.navigate} className="-m-1.5 grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-[var(--surface)]"><Navigation size={16} /></a>
           </li>
         ))}
       </ul>
@@ -3307,8 +3391,8 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
               {plan && <p className="num mt-1 text-xs text-[var(--muted)]">{fmt(t.fxSummary, { m: plan.mins, f: money(plan.fare && plan.fare.oct), x: xfer })}</p>}
               <p className="mt-1.5 flex-1 text-xs leading-relaxed">{zh ? h.zh : h.en}</p>
               <div className="mt-2 flex gap-1.5">
-                <button onClick={() => onRoute(h.code)} className="flex-1 rounded-lg px-2 py-1.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>{t.fxRoute}</button>
-                <a href={mapsUrl(h.q)} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1.5 text-xs font-bold hover:border-[var(--ink)]"><Navigation size={12} />{t.fxMap}</a>
+                <button onClick={() => onRoute(h.code)} className="min-h-[44px] flex-1 rounded-xl px-2 py-2.5 text-sm font-bold text-white" style={{ background: LINES.TML.color }}>{t.fxRoute}</button>
+                <a href={mapsUrl(h.q)} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--border)] min-h-[44px] px-2 py-2.5 text-sm font-bold hover:border-[var(--ink)]"><Navigation size={12} />{t.fxMap}</a>
               </div>
             </div>
           );
@@ -3316,7 +3400,7 @@ function MoneyExchangeFinder({ t, lang, items, onRoute }) {
       </div>
       <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
         {t.fxTips}{' '}
-        <a href={MSO_REGISTER_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{t.fxLicence}</a>
+        <a href={MSO_REGISTER_URL} target="_blank" rel="noopener noreferrer" className="-my-3 inline-flex min-h-[44px] items-center font-semibold underline">{t.fxLicence}</a>
       </p>
     </motion.section>
   );
@@ -3460,7 +3544,7 @@ function YouTubeModal({ video, onClose, t }) {
         <>
           <div className="flex items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-base font-bold"><Play size={17} />{video.title}</h2>
-            <button onClick={onClose} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+            <button onClick={onClose} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><X size={18} /></button>
           </div>
           <div className="relative mt-3 w-full overflow-hidden rounded-xl bg-black" style={{ paddingTop: '56.25%' }}>
             {id && (
@@ -3468,7 +3552,7 @@ function YouTubeModal({ video, onClose, t }) {
                 title={video.title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
             )}
           </div>
-          <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--muted)] underline">
+          <a href={video.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex min-h-[44px] items-center gap-1 py-2 text-xs font-semibold text-[var(--muted)] underline">
             {t.vidOpenYt}<ExternalLink size={12} />
           </a>
         </>
@@ -3497,7 +3581,7 @@ function HospitalVideoRoutes({ t, lang, compact }) {
     const ok = !!youtubeId(url);
     return (
       <button disabled={!ok} onClick={() => setVideo({ url, title: t[r.btn] })}
-        className={`flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold transition-opacity ${ok ? 'text-white hover:opacity-90' : 'cursor-not-allowed bg-[var(--surface-2)] text-[var(--muted)]'}`}
+        className={`flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold transition-opacity ${ok ? 'text-white hover:opacity-90' : 'cursor-not-allowed bg-[var(--surface-2)] text-[var(--muted)]'}`}
         style={ok ? { background: '#C8102E' } : undefined}>
         🎥 {ok ? t[r.btn] : t.vidSoon}
       </button>
@@ -3508,7 +3592,7 @@ function HospitalVideoRoutes({ t, lang, compact }) {
       {compact ? (
         <div className="grid grid-cols-2 gap-1.5">{HOSP_VIDEO_ROUTES.map((r) => <VideoBtn key={r.key} r={r} />)}</div>
       ) : (
-        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-2xl border-2 border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-3xl border-2 border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
           <h2 className="flex items-center gap-2 text-lg font-bold"><HeartPulse size={19} />{t.vidTitle}</h2>
           <p className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{t.hospWarn}</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -3521,7 +3605,7 @@ function HospitalVideoRoutes({ t, lang, compact }) {
                 <ol className="mt-3 flex-1 space-y-1.5 text-sm">
                   {(zh ? r.steps.zh : r.steps.en).map((s, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: LINES.TML.color }}>{i + 1}</span>
+                      <span className="num flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: LINES.TML.color }}>{i + 1}</span>
                       <span>{s}</span>
                     </li>
                   ))}
@@ -3530,7 +3614,7 @@ function HospitalVideoRoutes({ t, lang, compact }) {
               </article>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-[var(--muted)]">{t.vidNote}</p>
+          <p className="mt-2 text-xs text-[var(--muted)]">{t.vidNote}</p>
         </motion.section>
       )}
       <YouTubeModal video={video} onClose={() => setVideo(null)} t={t} />
@@ -3579,22 +3663,22 @@ function SpkModule({ t, lang, q }) {
         <span>{t.spkFrom}</span><ExitPlate exit="C" /><ArrowRight size={16} /><span>{t.spkBridge}</span><ArrowRight size={16} /><Footprints size={16} /><span>{t.spkWalk}</span>
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">{t.spkNote}</p>
-      {status === 'loading' && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-xl bg-[var(--surface)]" />)}</div>}
+      {status === 'loading' && <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl bg-[var(--surface)]" />)}</div>}
       {status !== 'loading' && list.length === 0 && <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.noResult}</p>}
-      <motion.div layout className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <motion.div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {list.map(({ b, shops }) => {
             const walk = buildingWalk(b);
             const note = b.note && (b.note[lang] || b.note.en || b.note.zh);
             return (
               <motion.article key={b.id} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
                 <div className="flex items-start gap-3">
                   <ExitPlate exit={b.exit_code || 'C'} size="lg" />
                   <div className="min-w-0">
                     <h3 className="font-bold leading-snug">{zh ? b.name : (b.name_en || b.name)}</h3>
                     <p className="text-xs text-[var(--muted)]">{zh ? b.name_en : b.name}</p>
-                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-semibold">
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-semibold">
                       <Factory size={11} />{b.category === 'commercial' ? t.spkCommercial : t.spkIndustrial}
                     </span>
                   </div>
@@ -3603,16 +3687,16 @@ function SpkModule({ t, lang, q }) {
                 {walk && <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--muted)]"><Footprints size={13} />{fmt(t.spkWalkFrom, { m: walk })}</p>}
                 {note && <p className="mt-1 text-xs text-[var(--warn-ink)]">{note}</p>}
                 <div className="mt-3 rounded-lg bg-[var(--surface-2)] p-2.5">
-                  <p className="text-[11px] font-bold text-[var(--muted)]">{t.spkInside}</p>
+                  <p className="text-xs font-bold text-[var(--muted)]">{t.spkInside}</p>
                   {shops.length === 0 ? (
                     <p className="mt-1 text-xs text-[var(--muted)]">{t.spkNoShops}</p>
                   ) : (
                     <ul className="mt-1.5 space-y-1">
                       {shops.map((s) => (
                         <li key={s.key} className="flex items-center gap-1.5 text-xs">
-                          <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>{tx(HIGHLIGHT_TYPES[s.type] || HIGHLIGHT_TYPES.restaurant, lang)}</span>
+                          <span className="rounded-lg px-1.5 py-0.5 text-xs font-bold" style={{ background: 'var(--tml-soft)', color: 'var(--tml)' }}>{tx(HIGHLIGHT_TYPES[s.type] || HIGHLIGHT_TYPES.restaurant, lang)}</span>
                           <span className="min-w-0 flex-1 truncate font-semibold">{zh ? s.name : (s.name_en || s.name)}</span>
-                          {s.source === 'fehd' && <span className="text-[9px] text-[var(--muted)]">{t.srcFehdShort}</span>}
+                          {s.source === 'fehd' && <span className="text-xs text-[var(--muted)]">{t.srcFehdShort}</span>}
                         </li>
                       ))}
                     </ul>
@@ -3620,16 +3704,16 @@ function SpkModule({ t, lang, q }) {
                 </div>
                 <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
                   <a href={mapsUrl(`${b.name} 新蒲崗`)} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>📍 {t.navigate}</a>
+                    className="flex items-center justify-center gap-1 min-h-[44px] rounded-xl px-2 py-2.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>📍 {t.navigate}</a>
                   <a href={mapsUrl(`餐廳 ${b.name} 新蒲崗`)} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-bold hover:border-[var(--ink)]"><UtensilsCrossed size={12} />{t.spkFindFood}</a>
+                    className="flex items-center justify-center gap-1 rounded-xl border border-[var(--border)] min-h-[44px] px-2 py-2.5 text-xs font-bold hover:border-[var(--ink)]"><UtensilsCrossed size={12} />{t.spkFindFood}</a>
                 </div>
               </motion.article>
             );
           })}
         </AnimatePresence>
       </motion.div>
-      <p className="text-[11px] text-[var(--muted)]">{status === 'live' ? t.spkLive : t.spkSeed}</p>
+      <p className="text-xs text-[var(--muted)]">{status === 'live' ? t.spkLive : t.spkSeed}</p>
     </div>
   );
 }
@@ -3882,8 +3966,8 @@ function GmbFareBox({ m, t }) {
   return (
     <div className="mt-2 rounded-lg border border-[var(--border)] px-2.5 py-2 text-xs">
       <p className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-bold text-[var(--muted)]">{t.gmbFareTitle}</span>
-        {m.fare_effective_date && <span className="num text-[10px] text-[var(--muted)]">{fmt(t.gmbEffective, { d: String(m.fare_effective_date).slice(0, 10) })}</span>}
+        <span className="text-xs font-bold text-[var(--muted)]">{t.gmbFareTitle}</span>
+        {m.fare_effective_date && <span className="num text-xs text-[var(--muted)]">{fmt(t.gmbEffective, { d: String(m.fare_effective_date).slice(0, 10) })}</span>}
       </p>
       <ul className="mt-1 space-y-0.5">
         <li className="flex justify-between gap-2"><span>{t.gmbFare}</span><b className="num">{m.fare || '—'}</b></li>
@@ -3891,10 +3975,10 @@ function GmbFareBox({ m, t }) {
           <li key={i} className="flex justify-between gap-2 text-[var(--muted)]"><span>{x.section || x.label}</span><b className="num text-[var(--ink)]">{x.fare}</b></li>
         ))}
       </ul>
-      {m.interchange_note && <p className="mt-1.5 text-[11px]">💳 <b>{t.gmbOctopus}</b>：{m.interchange_note}</p>}
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ background: verify.bg, color: verify.ink }}>
+      {m.interchange_note && <p className="mt-1.5 text-xs">💳 <b>{t.gmbOctopus}</b>：{m.interchange_note}</p>}
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2 py-1 text-xs font-semibold" style={{ background: verify.bg, color: verify.ink }}>
         <span>{verify.icon} {verify.text}</span>
-        {m.fare_source_url && <a href={m.fare_source_url} target="_blank" rel="noopener noreferrer" className="underline">{t.gmbSource}</a>}
+        {m.fare_source_url && <a href={m.fare_source_url} target="_blank" rel="noopener noreferrer" className="-my-3 inline-flex min-h-[44px] items-center underline">{t.gmbSource}</a>}
       </p>
     </div>
   );
@@ -3917,11 +4001,11 @@ function MinibusCard({ m, t, lang }) {
 
   return (
     <motion.article layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-      className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       {/* 標頭：路線編號、起訖、車費 */}
       <div className="flex items-start gap-3">
-        <span className="num shrink-0 rounded-lg px-2.5 py-1.5 text-center text-lg font-black leading-none text-white" style={{ background: '#0F9D58' }}>
-          <span className="block text-[10px] font-bold opacity-90">{t.gmbBadge}</span>{m.route_number}
+        <span className="num shrink-0 rounded-lg px-2.5 py-1.5 text-center text-lg font-black leading-none text-white" style={{ background: '#0B7A45' }}>
+          <span className="block text-xs font-bold opacity-90">{t.gmbBadge}</span>{m.route_number}
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="font-bold leading-snug">{m.origin} {m.is_circular ? '↺' : '⇄'} {m.destination}</h3>
@@ -3951,12 +4035,12 @@ function MinibusCard({ m, t, lang }) {
       )}
 
       {/* 沿途主要站點 */}
-      <p className="mt-3 text-[11px] font-bold text-[var(--muted)]">{t.gmbVia}</p>
+      <p className="mt-3 text-xs font-bold text-[var(--muted)]">{t.gmbVia}</p>
       <div className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
         {chain.map((c, i) => (
           <React.Fragment key={`${c}-${i}`}>
             {i > 0 && <span className="text-[var(--muted)]">➔</span>}
-            <span className={`rounded-md px-1.5 py-0.5 ${i === 0 || i === chain.length - 1 ? 'bg-[var(--surface-2)] font-bold' : ''}`}>{c}</span>
+            <span className={`rounded-lg px-1.5 py-0.5 ${i === 0 || i === chain.length - 1 ? 'bg-[var(--surface-2)] font-bold' : ''}`}>{c}</span>
           </React.Fragment>
         ))}
         {m.is_circular && <span className="text-[var(--muted)]">↺</span>}
@@ -3965,23 +4049,23 @@ function MinibusCard({ m, t, lang }) {
       {/* 班次、服務時間、實時到站 */}
       <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
         <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
-          <p className="text-[10px] text-[var(--muted)]">{t.gmbHeadway}</p>
+          <p className="text-xs text-[var(--muted)]">{t.gmbHeadway}</p>
           <p className="font-bold">{headway || (status === 'loading' ? '…' : '—')}</p>
         </div>
         <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
-          <p className="text-[10px] text-[var(--muted)]">{t.gmbHours}</p>
+          <p className="text-xs text-[var(--muted)]">{t.gmbHours}</p>
           <p className="num font-bold">{hours || (status === 'loading' ? '…' : '—')}</p>
         </div>
       </div>
       {exits.length > 0 && (
         <div className="mt-1.5 rounded-lg border border-[var(--border)] px-2.5 py-2 text-xs">
-          <p className="flex items-center justify-between text-[10px] text-[var(--muted)]">
+          <p className="flex items-center justify-between text-xs text-[var(--muted)]">
             <span>{stop ? fmt(t.gmbEtaAt, { stop: zh ? stop.zh : stop.en }) : t.gmbEtaTitle}</span>
-            {status === 'live' && etas && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.hospLive}</span>}
+            {status === 'live' && etas && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.hospLive}</span>}
           </p>
           <p className="mt-0.5">
             {status === 'loading' || (status === 'live' && stop && etas === null)
-              ? <span className="inline-block h-4 w-24 animate-pulse rounded bg-[var(--surface-2)]" />
+              ? <span className="inline-block h-4 w-24 animate-pulse rounded-lg bg-[var(--surface-2)]" />
               : status === 'offline' || !stop ? <span className="text-[var(--muted)]">{t.etaFallback}</span>
               : etas.length === 0 ? <span className="text-[var(--muted)]">{t.busNoEta}</span>
               : <b className="num text-sm" style={{ color: 'var(--tml)' }}>🚐 {etas.map((e) => etaMinLabel(e.at, now, t)).join(' | ')}</b>}
@@ -3993,7 +4077,7 @@ function MinibusCard({ m, t, lang }) {
 
       <div className="mt-auto pt-3">
         <a href={navUrl} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white" style={{ background: '#0F9D58' }}>
+          className="min-h-[44px] flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-white" style={{ background: '#0B7A45' }}>
           <Footprints size={15} />{t.gmbNav}
         </a>
       </div>
@@ -4023,20 +4107,20 @@ function MinibusPanel({ t, lang }) {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden>🚐</span>{t.gmbTitle}</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.gmbIntro}</p>
         <label className="relative mt-3 block">
           <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.gmbSearchPh}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--ink)]" />
-          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
+          {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
         </label>
         <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-5 sm:px-5">
           {GMB_FILTERS.map((x) => (
             <button key={x.id} onClick={() => setF(x.id)}
-              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${f === x.id ? 'border-transparent text-white' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}
-              style={f === x.id ? { background: '#0F9D58' } : undefined}>
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border min-h-[40px] px-3.5 py-2 text-xs font-semibold transition-colors ${f === x.id ? 'border-transparent text-white' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}
+              style={f === x.id ? { background: '#0B7A45' } : undefined}>
               {x.exit && <ExitPlate exit={x.exit} />}{tx(x.label, lang)}
             </button>
           ))}
@@ -4045,17 +4129,17 @@ function MinibusPanel({ t, lang }) {
 
       {status !== 'loading' && <p className="px-1 text-xs font-semibold text-[var(--muted)]">{fmt(t.gmbCount, { n: list.length })}</p>}
       {status === 'loading' ? (
-        <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-xl bg-[var(--surface)]" />)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />)}</div>
       ) : list.length === 0 ? (
         <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.gmbNone}</p>
       ) : (
-        <motion.div layout className="grid gap-3 md:grid-cols-2">
+        <motion.div className="grid gap-3 md:grid-cols-2">
           <AnimatePresence mode="popLayout">
             {list.map((m) => <MinibusCard key={m.id || m.route_number} m={m} t={t} lang={lang} />)}
           </AnimatePresence>
         </motion.div>
       )}
-      <p className="text-[11px] leading-relaxed text-[var(--muted)]">{status === 'live' ? t.gmbSrcLive : t.gmbSrcSeed} {t.gmbSrcTd}</p>
+      <p className="text-xs leading-relaxed text-[var(--muted)]">{status === 'live' ? t.gmbSrcLive : t.gmbSrcSeed} {t.gmbSrcTd}</p>
     </section>
   );
 }
@@ -4243,7 +4327,7 @@ function RouteChain({ code, lang, t }) {
       <b>{stName('KAT', lang)}</b>
       {r.legs.map((lg, i) => (
         <React.Fragment key={i}>
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
             style={{ background: LINES[lg.line].color }}>
             {lg.kind === 'walk' ? '🚶' : '🚇'} {tx(LINES[lg.line].name, lang)}
           </span>
@@ -4328,9 +4412,9 @@ function TripLive({ code, lastMile, t, lang }) {
 
   return (
     <div ref={box} className="mt-2 rounded-lg border border-[var(--border)] px-3 py-2">
-      <p className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-[var(--muted)]">
+      <p className="mb-1.5 flex items-center justify-between text-xs font-bold text-[var(--muted)]">
         <span>🕐 {t.tlTitle}</span>
-        {Object.keys(data).length > 0 && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />{t.live}</span>}
+        {Object.keys(data).length > 0 && <span className="flex items-center gap-1 text-emerald-700"><span className="h-1.5 w-1.5 kt-live-dot rounded-full bg-emerald-500" />{t.live}</span>}
       </p>
       <ul className="space-y-1.5">
         {rows.filter((r) => !r.walk).map((r, i) => {
@@ -4338,10 +4422,10 @@ function TripLive({ code, lastMile, t, lang }) {
           const next = r.list ? r.list.filter((x) => x.at > now - 20000).slice(0, 2) : [];
           return (
             <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: LINES[r.l.line].color }}>{tx(LINES[r.l.line].name, lang)}</span>
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: lineBg(r.l.line), color: lineInk(r.l.line) }}>{tx(LINES[r.l.line].name, lang)}</span>
               <span className="font-semibold">{fmt(t.tlAt, { sta: stName(r.l.from, lang), to: stName(r.l.toward, lang) })}</span>
               <span className="ml-auto num tabular-nums">
-                {r.loading && !vis ? '—' : r.loading ? <span className="inline-block h-3 w-16 animate-pulse rounded bg-[var(--surface-2)]" />
+                {r.loading && !vis ? '—' : r.loading ? <span className="inline-block h-3 w-16 animate-pulse rounded-lg bg-[var(--surface-2)]" />
                   : !r.list ? <span className="text-[var(--muted)]">{t.tlNoData}</span>
                   : first ? (next.length ? next.map((x, k) => <b key={k} className={k === 0 ? 'text-sm' : 'ml-2 font-normal text-[var(--muted)]'} style={k === 0 ? { color: 'var(--tml)' } : undefined}>{countdown(x.at, now) || t.arriving}</b>) : <span className="text-[var(--muted)]">{t.ntNone}</span>)
                   : r.catchT ? <span>{fmt(t.tlCatch, { time: hhmmHK(r.catchT.at), wait: Math.max(0, Math.round((r.catchT.at - r.need) / 60000)) })}</span>
@@ -4364,10 +4448,10 @@ function AttractionCard({ a, t, lang, onRoute }) {
   const alt = lang === 'en' || lang === 'ko' ? jx(a.name, 'zh') : jx(a.name, 'en');
   return (
     <motion.article layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-[var(--muted)]">{tx(ATT_CATS[a.category], lang)} · {jx(a.area, lang)}</p>
+          <p className="text-xs font-semibold text-[var(--muted)]">{tx(ATT_CATS[a.category], lang)} · {jx(a.area, lang)}</p>
           <h3 className="mt-0.5 text-base font-bold leading-snug">{name}</h3>
           {alt && alt !== name && <p className="text-xs text-[var(--muted)]">{alt}</p>}
         </div>
@@ -4377,7 +4461,7 @@ function AttractionCard({ a, t, lang, onRoute }) {
       </div>
 
       <div className="mt-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
-        <p className="mb-1 text-[10px] font-bold text-[var(--muted)]">{fmt(t.attMtrPart, { n: r ? r.mins : 0 })}</p>
+        <p className="mb-1 text-xs font-bold text-[var(--muted)]">{fmt(t.attMtrPart, { n: r ? r.mins : 0 })}</p>
         <RouteChain code={a.station} lang={lang} t={t} />
       </div>
       <TripLive code={a.station} lastMile={a.last_mile_minutes} t={t} lang={lang} />
@@ -4386,14 +4470,14 @@ function AttractionCard({ a, t, lang, onRoute }) {
         {a.exit ? <ExitPlate exit={a.exit} /> : <span className="mt-0.5 text-base" aria-hidden>📍</span>}
         <div className="min-w-0">
           <p>{jx(a.last_mile, lang)}</p>
-          {a.last_mile_minutes ? <p className="mt-0.5 text-[11px] text-[var(--muted)]">{fmt(t.attLastMile, { n: a.last_mile_minutes })}</p> : null}
+          {a.last_mile_minutes ? <p className="mt-0.5 text-xs text-[var(--muted)]">{fmt(t.attLastMile, { n: a.last_mile_minutes })}</p> : null}
         </div>
       </div>
 
       {modes.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {modes.map((m) => MODE_META[m] && (
-            <span key={m} className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-[11px]">{MODE_META[m].i} {tx(MODE_META[m], lang)}</span>
+            <span key={m} className="rounded-lg border border-[var(--border)] px-1.5 py-0.5 text-xs">{MODE_META[m].i} {tx(MODE_META[m], lang)}</span>
           ))}
         </div>
       )}
@@ -4402,17 +4486,17 @@ function AttractionCard({ a, t, lang, onRoute }) {
       <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
         {r && (
           <button onClick={() => onRoute && onRoute(a.station)}
-            className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>
+            className="flex min-h-[44px] items-center gap-1 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white" style={{ background: LINES.TML.color }}>
             <Train size={13} />{t.attFare}
           </button>
         )}
         <a href={mapsUrl(`${jx(a.name, 'en')} Hong Kong`)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold hover:border-[var(--ink)]">
+          className="flex items-center gap-1 rounded-xl border border-[var(--border)] min-h-[44px] px-3.5 py-2.5 text-xs font-semibold hover:border-[var(--ink)]">
           <MapPin size={13} />{t.attMap}
         </a>
         {a.official_url && (
           <a href={a.official_url} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold hover:border-[var(--ink)]">
+            className="flex items-center gap-1 rounded-xl border border-[var(--border)] min-h-[44px] px-3.5 py-2.5 text-xs font-semibold hover:border-[var(--ink)]">
             <ExternalLink size={13} />{t.attSite}
           </a>
         )}
@@ -4440,7 +4524,7 @@ const TRAM_TRANSFERS = [
 function TramGuide({ t, lang }) {
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="flex items-center gap-2 text-base font-bold">🚃 {t.tramTitle}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.tramIntro}</p>
         <div className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)' }}>⚠️ {t.tramNoExc}</div>
@@ -4458,7 +4542,7 @@ function TramGuide({ t, lang }) {
           })}
         </div>
       </div>
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h4 className="text-sm font-bold">{t.tramRoutes}</h4>
         <ol className="mt-2 grid gap-1.5 sm:grid-cols-2">
           {TRAM_ROUTES.map((r, i) => (
@@ -4470,7 +4554,7 @@ function TramGuide({ t, lang }) {
         </ol>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           {[[t.fAdult, '$3.3'], [t.fChild, '$1.6'], [t.fElder, '$1.5']].map(([k, v]) => (
-            <div key={k} className="rounded-lg border border-[var(--border)] px-2 py-2"><p className="text-[10px] text-[var(--muted)]">{k}</p><p className="num text-lg font-bold">{v}</p></div>
+            <div key={k} className="rounded-lg border border-[var(--border)] px-2 py-2"><p className="text-xs text-[var(--muted)]">{k}</p><p className="num text-lg font-bold">{v}</p></div>
           ))}
         </div>
         <ul className="mt-3 space-y-1 text-xs text-[var(--muted)]">
@@ -4478,7 +4562,7 @@ function TramGuide({ t, lang }) {
           <li>🚪 {t.tramHow}</li>
           <li>🕐 {t.tramHours}</li>
         </ul>
-        <a href="https://www.hktramways.com/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold underline"><ExternalLink size={12} />{t.tramSite}</a>
+        <a href="https://www.hktramways.com/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-semibold hover:border-[var(--ink)]"><ExternalLink size={14} />{t.tramSite}</a>
       </div>
     </section>
   );
@@ -4497,7 +4581,7 @@ function FerryGuide({ t, lang }) {
   const rE = routeTo('ETS'), rH = routeTo('HOK');
   return (
     <section className="space-y-3">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="flex items-center gap-2 text-base font-bold">⭐ {t.starTitle}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.starIntro}</p>
         <div className="mt-3 rounded-xl border border-[var(--border)] p-3">
@@ -4509,9 +4593,9 @@ function FerryGuide({ t, lang }) {
           <li>⛴️ {t.starR1}</li>
           <li>⛴️ {t.starR2}</li>
         </ul>
-        <a href="https://www.starferry.com.hk/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold underline"><ExternalLink size={12} />{t.starSite}</a>
+        <a href="https://www.starferry.com.hk/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-semibold hover:border-[var(--ink)]"><ExternalLink size={14} />{t.starSite}</a>
       </div>
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="flex items-center gap-2 text-base font-bold">🏝️ {t.cpTitle}</h3>
         <div className="mt-3 rounded-xl border border-[var(--border)] p-3">
           <p className="flex items-center justify-between text-sm font-bold"><span>🚉 {stName('HOK', lang)}／{stName('CEN', lang)}</span>{rH && <span className="num text-xs text-[var(--muted)]">⏱ {fmt(t.attAbout, { n: rH.mins })}</span>}</p>
@@ -4521,7 +4605,7 @@ function FerryGuide({ t, lang }) {
         <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
           {CENTRAL_PIERS.map((p) => (
             <li key={p.pier} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm">
-              <span className="num flex h-7 min-w-[1.75rem] shrink-0 items-center justify-center rounded-md px-1 text-sm font-black text-white" style={{ background: '#0075C2' }}>{p.pier}</span>
+              <span className="num flex h-7 min-w-[1.75rem] shrink-0 items-center justify-center rounded-lg px-1 text-sm font-black text-white" style={{ background: '#0075C2' }}>{p.pier}</span>
               <span>{zh ? p.zh : p.en}</span>
             </li>
           ))}
@@ -4552,13 +4636,13 @@ function ExplorePanel({ t, lang, onRoute }) {
   const VIEWS = [['spots', t.expSpots], ['tram', t.expTram], ['ferry', t.expFerry]];
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden>🎡</span>{t.expTitle}</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">{t.expIntro}</p>
-        <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-[var(--surface-2)] p-1">
+        <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-[var(--surface-2)] p-1">
           {VIEWS.map(([id, label]) => (
             <button key={id} onClick={() => setView(id)}
-              className={`rounded-lg py-2 text-sm font-bold transition-colors ${view === id ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}>{label}</button>
+              className={`min-h-[44px] rounded-xl py-2 text-sm font-bold transition-colors ${view === id ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}>{label}</button>
           ))}
         </div>
         {view === 'spots' && (
@@ -4567,12 +4651,12 @@ function ExplorePanel({ t, lang, onRoute }) {
               <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.expSearchPh}
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--ink)]" />
-              {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
+              {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
             </label>
             <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-5 sm:px-5">
               {[['all', { zh: '全部', en: 'All', ko: '전체', ja: 'すべて' }], ...Object.entries(ATT_CATS)].map(([id, label]) => (
                 <button key={id} onClick={() => setCat(id)}
-                  className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${cat === id ? 'border-transparent text-white' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}
+                  className={`shrink-0 whitespace-nowrap rounded-full border min-h-[40px] px-3.5 py-2 text-xs font-semibold transition-colors ${cat === id ? 'border-transparent text-white' : 'border-[var(--border)] hover:border-[var(--ink)]'}`}
                   style={cat === id ? { background: LINES.TML.color } : undefined}>{tx(label, lang)}</button>
               ))}
             </div>
@@ -4584,17 +4668,17 @@ function ExplorePanel({ t, lang, onRoute }) {
         <>
           <p className="px-1 text-xs font-semibold text-[var(--muted)]">{fmt(t.expCount, { n: list.length })}</p>
           {status === 'loading' ? (
-            <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-xl bg-[var(--surface)]" />)}</div>
+            <div className="grid gap-3 md:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl bg-[var(--surface)]" />)}</div>
           ) : list.length === 0 ? (
             <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">{t.expNone}</p>
           ) : (
-            <motion.div layout className="grid gap-3 md:grid-cols-2">
+            <motion.div className="grid gap-3 md:grid-cols-2">
               <AnimatePresence mode="popLayout">
                 {list.map((a) => <AttractionCard key={a.id || a.slug} a={a} t={t} lang={lang} onRoute={onRoute} />)}
               </AnimatePresence>
             </motion.div>
           )}
-          <p className="text-[11px] leading-relaxed text-[var(--muted)]">{t.expSrc}</p>
+          <p className="text-xs leading-relaxed text-[var(--muted)]">{t.expSrc}</p>
         </>
       )}
       {view === 'tram' && <TramGuide t={t} lang={lang} />}
@@ -4679,14 +4763,14 @@ function OfficialMap({ kind, lang, t }) {
     return (
       <div className="p-6 text-center text-sm text-neutral-800">
         <p>{t.mapImgFail}</p>
-        <a href={o.pdf} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold underline"><ExternalLink size={13} />{kind === 'lr' ? t.lrPdf : t.mapPdf}</a>
+        <a href={o.pdf} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex min-h-[44px] items-center gap-1 py-2 font-semibold underline"><ExternalLink size={13} />{kind === 'lr' ? t.lrPdf : t.mapPdf}</a>
       </div>
     );
   }
   return (
     <div className="relative">
       <img src={o.jpg} alt={kind === 'lr' ? t.mapLr : t.mapMtr} draggable={false} className="block w-full select-none" onError={() => setJpgOk(false)} />
-      {state === 'loading' && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white">{t.mapHiLoading}</span>}
+      {state === 'loading' && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">{t.mapHiLoading}</span>}
     </div>
   );
 }
@@ -4724,30 +4808,77 @@ async function loadLr() {
 
 // 可縮放的檢視區：兩指縮放、按鈕縮放、捲動移動
 function ZoomPane({ children, t, minWidth }) {
-  const [scale, setScale] = useState(1);
+  const MIN = 1, MAX = 5;
+  const [scale, setScaleRaw] = useState(1);
+  const box = useRef(null);
+  const cur = useRef(1);
+  const anchor = useRef(null); // 縮放中心（相對檢視區）
   const pts = useRef(new Map());
   const pinch = useRef(null);
-  const clamp = (s) => Math.min(5, Math.max(1, s));
-  const dist = () => { const [a, b] = [...pts.current.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
-  const down = (e) => { pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.current.size === 2) pinch.current = { d: dist(), s: scale }; };
+  const anim = useRef(null);
+  const clamp = (v) => Math.min(MAX, Math.max(MIN, v));
+  // 超出範圍時加橡皮筋阻力，而唔係硬停
+  const soft = (v) => (v > MAX ? MAX + rubberband(v - MAX, MAX) : v < MIN ? MIN - rubberband(MIN - v, MIN) : v);
+  const apply = (next, ax, ay) => {
+    const el = box.current;
+    if (el) anchor.current = { ax, ay, x: (el.scrollLeft + ax) / cur.current, y: (el.scrollTop + ay) / cur.current };
+    cur.current = next;
+    setScaleRaw(next);
+  };
+  // 每次縮放後保持手指（或中心點）下面嘅內容唔走位
+  useLayoutEffect(() => {
+    const el = box.current, a = anchor.current;
+    if (!el || !a) return;
+    el.scrollLeft = a.x * scale - a.ax;
+    el.scrollTop = a.y * scale - a.ay;
+  }, [scale]);
+  const stop = () => { if (anim.current) { anim.current.stop(); anim.current = null; } };
+  const animateTo = (target, ax, ay) => {
+    stop();
+    if (!motionAnimate) { apply(target, ax, ay); return; }
+    anim.current = motionAnimate(cur.current, target, { ...UI_SPRING, onUpdate: (v) => apply(v, ax, ay) });
+  };
+  const center = () => { const el = box.current; return el ? [el.clientWidth / 2, el.clientHeight / 2] : [0, 0]; };
+  const local = (x, y) => { const r = box.current.getBoundingClientRect(); return [x - r.left, y - r.top]; };
+  const mid = () => { const [a, b] = [...pts.current.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+  const down = (e) => {
+    if (e.pointerType === 'mouse') return;
+    pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.current.size === 2) { stop(); const m = mid(); pinch.current = { d: m.d, s: cur.current }; }
+  };
   const move = (e) => {
     if (!pts.current.has(e.pointerId)) return;
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.current.size === 2 && pinch.current) setScale(clamp(pinch.current.s * dist() / pinch.current.d));
+    if (pts.current.size === 2 && pinch.current) {
+      const m = mid(); const [ax, ay] = local(m.x, m.y);
+      apply(soft(pinch.current.s * m.d / pinch.current.d), ax, ay);
+    }
   };
-  const up = (e) => { pts.current.delete(e.pointerId); if (pts.current.size < 2) pinch.current = null; };
-  const wheel = (e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setScale((s) => clamp(s * (e.deltaY < 0 ? 1.15 : 0.87))); } };
+  const up = (e) => {
+    pts.current.delete(e.pointerId);
+    if (pts.current.size < 2 && pinch.current) {
+      pinch.current = null;
+      if (cur.current !== clamp(cur.current)) { const [ax, ay] = anchor.current ? [anchor.current.ax, anchor.current.ay] : center(); animateTo(clamp(cur.current), ax, ay); }
+    }
+  };
+  const wheel = (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault(); stop();
+    const [ax, ay] = local(e.clientX, e.clientY);
+    apply(clamp(cur.current * (e.deltaY < 0 ? 1.15 : 0.87)), ax, ay);
+  };
+  const zoomBy = (f) => { const [ax, ay] = center(); animateTo(clamp(cur.current * f), ax, ay); };
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl bg-white" style={{ touchAction: 'pan-x pan-y' }}
-        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onPointerLeave={up} onWheel={wheel}>
+      <div ref={box} className="min-h-0 flex-1 overflow-auto rounded-3xl bg-white" style={{ touchAction: 'pan-x pan-y' }}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onWheel={wheel}>
         <div style={{ width: `${scale * 100}%`, minWidth: minWidth ? minWidth * scale : undefined }}>{children}</div>
       </div>
-      <div className="absolute bottom-3 right-3 flex gap-1 rounded-xl bg-black/70 p-1 text-white shadow-lg">
-        <button onClick={() => setScale((s) => clamp(s / 1.4))} aria-label={t.mapZoomOut} className="rounded-lg p-2 hover:bg-white/15"><ZoomOut size={18} /></button>
-        <span className="num flex min-w-[3rem] items-center justify-center text-xs font-bold">{Math.round(scale * 100)}%</span>
-        <button onClick={() => setScale((s) => clamp(s * 1.4))} aria-label={t.mapZoomIn} className="rounded-lg p-2 hover:bg-white/15"><ZoomIn size={18} /></button>
-        <button onClick={() => setScale(1)} aria-label={t.mapReset} className="rounded-lg p-2 hover:bg-white/15"><Maximize2 size={18} /></button>
+      <div className="absolute bottom-3 right-3 flex gap-1 rounded-3xl bg-black/70 p-1 text-white shadow-lg">
+        <button onClick={() => zoomBy(1 / 1.4)} aria-label={t.mapZoomOut} className="grid h-11 w-11 place-items-center rounded-xl hover:bg-white/15"><ZoomOut size={18} /></button>
+        <span className="num flex min-w-[3rem] items-center justify-center text-xs font-bold">{Math.round(clamp(scale) * 100)}%</span>
+        <button onClick={() => zoomBy(1.4)} aria-label={t.mapZoomIn} className="grid h-11 w-11 place-items-center rounded-xl hover:bg-white/15"><ZoomIn size={18} /></button>
+        <button onClick={() => { const [ax, ay] = center(); animateTo(1, ax, ay); }} aria-label={t.mapReset} className="grid h-11 w-11 place-items-center rounded-xl hover:bg-white/15"><Maximize2 size={18} /></button>
       </div>
     </div>
   );
@@ -4804,12 +4935,12 @@ function LrStrips({ lang, t }) {
     return () => { alive = false; };
   }, []);
   const zh = lang === 'zh' || lang === 'ja';
-  if (status === 'loading') return <div className="space-y-3 p-4">{[0, 1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded bg-neutral-200" />)}</div>;
+  if (status === 'loading') return <div className="space-y-3 p-4">{[0, 1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-neutral-200" />)}</div>;
   if (status === 'fail') {
     return (
       <div className="p-6 text-center text-sm text-neutral-800">
         <p>{t.lrFail}</p>
-        <a href={LR_DATA_PAGE} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold underline"><ExternalLink size={13} />{t.lrSrc}</a>
+        <a href={LR_DATA_PAGE} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex min-h-[44px] items-center gap-1 py-2 font-semibold underline"><ExternalLink size={13} />{t.lrSrc}</a>
       </div>
     );
   }
@@ -4840,28 +4971,28 @@ function RailMapLightbox({ open, onClose, t, lang, initial }) {
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-neutral-950/95 p-2 text-white sm:p-4" role="dialog" aria-modal="true">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 rounded-xl bg-white/10 p-1">
+        <div className="flex gap-1 rounded-2xl bg-white/10 p-1">
           {[['mtr', t.mapMtr], ['lr', t.mapLr]].map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)} className={`rounded-lg px-3 py-1.5 text-sm font-bold ${tab === id ? 'bg-white text-neutral-900' : 'text-white/80'}`}>{label}</button>
+            <button key={id} onClick={() => setTab(id)} className={`min-h-[44px] rounded-xl px-3.5 py-2 text-sm font-bold ${tab === id ? 'bg-white text-neutral-900' : 'text-white/80'}`}>{label}</button>
           ))}
         </div>
         {(
-          <div className="flex gap-1 rounded-xl bg-white/10 p-1">
+          <div className="flex gap-1 rounded-2xl bg-white/10 p-1">
             {[['official', t.mapOfficial], ['lines', t.mapLines]].map(([id, label]) => (
-              <button key={id} onClick={() => setMode(id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${mode === id ? 'bg-white/90 text-neutral-900' : 'text-white/80'}`}>{label}</button>
+              <button key={id} onClick={() => setMode(id)} className={`min-h-[44px] rounded-xl px-3.5 py-2 text-xs font-semibold ${mode === id ? 'bg-white/90 text-neutral-900' : 'text-white/80'}`}>{label}</button>
             ))}
           </div>
         )}
-        <button onClick={onClose} aria-label={t.close || 'Close'} className="ml-auto rounded-full bg-white/15 p-2 hover:bg-white/25"><X size={20} /></button>
+        <button onClick={onClose} aria-label={t.close || 'Close'} className="ml-auto grid h-11 w-11 place-items-center rounded-full bg-white/15 hover:bg-white/25"><X size={20} /></button>
       </div>
       <ZoomPane key={`${tab}-${mode}-${lang}`} t={t} minWidth={mode === 'official' ? 320 : undefined}>
         {mode === 'official' ? <OfficialMap kind={tab} lang={lang} t={t} />
           : tab === 'lr' ? <LrStrips lang={lang} t={t} /> : <MtrStrips lang={lang} />}
       </ZoomPane>
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/70">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/70">
         <span>{t.mapHint}</span>
-        <a href={MTR_OFFICIAL(tab, lang).pdf} target="_blank" rel="noopener noreferrer" className="underline">{tab === 'lr' ? t.lrPdf : t.mapPdf}</a>
-        {tab === 'mtr' && <a href={KAT_LOCATION_PDF} target="_blank" rel="noopener noreferrer" className="underline">{t.mapKatPdf}</a>}
+        <a href={MTR_OFFICIAL(tab, lang).pdf} target="_blank" rel="noopener noreferrer" className="-my-3 inline-flex min-h-[44px] items-center underline">{tab === 'lr' ? t.lrPdf : t.mapPdf}</a>
+        {tab === 'mtr' && <a href={KAT_LOCATION_PDF} target="_blank" rel="noopener noreferrer" className="-my-3 inline-flex min-h-[44px] items-center underline">{t.mapKatPdf}</a>}
         <span>{mode === 'official' ? t.mapSrcNote : tab === 'lr' ? t.lrSrcNote : t.mapLinesNote}</span>
       </div>
     </div>
@@ -4871,7 +5002,7 @@ function RailMapLightbox({ open, onClose, t, lang, initial }) {
 function MapThumb({ kind, label, lang, onOpen }) {
   const [ok, setOk] = useState(true);
   return (
-    <button onClick={() => onOpen(kind)} className="group overflow-hidden rounded-lg border border-[var(--border)] bg-white text-left">
+    <button onClick={() => onOpen(kind)} className="group overflow-hidden rounded-xl border border-[var(--border)] bg-white text-left">
       <div className="flex h-24 items-center justify-center overflow-hidden sm:h-32">
         {ok ? <img src={MTR_OFFICIAL(kind, lang).jpg} alt="" loading="lazy" className="h-full w-full object-cover object-center transition-transform group-hover:scale-105" onError={() => setOk(false)} />
           : <span className="text-3xl" aria-hidden>{kind === 'lr' ? '🚈' : '🚇'}</span>}
@@ -4891,7 +5022,7 @@ function RailMapCard({ t, lang }) {
         <MapThumb kind="mtr" label={t.mapMtr} lang={lang} onOpen={setOpen} />
         <MapThumb kind="lr" label={t.mapLr} lang={lang} onOpen={setOpen} />
       </div>
-      <p className="mt-1.5 text-[11px] text-[var(--muted)]">{t.mapCardHint}</p>
+      <p className="mt-1.5 text-xs text-[var(--muted)]">{t.mapCardHint}</p>
       <RailMapLightbox open={!!open} initial={open} onClose={() => setOpen(null)} t={t} lang={lang} />
     </div>
   );
@@ -5208,9 +5339,9 @@ function useAssistantDocs({ items, lang, t }) {
 
 // 外部 AI：開新分頁並自動填好問題（網址格式按各服務公開的 ?q= 參數；如日後改動，只需修改這裏）
 const EXT_AI = [
-  { id: 'chatgpt', name: 'ChatGPT', color: '#10A37F', url: (p) => `https://chatgpt.com/?q=${encodeURIComponent(p)}` },
+  { id: 'chatgpt', name: 'ChatGPT', color: '#0B7A5E', url: (p) => `https://chatgpt.com/?q=${encodeURIComponent(p)}` },
   { id: 'google', name: 'Google AI', color: '#1A73E8', url: (p) => `https://www.google.com/search?udm=50&q=${encodeURIComponent(p)}` },
-  { id: 'perplexity', name: 'Perplexity', color: '#20808D', url: (p) => `https://www.perplexity.ai/?q=${encodeURIComponent(p)}` },
+  { id: 'perplexity', name: 'Perplexity', color: '#1A6B75', url: (p) => `https://www.perplexity.ai/?q=${encodeURIComponent(p)}` },
 ];
 const extPrompt = (q, lang) => fmt(UI[lang].qaPrompt, { q: String(q || '').trim() });
 
@@ -5228,6 +5359,7 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
   }, [docs, tokens]);
   const nothing = q.trim().length > 0 && !faq.length && !results.length;
   const go = (d) => { if (d.type === 'station') onRoute(d.code); else onGo(d.go); setOpen(false); };
+  const sheet = useSheet(() => setOpen(false));
   return (
     <>
       <button onClick={() => setOpen(true)} aria-label={t.qaTitle}
@@ -5238,33 +5370,34 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
       <AnimatePresence>
         {open && (
           <motion.div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={() => setOpen(false)}>
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={() => setOpen(false)}>
             <motion.div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}
-              className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:max-w-xl sm:rounded-2xl"
-              initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }}>
-              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+              className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:max-w-xl sm:rounded-3xl"
+              {...sheet.motionProps}>
+              {sheet.handle}
+              <div onPointerDown={sheet.startDrag} className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2 sm:py-3">
                 <h2 className="flex items-center gap-2 text-base font-bold">💬 {t.qaTitle}</h2>
-                <button onClick={() => setOpen(false)} aria-label="Close" className="rounded p-1 text-[var(--muted)] hover:text-[var(--ink)]"><X size={18} /></button>
+                <button onClick={() => setOpen(false)} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"><X size={18} /></button>
               </div>
               <div className="border-b border-[var(--border)] p-3">
                 <label className="relative block">
                   <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
                   <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
                     placeholder={t.qaPh} className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--ink)]" />
-                  {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted)]"><X size={15} /></button>}
+                  {q && <button onClick={() => setQ('')} aria-label="Clear" className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-[var(--muted)] hover:text-[var(--ink)]"><X size={15} /></button>}
                 </label>
                 {!q && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {t.qaSamples.map((s) => <button key={s} onClick={() => setQ(s)} className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs hover:border-[var(--ink)]">{s}</button>)}
+                    {t.qaSamples.map((s) => <button key={s} onClick={() => setQ(s)} className="min-h-[40px] rounded-full border border-[var(--border)] px-3.5 py-2 text-xs hover:border-[var(--ink)]">{s}</button>)}
                   </div>
                 )}
               </div>
               <div className="flex-1 space-y-2 overflow-y-auto p-3">
                 {faq.map(({ f }, i) => (
                   <div key={i} className="rounded-xl px-3 py-2.5 text-sm" style={{ background: 'var(--tml-soft)' }}>
-                    <p className="text-[11px] font-bold" style={{ color: 'var(--tml)' }}>💡 {t.qaAnswer}</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--tml)' }}>💡 {t.qaAnswer}</p>
                     <p className="mt-0.5 leading-relaxed">{tx(f.a, lang)}</p>
-                    <button onClick={() => { onGo(f.go); setOpen(false); }} className="mt-1.5 text-xs font-bold underline">{t.qaOpen}</button>
+                    <button onClick={() => { onGo(f.go); setOpen(false); }} className="mt-0.5 inline-flex min-h-[40px] items-center text-xs font-bold underline">{t.qaOpen}</button>
                   </div>
                 ))}
                 {results.map((d, i) => (
@@ -5283,16 +5416,16 @@ function AssistantWidget({ t, lang, items, onGo, onRoute }) {
                     <div className="mt-2 grid grid-cols-3 gap-1.5">
                       {EXT_AI.map((x) => (
                         <a key={x.id} href={x.url(extPrompt(q, lang))} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-white" style={{ background: x.color }}>
+                          className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-xs font-bold text-white" style={{ background: x.color }}>
                           {x.name}<ExternalLink size={12} />
                         </a>
                       ))}
                     </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">{t.qaExtNote}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{t.qaExtNote}</p>
                   </div>
                 )}
               </div>
-              <p className="border-t border-[var(--border)] px-4 py-2 text-[10px] text-[var(--muted)]">{t.qaFoot}</p>
+              <p className="border-t border-[var(--border)] px-4 py-2 text-xs text-[var(--muted)]">{t.qaFoot}</p>
             </motion.div>
           </motion.div>
         )}
@@ -5417,6 +5550,7 @@ function App() {
   ];
 
   return (
+    <MotionConfig reducedMotion="user" transition={UI_SPRING}>
     <div className="min-h-full bg-[var(--bg)] text-[var(--ink)]">
       <style>{GLOBAL_CSS}</style>
       <Header lang={lang} setLang={setLang} t={t} isAdmin={isAdmin} onAdminClick={() => setLoginOpen(true)} onLogout={handleLogout} />
@@ -5428,7 +5562,7 @@ function App() {
               <span className="flex items-center gap-2"><Unlock size={15} />{t.adminOn}</span>
               <span className="flex flex-wrap items-center justify-end gap-3">
                 <span className="flex items-center gap-1.5 text-xs font-medium"><Database size={13} />{db.mode === 'cloud' ? t.storeCloud : t.storeLocal}</span>
-                <button onClick={() => setSyncOpen(true)} className="relative flex items-center gap-1.5 rounded-md bg-[#111418] px-2.5 py-1 text-xs font-bold text-[var(--sign)]">
+                <button onClick={() => setSyncOpen(true)} className="relative flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#111418] px-3 py-2 text-xs font-bold text-[var(--sign)]">
                   <RefreshCw size={13} />{diff.total > 0 ? fmt(t.syncBanner, { n: diff.total }) : t.syncReview}
                   {diff.total > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />}
                 </button>
@@ -5444,7 +5578,7 @@ function App() {
             <div className="mx-auto flex max-w-6xl items-start gap-2 px-4 py-2.5 text-sm font-semibold">
               <AlertTriangle size={17} className="mt-0.5 shrink-0" />
               <span className="flex-1">{t.octBanner}</span>
-              <button onClick={() => setOctBanner(false)} aria-label="Close" className="rounded p-0.5 hover:bg-black/10"><X size={16} /></button>
+              <button onClick={() => setOctBanner(false)} aria-label="Close" className="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-black/10"><X size={16} /></button>
             </div>
           </motion.div>
         )}
@@ -5455,15 +5589,15 @@ function App() {
         <nav className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-[var(--border)] px-4" role="tablist">
           {TABS.map((tb) => (
             <button key={tb.id} role="tab" aria-selected={tab === tb.id} onClick={() => setTab(tb.id)}
-              className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3 pb-3 pt-1 text-[15px] font-bold transition-colors sm:px-4 ${tab === tb.id ? 'text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+              className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap min-h-[48px] px-3 pb-3 pt-2.5 text-[0.9375rem] font-bold transition-colors sm:px-4 ${tab === tb.id ? 'text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               <tb.Icon size={17} />{tb.label}
               {tab === tb.id && <motion.span layoutId="tabLine" className="absolute -bottom-px left-0 right-0 h-[3px] rounded-full" style={{ background: LINES.TML.color }} />}
             </button>
           ))}
         </nav>
 
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+        {/* 轉頁籤：即時切換，只做 0.15 秒淡入（毋須等舊內容離場） */}
+          <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15, ease: 'easeOut' }}>
             {tab === 'land' ? (
               <LandmarkPortal items={diningMerged} lang={lang} t={t} isAdmin={isAdmin}
                 onAdd={() => { setEditing(null); setFormOpen(true); }}
@@ -5479,7 +5613,6 @@ function App() {
               <ExplorePanel t={t} lang={lang} onRoute={goRoute} />
             )}
           </motion.div>
-        </AnimatePresence>
       </main>
 
       <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--muted)]">
@@ -5504,6 +5637,7 @@ function App() {
         )}
       </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 }
 
